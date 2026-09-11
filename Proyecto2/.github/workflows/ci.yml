@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  quality:
+    name: Ruff + pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -e ".[dev]"
+
+      # El build DEBE fallar si el lint o las pruebas fallan: sin `continue-on-error`.
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Ruff (formato)
+        run: ruff format --check .
+
+      - name: pytest
+        run: pytest
+
+  smoke:
+    name: Arranque desde cero
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Reproduce la compuerta M1 de la rubrica: un clon limpio tiene que
+      # levantar app + MariaDB + MinIO con un solo comando, sin pasos extra.
+      # `up.py` falla con codigo != 0 si /health no queda en OK.
+      - name: python scripts/up.py
+        run: python scripts/up.py
+
+      - name: Logs de la app si algo fallo
+        if: failure()
+        run: docker compose logs
+
+      - name: Apagar
+        if: always()
+        run: docker compose down -v

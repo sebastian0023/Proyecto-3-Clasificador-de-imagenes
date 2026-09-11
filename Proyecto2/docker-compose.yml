@@ -1,0 +1,118 @@
+# Infraestructura local: MariaDB + MinIO + la app.
+# Ningun valor vive aqui: todo sale de `.env` y la sintaxis `${VAR:?...}` hace
+# que compose se niegue a arrancar si falta una variable.
+
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: dq_mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?falta DB_ROOT_PASSWORD en .env}
+      MARIADB_DATABASE: ${DB_NAME:?falta DB_NAME en .env}
+      MARIADB_USER: ${DB_USER:?falta DB_USER en .env}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD en .env}
+    ports:
+      - "${DB_PORT:?falta DB_PORT en .env}:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  minio:
+    image: minio/minio:latest
+    container_name: dq_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?falta MINIO_ROOT_USER en .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?falta MINIO_ROOT_PASSWORD en .env}
+    ports:
+      - "${MINIO_PORT:?falta MINIO_PORT en .env}:9000"
+      - "${MINIO_CONSOLE_PORT:?falta MINIO_CONSOLE_PORT en .env}:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - minio_data:/data
+
+  # Job de un solo uso: crea los buckets y termina. Es idempotente.
+  minio-init:
+    image: minio/mc:latest
+    container_name: dq_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
+      MINIO_BUCKET_RELEASES: ${MINIO_BUCKET_RELEASES:?falta MINIO_BUCKET_RELEASES en .env}
+      MINIO_BUCKET_DVC_CACHE: ${MINIO_BUCKET_DVC_CACHE:?falta MINIO_BUCKET_DVC_CACHE en .env}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing "local/$$MINIO_BUCKET_RELEASES"
+        mc mb --ignore-existing "local/$$MINIO_BUCKET_DVC_CACHE"
+        echo "buckets listos: $$MINIO_BUCKET_RELEASES, $$MINIO_BUCKET_DVC_CACHE"
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: dq_app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Dentro de la red de compose los servicios se llaman por su nombre.
+      # Esto es topologia de red, no configuracion secreta.
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+    ports:
+      - "${APP_PORT:?falta APP_PORT en .env}:8000"
+    volumes:
+      # Codigo montado en vivo: editar en el host recarga uvicorn.
+      - ./src:/app/src:ro
+    command:
+      - uvicorn
+      - dataset_quality.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/src
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          sys.exit(0 if urllib.request.urlopen("http://localhost:8000/health", timeout=5).status == 200 else 1)
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+volumes:
+  mariadb_data:
+  minio_data:
