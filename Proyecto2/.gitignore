@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+# Secretos: nunca se versionan (compuerta M2 de la rubrica).
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Terraform (el state puede contener secretos en claro)
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!*.tfvars.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node (Frente 7: la app web)
+node_modules/
+dist/
+
+# Datos y artefactos: los versiona DVC, no Git
+/data/
+*.jpg
+*.jpeg
+*.png
+*.zip
+/.dvc/cache/
+/.dvc/tmp/
+
+# Editores / SO
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
