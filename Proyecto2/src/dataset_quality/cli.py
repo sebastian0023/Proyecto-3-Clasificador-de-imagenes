@@ -131,6 +131,59 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_gate(args: argparse.Namespace):
+    """Carga, analiza y evalua. Aislado para poder probar el CLI sin datos."""
+    from dataset_quality.models.coco import load_coco
+    from dataset_quality.models.quality import QualityConfig
+    from dataset_quality.tiers import gate
+    from dataset_quality.tiers.ingest import RAW_ANNOTATIONS, RAW_IMAGES
+
+    dataset = load_coco(RAW_ANNOTATIONS)
+    config = QualityConfig.from_yaml(Path(args.config))
+    return gate.run(dataset, config, RAW_IMAGES, out=Path(args.out))
+
+
+def cmd_gate(args: argparse.Namespace) -> int:
+    """Tier 3 — evalua la politica y DEVUELVE el codigo de salida.
+
+    Este `return report.exit_code` es la linea que hace que la compuerta sirva:
+    sin ella el reporte diria `fail`, el terminal lo pintaria en rojo, y la
+    etapa siguiente del pipeline se ejecutaria igual.
+    """
+    try:
+        report = _run_gate(args)
+    except DatasetValidationError as error:
+        print(f"\n{RED}{error}{RESET}", file=sys.stderr)
+        return 1
+
+    heading("Compuerta de calidad")
+    for check in report.checks:
+        color = STATUS_COLOR[check.status]
+        print(
+            f"  {color}{check.status.upper():<7}{RESET} {check.name:<22} "
+            f"{check.observed:>10.4g} contra {check.threshold:<10.4g} "
+            f"{DIM}[{check.severity}]{RESET}"
+        )
+        print(f"          {DIM}{check.message}{RESET}")
+
+    from dataset_quality.tiers import gate as gate_module
+
+    bloquean = gate_module.blocking(report.checks)
+    avisos = gate_module.warnings(report.checks)
+
+    print(f"\nreporte: {args.out}")
+    print(f"  huella:  {report.dataset_fingerprint[:16]}...")
+
+    if report.exit_code == 0:
+        print(f"\n{GREEN}La compuerta pasa.{RESET} {len(avisos)} aviso(s) que no bloquean.")
+    else:
+        nombres = ", ".join(check.name for check in bloquean)
+        print(f"\n{RED}RELEASE BLOQUEADO{RESET} por {len(bloquean)} check(s): {nombres}")
+        print(f"{DIM}La etapa siguiente del pipeline no se ejecuta.{RESET}")
+
+    return report.exit_code
+
+
 def cmd_init_db(args: argparse.Namespace) -> int:
     """Crea las tablas que falten. Idempotente."""
     del args
@@ -160,6 +213,13 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("--config", default="quality.yaml", help="Ruta de quality.yaml.")
     analyze.add_argument("--json", default=None, help="Escribe el resultado en este JSON.")
     analyze.set_defaults(handler=cmd_analyze)
+
+    gate = subcommands.add_parser(
+        "gate", help="Tier 3 — evalua la politica; sale con codigo != 0 si bloquea."
+    )
+    gate.add_argument("--config", default="quality.yaml", help="Ruta de quality.yaml.")
+    gate.add_argument("--out", default="reports/quality.json", help="Donde escribir el reporte.")
+    gate.set_defaults(handler=cmd_gate)
 
     init_db = subcommands.add_parser("init-db", help="Crea las tablas que falten.")
     init_db.set_defaults(handler=cmd_init_db)

@@ -20,6 +20,7 @@ from dataset_quality.analyzers.duplicates import (
 from dataset_quality.analyzers.structural import (
     analyze_class_imbalance,
     analyze_degenerate_boxes,
+    analyze_min_images_per_class,
     analyze_small_objects,
     analyze_spatial_bias,
     images_per_class,
@@ -32,6 +33,7 @@ __all__ = [
     "analyze_class_imbalance",
     "analyze_degenerate_boxes",
     "analyze_duplicates",
+    "analyze_min_images_per_class",
     "analyze_small_objects",
     "analyze_spatial_bias",
     "compute_hashes",
@@ -51,6 +53,7 @@ def run_all(dataset: CocoDataset, config: QualityConfig, images_dir: Path) -> li
     reporte debe decir que una regla no se evaluo, no callarselo.
     """
     return [
+        analyze_min_images_per_class(dataset, config.min_images_per_class),
         analyze_small_objects(dataset, config.small_objects),
         analyze_class_imbalance(dataset, config.class_imbalance),
         analyze_duplicates(dataset, config.duplicates, images_dir),

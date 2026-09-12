@@ -24,6 +24,23 @@ from dataset_quality.models.errors import from_pydantic, single_issue
 Severity = Literal["error", "warning"]
 
 
+class MinImagesPerClassCheck(StrictModel):
+    """Exige volumen suficiente: N imagenes distintas en al menos M clases.
+
+    Es el requisito del curso (compuerta M3) y el unico check que mide si hay
+    dataset con el que entrenar algo. Nace en `error` a proposito: sin volumen
+    no hay nada que publicar, por bien que salgan los demas analizadores.
+
+    Se cuentan IMAGENES distintas que contienen al menos una caja de la clase,
+    no cajas: una foto con siete coches aporta una imagen a `car`, no siete.
+    """
+
+    enabled: bool = True
+    severity: Severity = "error"
+    min_images: int = Field(ge=1)
+    min_classes: int = Field(ge=1)
+
+
 class SmallObjectsCheck(StrictModel):
     """Marca anotaciones cuya area relativa a la imagen es demasiado chica."""
 
@@ -71,6 +88,7 @@ class QualityConfig(StrictModel):
     """Umbrales de calidad. Se carga desde `quality.yaml`."""
 
     version: int = Field(default=1, ge=1)
+    min_images_per_class: MinImagesPerClassCheck
     small_objects: SmallObjectsCheck
     class_imbalance: ClassImbalanceCheck
     duplicates: DuplicatesCheck
@@ -80,6 +98,7 @@ class QualityConfig(StrictModel):
     def enabled_checks(self) -> tuple[str, ...]:
         """Nombres de los analizadores activos, en el orden declarado arriba."""
         names = (
+            "min_images_per_class",
             "small_objects",
             "class_imbalance",
             "duplicates",

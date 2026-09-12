@@ -27,6 +27,7 @@ from dataset_quality.models.quality import (
     ClassImbalanceCheck,
     DegenerateBoxesCheck,
     DuplicatesCheck,
+    MinImagesPerClassCheck,
     QualityConfig,
     SmallObjectsCheck,
     SpatialBiasCheck,
@@ -457,6 +458,9 @@ def test_la_descriptiva_incluye_imagenes_sin_anotar() -> None:
 # --------------------------------------------------------------------------
 def full_config(**overrides) -> QualityConfig:
     base = {
+        # El minimo real del curso; las pruebas de este frente usan datasets
+        # diminutos, asi que se relaja aqui para no tapar lo que se esta midiendo.
+        "min_images_per_class": MinImagesPerClassCheck(min_images=1, min_classes=1),
         "small_objects": SmallObjectsCheck(area_ratio_threshold=0.01, max_ratio=0.5),
         "class_imbalance": ClassImbalanceCheck(max_ratio_max_min=10.0),
         "duplicates": DuplicatesCheck(phash_hamming_distance=6, max_ratio=0.1),
@@ -473,6 +477,7 @@ def test_run_all_devuelve_un_resultado_por_analizador(photos) -> None:
     results = run_all(dataset, full_config(), images_dir)
 
     assert [r.name for r in results] == [
+        "min_images_per_class",
         "small_objects",
         "class_imbalance",
         "duplicates",

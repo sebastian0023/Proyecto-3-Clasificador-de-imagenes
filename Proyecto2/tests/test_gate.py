@@ -36,9 +36,7 @@ def check(
 
 
 def evaluate(checks: list[CheckResult]) -> QualityReport:
-    return gate.evaluate(
-        checks, fingerprint=FINGERPRINT, config_version=1, totals=TOTALS
-    )
+    return gate.evaluate(checks, fingerprint=FINGERPRINT, config_version=1, totals=TOTALS)
 
 
 # --------------------------------------------------------------------------
@@ -58,7 +56,7 @@ def test_todo_en_verde_sale_con_codigo_cero() -> None:
     assert report.exit_code == 0
 
 
-def test_un_fail_con_severidad_warning_NO_bloquea() -> None:
+def test_un_fail_con_severidad_warning_no_bloquea() -> None:
     """Un aviso avisa. Solo `error` detiene la publicacion."""
     report = evaluate([check(status="fail", severity="warning")])
 
@@ -135,8 +133,16 @@ def test_el_reporte_guarda_valor_y_umbral_de_cada_check(tmp_path) -> None:
     destino = tmp_path / "quality.json"
     report = evaluate(
         [
-            check(name="duplicates", status="fail", severity="error", observed=0.044, threshold=0.01),
-            check(name="small_objects", status="pass", severity="warning", observed=0.019, threshold=0.1),
+            check(
+                name="duplicates", status="fail", severity="error", observed=0.044, threshold=0.01
+            ),
+            check(
+                name="small_objects",
+                status="pass",
+                severity="warning",
+                observed=0.019,
+                threshold=0.1,
+            ),
         ]
     )
     gate.write_report(report, destino)

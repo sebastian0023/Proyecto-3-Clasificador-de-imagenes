@@ -17,6 +17,7 @@ from dataset_quality.models.quality import CheckResult as Result
 from dataset_quality.models.quality import (
     ClassImbalanceCheck,
     DegenerateBoxesCheck,
+    MinImagesPerClassCheck,
     SmallObjectsCheck,
     SpatialBiasCheck,
 )
@@ -210,4 +211,47 @@ def analyze_spatial_bias(dataset: CocoDataset, config: SpatialBiasCheck) -> Resu
             f"{observed:.1%} de los objetos (reparto uniforme: {uniforme:.1%}; "
             f"maximo permitido {config.max_cell_share:.1%})"
         ),
+    )
+
+
+def analyze_min_images_per_class(dataset: CocoDataset, config: MinImagesPerClassCheck) -> Result:
+    """Exige `min_images` imagenes distintas en al menos `min_classes` clases.
+
+    El valor observado es el conteo de la clase que ocupa la posicion
+    `min_classes` al ordenar de mayor a menor. Con min_classes=2 eso es la
+    SEGUNDA clase mas poblada: si esa llega al minimo, por definicion la
+    primera tambien, y el requisito se cumple. Si hay menos clases con
+    imagenes que las exigidas, el observado es 0.
+    """
+    if not config.enabled:
+        return _skipped("min_images_per_class", config.severity, float(config.min_images))
+
+    per_class = images_per_class(dataset)
+    ids = {category.name: category.id for category in dataset.categories}
+    ranked = sorted(per_class.values(), reverse=True)
+
+    observed = float(ranked[config.min_classes - 1]) if len(ranked) >= config.min_classes else 0.0
+    cumplen = [name for name, count in per_class.items() if count >= config.min_images]
+    faltan = sorted(ids[name] for name, count in per_class.items() if count < config.min_images)
+
+    ok = len(cumplen) >= config.min_classes
+    detalle = (
+        f"{len(cumplen)} clase(s) llegan a {config.min_images} imagenes "
+        f"(se exigen {config.min_classes})"
+    )
+    if not ok and ranked:
+        mejores = sorted(per_class.items(), key=lambda item: -item[1])[: config.min_classes]
+        cerca = ", ".join(
+            f"{name} {count} (+{config.min_images - count})" for name, count in mejores
+        )
+        detalle += f"; las mas cercanas: {cerca}"
+
+    return Result(
+        name="min_images_per_class",
+        status="pass" if ok else "fail",
+        severity=config.severity,
+        observed=observed,
+        threshold=float(config.min_images),
+        message=detalle,
+        offenders=faltan,
     )
