@@ -17,6 +17,9 @@ dependencies = [
     "pymysql>=1.1",
     "boto3>=1.35",
     "pyyaml>=6.0",
+    # pHash para el analizador de duplicados. Arrastra Pillow, numpy y
+    # scipy (la DCT). Se usa la libreria en vez de implementarlo a mano.
+    "imagehash>=4.3",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +30,9 @@ dev = [
     "ruff>=0.7",
     "types-pyyaml>=6.0",
 ]
+
+[project.scripts]
+dq = "dataset_quality.cli:run"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dataset_quality"]
