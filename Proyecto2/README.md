@@ -200,14 +200,43 @@ cumple. Dos jobs:
 ├── scripts/
 │   ├── up.py                   # el comando: levanta y verifica todo
 │   └── down.py                 # apaga el entorno
+├── quality.yaml                 # umbrales de la compuerta de calidad (Frente 4)
 ├── src/dataset_quality/
 │   ├── settings.py             # pydantic-settings: la frontera con el entorno
 │   ├── db.py                   # engine SQLAlchemy -> MariaDB
 │   ├── storage.py              # cliente S3 -> MinIO
 │   ├── main.py                 # FastAPI: /, /health, /api/config, /docs
+│   ├── models/                 # Pydantic v2: COCO, quality.yaml y los 3 contratos de salida
+│   │   ├── coco.py             # dataset COCO crudo (entrada)
+│   │   ├── quality.py          # quality.yaml (entrada) y quality.json (salida)
+│   │   ├── splits.py           # splits.json (salida, contrato congelado)
+│   │   ├── versions.py         # versions.json (salida, contrato congelado)
+│   │   └── errors.py           # ValidationError -> mensaje que nombra el campo
 │   └── static/index.html       # landing con el estado de la infraestructura
 └── tests/                      # pytest
+    └── fixtures/                # ejemplos COCO y los 3 golden files congelados
 ```
+
+## Contratos de datos (Frente 2)
+
+Los modelos de `src/dataset_quality/models/` son la frontera tipada del proyecto:
+todo lo que entra o sale de la plataforma de calidad se valida contra ellos, y
+un documento inválido se rechaza nombrando el campo exacto que falló (no un
+traceback genérico de Pydantic).
+
+| Archivo | Dirección | Modelo principal |
+| --- | --- | --- |
+| dataset COCO crudo | entrada | `models.coco.CocoDataset` |
+| `quality.yaml` | entrada | `models.quality.QualityConfig` |
+| `quality.json` | salida — **contrato congelado** | `models.quality.QualityReport` |
+| `splits.json` | salida — **contrato congelado** | `models.splits.SplitsManifest` |
+| `versions.json` | salida — **contrato congelado** | `models.versions.VersionsManifest` |
+
+Los tres contratos de salida están en `schema_version=1` y protegidos por
+`tests/test_contratos_congelados.py`, que hace un round-trip contra los
+ejemplos de oro en `tests/fixtures/`. Cambiar su forma sin subir la versión y
+actualizar esos fixtures rompe la prueba a propósito: es lo que permite que
+los Frentes 3, 4, 5, 7 y 8 desarrollen en paralelo contra un contrato estable.
 
 ## Estado y siguiente paso
 
@@ -215,13 +244,16 @@ cumple. Dos jobs:
 MariaDB + MinIO, la configuración va por pydantic-settings y no hay ninguna
 credencial en el código.
 
+**Frente 2 (Validación Pydantic) — cerrado.** Modelos Pydantic v2 del COCO, de
+`quality.yaml` y los tres contratos de salida (`quality.json`, `splits.json`,
+`versions.json`) congelados con ejemplos escritos a mano.
+
 Lo que sigue, en el orden en que desbloquea:
 
-1. **Frente 2** — modelos Pydantic v2 del COCO, de `quality.yaml` y del entorno.
-2. **Modelo de datos + migraciones** — `dataset_versions`, `quality_reports`,
+1. **Modelo de datos + migraciones** — `dataset_versions`, `quality_reports`,
    `check_results`, `splits`.
-3. **Frente 3** — los cinco analizadores (objetos pequeños, desbalance,
+2. **Frente 3** — los cinco analizadores (objetos pequeños, desbalance,
    duplicados por pHash, cajas degeneradas, sesgo espacial).
-4. **Frente 4** — la compuerta: `quality.yaml`, `quality.json` y exit code real.
-5. **Frente 5** — splits estratificados con semilla y sin fuga.
-6. **Frente 6** — `dvc init`, pipeline por etapas y remotes DEV/PROD.
+3. **Frente 4** — la compuerta: `quality.yaml`, `quality.json` y exit code real.
+4. **Frente 5** — splits estratificados con semilla y sin fuga.
+5. **Frente 6** — `dvc init`, pipeline por etapas y remotes DEV/PROD.

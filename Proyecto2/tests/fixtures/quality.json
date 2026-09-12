@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-11T10:00:00Z",
+  "dataset_fingerprint": "9a3b819caaf5a3b29c8ae3d9c6de12e09ae60c321dee334268a4c34abe07bd0f",
+  "config_version": 1,
+  "status": "pass",
+  "exit_code": 0,
+  "totals": {
+    "images": 3,
+    "annotations": 4,
+    "categories": 2
+  },
+  "checks": [
+    {
+      "name": "small_objects",
+      "status": "pass",
+      "severity": "warning",
+      "observed": 0.0,
+      "threshold": 0.1,
+      "message": "ninguna anotacion por debajo del area minima relativa",
+      "offenders": []
+    },
+    {
+      "name": "class_imbalance",
+      "status": "pass",
+      "severity": "warning",
+      "observed": 2.0,
+      "threshold": 20.0,
+      "message": "relacion max/min de clases dentro del umbral",
+      "offenders": []
+    },
+    {
+      "name": "duplicates",
+      "status": "pass",
+      "severity": "error",
+      "observed": 0.0,
+      "threshold": 0.01,
+      "message": "no se encontraron imagenes duplicadas por pHash",
+      "offenders": []
+    },
+    {
+      "name": "degenerate_boxes",
+      "status": "pass",
+      "severity": "error",
+      "observed": 0.0,
+      "threshold": 0.0,
+      "message": "sin cajas degeneradas",
+      "offenders": []
+    },
+    {
+      "name": "spatial_bias",
+      "status": "fail",
+      "severity": "warning",
+      "observed": 0.62,
+      "threshold": 0.6,
+      "message": "la celda central concentra el 62% de las anotaciones",
+      "offenders": [1, 3]
+    }
+  ]
+}
