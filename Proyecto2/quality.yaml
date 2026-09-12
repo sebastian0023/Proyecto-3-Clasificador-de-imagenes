@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------------------
+# Umbrales de la compuerta de calidad (Frente 4), validados por
+# `dataset_quality.models.quality.QualityConfig` (Frente 2).
+#
+# `max_ratio` en cada analizador es la fraccion tolerada de anotaciones/
+# imagenes con hallazgos antes de que el check se marque "fail". `severity`
+# decide si un "fail" bloquea la publicacion (`error`) o solo advierte
+# (`warning`); la compuerta del Frente 4 es quien interpreta esa distincion.
+# ---------------------------------------------------------------------------
+
+version: 1
+
+# Objetos pequenos: anotaciones cuya area es una fraccion diminuta de su
+# imagen suelen ser ruido de anotacion o casos que el modelo no podra
+# aprender bien.
+small_objects:
+  enabled: true
+  severity: warning
+  area_ratio_threshold: 0.02 # area/annotation < 2% del area de la imagen
+  max_ratio: 0.10 # tolera hasta 10% de las anotaciones marcadas
+
+# Desbalance de clases: relacion entre la clase mas frecuente y la menos
+# frecuente. Por encima de este ratio, entrenar sin remuestreo es arriesgado.
+class_imbalance:
+  enabled: true
+  severity: warning
+  max_ratio_max_min: 20.0
+
+# Duplicados por pHash: imagenes casi identicas (distancia de Hamming baja)
+# inflan artificialmente una clase y filtran datos entre splits si no se
+# detectan antes de F5.
+duplicates:
+  enabled: true
+  severity: error
+  phash_hamming_distance: 5 # <=5 bits de diferencia se considera duplicado
+  max_ratio: 0.01 # tolera hasta 1% de imagenes duplicadas
+
+# Cajas degeneradas: area nula o negativa. Nunca deberian pasar la validacion
+# de CocoAnnotation, pero la compuerta las vuelve a comprobar como defensa.
+degenerate_boxes:
+  enabled: true
+  severity: error
+  max_ratio: 0.0 # cero tolerancia
+
+# Sesgo espacial: concentracion anomala de anotaciones en una zona de la
+# imagen (p. ej. siempre en la esquina) sugiere un sesgo del pipeline de
+# captura, no del contenido real.
+spatial_bias:
+  enabled: true
+  severity: warning
+  grid_size: 3 # cuadricula 3x3 sobre cada imagen
+  max_cell_share: 0.60 # ninguna celda debe concentrar mas del 60%

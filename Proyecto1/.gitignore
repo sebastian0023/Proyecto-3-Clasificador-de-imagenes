@@ -162,3 +162,8 @@ desktop.ini
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Python venv (por si alguna herramienta lo crea aqui por error;
+# el codigo Python vive en Proyecto2)
+.venv/
+__pycache__/
