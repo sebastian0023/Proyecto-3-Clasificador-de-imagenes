@@ -143,6 +143,52 @@ verificar contra qué base y qué bucket está trabajando el entorno.
 
 ---
 
+---
+
+## Traer el dataset del Proyecto 1
+
+El portal de anotacion expone su dataset por HTTP. Este script lo descarga a
+`data/raw/` — que es donde el pipeline lo busca — y de paso **verifica el
+minimo del curso**: al menos 300 imagenes distintas en al menos 2 clases.
+
+```bash
+# El Proyecto 1 tiene que estar levantado (npm run up en su repositorio)
+python scripts/export_from_mp1.py
+```
+
+| Opcion | Para que |
+| ------ | -------- |
+| `--check-only` | Solo consulta el conteo por clase; no descarga nada. Rapido, para el seguimiento diario. |
+| `--strict` | Sale con codigo 1 si el minimo no se cumple. Util en CI. |
+| `--fresh` | Borra las imagenes locales antes de descargar. |
+| `--base-url URL` | Apunta a otro host (por defecto, `MP1_BASE_URL` del `.env`). |
+
+La descarga es **reanudable**: si se corta, vuelve a correr el script y retoma
+donde se quedo en vez de empezar de cero.
+
+### Por que por HTTP y no leyendo su base de datos
+
+`GET /api/coco/export` es el contrato publico que el propio README del
+Proyecto 1 declara como entregable. Usarlo evita acoplar este proyecto a su
+esquema de Drizzle y evita necesitar sus credenciales de MariaDB o MinIO. La
+llave que une las dos mitades es el `id`: el de `coco.images[]` es el mismo que
+el de `GET /api/images/{id}/file`.
+
+### Por que la descarga vive fuera del pipeline
+
+Ocurre **una vez**. El pipeline solo lee `data/raw/`, asi que sigue siendo
+reproducible aunque el Proyecto 1 no este corriendo — que es exactamente la
+situacion del evaluador. Una etapa que hiciera una peticion HTTP dejaria de ser
+determinista.
+
+### Sobre el conteo
+
+Se cuentan **imagenes distintas que contienen al menos una caja de esa clase**,
+no cajas: una foto con siete coches aporta una imagen a `car`, no siete. Y es
+un conteo *antes* de colapsar casi-duplicados; el numero que vale para la
+evaluacion es el de despues, que dara el analizador de duplicados.
+
+
 ## Verificación
 
 | Comando | Qué verifica |

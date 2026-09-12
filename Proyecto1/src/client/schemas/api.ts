@@ -55,6 +55,13 @@ export const apiImageSchema = z.object({
   updatedAt: isoDateSchema,
 });
 
+export const apiImageNeighborsSchema = z.object({
+  previousId: z.number().int().positive().nullable(),
+  nextId: z.number().int().positive().nullable(),
+  position: z.number().int().min(0),
+  total: z.number().int().min(0),
+});
+
 export const apiCategorySchema = z.object({
   id: z.number().int().positive(),
   name: z.string().min(1),
@@ -93,6 +100,7 @@ export const apiErrorSchema = z.object({
 });
 
 export const imageResponseSchema = z.object({ data: apiImageSchema });
+export const imageNeighborsResponseSchema = z.object({ data: apiImageNeighborsSchema });
 export const imageListResponseSchema = z.object({
   data: z.array(apiImageSchema),
   pagination: paginationSchema,

@@ -8,6 +8,7 @@ import {
   categoryListResponseSchema,
   dashboardMetricsResponseSchema,
   imageListResponseSchema,
+  imageNeighborsResponseSchema,
   imageResponseSchema,
   imageUpdateInputSchema,
   searchResponseSchema,
@@ -125,6 +126,9 @@ export const apiClient = {
     },
     get(id: number) {
       return request(`/api/images/${id}`, imageResponseSchema);
+    },
+    neighbors(id: number) {
+      return request(`/api/images/${id}/neighbors`, imageNeighborsResponseSchema);
     },
     fileUrl(id: number) {
       return `/api/images/${id}/file`;

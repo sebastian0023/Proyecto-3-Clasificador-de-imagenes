@@ -9,12 +9,11 @@ import { IntegrationBadge } from '../components/IntegrationBadge.js';
 import { StatusBadge } from '../components/StatusBadge.js';
 import { ApiClientError, apiClient } from '../lib/api-client.js';
 import type { BoundingBox } from '../lib/canvas-geometry.js';
-import type { ApiAnnotation, ApiCategory, ApiImage } from '../types/api.js';
+import type { ApiAnnotation, ApiCategory, ApiImage, ApiImageNeighbors } from '../types/api.js';
 
 interface Workspace {
   image: ApiImage;
-  images: ApiImage[];
-  imageTotal: number;
+  neighbors: ApiImageNeighbors;
   categories: ApiCategory[];
   annotations: ApiAnnotation[];
   annotationTotal: number;
@@ -57,21 +56,17 @@ export function AnnotationPage() {
     setLoading(true);
     setError(null);
     try {
-      const [imageResponse, imagesResponse, categoriesResponse, annotationsResponse] =
+      const [imageResponse, neighborsResponse, categoriesResponse, annotationsResponse] =
         await Promise.all([
           apiClient.images.get(numericImageId),
-          apiClient.images.list({ limit: 100, offset: 0 }),
+          apiClient.images.neighbors(numericImageId),
           apiClient.categories.list({ limit: 100, offset: 0 }),
           apiClient.annotations.list({ imageId: numericImageId, limit: 100, offset: 0 }),
         ]);
-      const navigationImages = imagesResponse.data.some((image) => image.id === numericImageId)
-        ? imagesResponse.data
-        : [...imagesResponse.data, imageResponse.data].sort((a, b) => a.id - b.id);
 
       setWorkspace({
         image: imageResponse.data,
-        images: navigationImages,
-        imageTotal: imagesResponse.pagination.total,
+        neighbors: neighborsResponse.data,
         categories: categoriesResponse.data,
         annotations: annotationsResponse.data,
         annotationTotal: annotationsResponse.pagination.total,
@@ -127,9 +122,6 @@ export function AnnotationPage() {
           ? {
               ...current,
               image: refreshedImage.data,
-              images: current.images.map((image) =>
-                image.id === refreshedImage.data.id ? refreshedImage.data : image,
-              ),
               annotations: [...current.annotations, created.data],
               annotationTotal: current.annotationTotal + 1,
             }
@@ -321,9 +313,6 @@ export function AnnotationPage() {
           ? {
               ...current,
               image: updated.data,
-              images: current.images.map((image) =>
-                image.id === updated.data.id ? updated.data : image,
-              ),
             }
           : current,
       );
@@ -342,6 +331,44 @@ export function AnnotationPage() {
       setSaving(false);
     }
   };
+
+  /**
+   * Atajos para recorrer el dataset sin soltar el ratón: N/→ siguiente,
+   * P/← anterior y Enter para finalizar y avanzar en un solo gesto.
+   */
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || !workspace || saving) {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest('input, textarea, select, [contenteditable="true"]')
+      ) {
+        return;
+      }
+
+      const { previousId, nextId } = workspace.neighbors;
+      if ((event.key === 'n' || event.key === 'N' || event.key === 'ArrowRight') && nextId) {
+        event.preventDefault();
+        navigate(`/annotate/${nextId}`);
+        return;
+      }
+      if ((event.key === 'p' || event.key === 'P' || event.key === 'ArrowLeft') && previousId) {
+        event.preventDefault();
+        navigate(`/annotate/${previousId}`);
+        return;
+      }
+      if (event.key === 'Enter' && workspace.image.status === 'in_progress') {
+        event.preventDefault();
+        void handleComplete(nextId ?? undefined);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
 
   if (loading) {
     return (
@@ -379,12 +406,9 @@ export function AnnotationPage() {
     );
   }
 
-  const { image, images, categories, annotations, annotationTotal, imageTotal } = workspace;
+  const { image, categories, annotations, annotationTotal, neighbors } = workspace;
   const selectedCategory = categories.find((category) => category.id === selectedCategoryId);
-  const currentIndex = images.findIndex((item) => item.id === image.id);
-  const previousImage = currentIndex > 0 ? images[currentIndex - 1] : undefined;
-  const nextImage =
-    currentIndex >= 0 && currentIndex < images.length - 1 ? images[currentIndex + 1] : undefined;
+  const { previousId, nextId, position, total } = neighbors;
 
   return (
     <div className="annotation-page">
@@ -606,8 +630,8 @@ export function AnnotationPage() {
 
       <footer className="annotation-footer">
         <div className="image-navigation">
-          {previousImage ? (
-            <Link className="button button-ghost" to={`/annotate/${previousImage.id}`}>
+          {previousId ? (
+            <Link className="button button-ghost" to={`/annotate/${previousId}`}>
               ← Anterior
             </Link>
           ) : (
@@ -616,10 +640,10 @@ export function AnnotationPage() {
             </button>
           )}
           <span>
-            Imagen {currentIndex + 1} de {imageTotal}
+            Imagen {position} de {total}
           </span>
-          {nextImage && !saving ? (
-            <Link className="button button-ghost" to={`/annotate/${nextImage.id}`}>
+          {nextId && !saving ? (
+            <Link className="button button-ghost" to={`/annotate/${nextId}`}>
               Siguiente →
             </Link>
           ) : (
@@ -633,8 +657,11 @@ export function AnnotationPage() {
             <span aria-hidden="true" className="save-status-dot" />
             {saving ? 'Guardando…' : 'Cambios guardados automáticamente'}
           </span>
-          {image.status === 'completed' && nextImage && !saving ? (
-            <Link className="button button-primary" to={`/annotate/${nextImage.id}`}>
+          <span className="shortcut-hint">
+            <kbd>N</kbd> siguiente · <kbd>P</kbd> anterior · <kbd>Enter</kbd> finalizar y siguiente
+          </span>
+          {image.status === 'completed' && nextId && !saving ? (
+            <Link className="button button-primary" to={`/annotate/${nextId}`}>
               Siguiente imagen
               <span aria-hidden="true">→</span>
             </Link>
@@ -647,7 +674,7 @@ export function AnnotationPage() {
             <button
               className="button button-primary"
               disabled={image.status !== 'in_progress' || saving}
-              onClick={() => void handleComplete(nextImage?.id)}
+              onClick={() => void handleComplete(nextId ?? undefined)}
               title={
                 image.status === 'pending'
                   ? 'Agrega al menos una caja antes de finalizar la imagen'
@@ -655,8 +682,8 @@ export function AnnotationPage() {
               }
               type="button"
             >
-              {nextImage ? 'Finalizar y siguiente' : 'Finalizar imagen'}
-              <span aria-hidden="true">{nextImage ? '→' : '✓'}</span>
+              {nextId ? 'Finalizar y siguiente' : 'Finalizar imagen'}
+              <span aria-hidden="true">{nextId ? '→' : '✓'}</span>
             </button>
           )}
         </div>

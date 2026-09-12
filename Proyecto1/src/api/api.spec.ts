@@ -303,6 +303,32 @@ describe('imágenes', () => {
     expect((await res.json()).error.code).toBe('IMAGE_FILE_MISSING');
   });
 
+  it('GET /api/images/:id/neighbors -> 200 con anterior, siguiente y posición absoluta', async () => {
+    vi.mocked(imagesService.getImage).mockResolvedValue(sampleImage);
+    vi.mocked(imagesService.getImageNeighbors).mockResolvedValue({
+      previousId: 499,
+      nextId: 501,
+      position: 497,
+      total: 877,
+    });
+    const res = await app.request('/api/images/500/neighbors');
+    expect(res.status).toBe(200);
+    expect((await res.json()).data).toEqual({
+      previousId: 499,
+      nextId: 501,
+      position: 497,
+      total: 877,
+    });
+    expect(imagesService.getImageNeighbors).toHaveBeenCalledWith(500);
+  });
+
+  it('GET /api/images/:id/neighbors -> 404 si la imagen no existe', async () => {
+    vi.mocked(imagesService.getImage).mockResolvedValue(null);
+    const res = await app.request('/api/images/999/neighbors');
+    expect(res.status).toBe(404);
+    expect(imagesService.getImageNeighbors).not.toHaveBeenCalled();
+  });
+
   it('PATCH /api/images/:id con status inválido -> 400', async () => {
     const res = await app.request('/api/images/1', {
       method: 'PATCH',

@@ -1508,6 +1508,24 @@ h2,
   gap: 20px;
 }
 
+.shortcut-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.shortcut-hint kbd {
+  padding: 1px 5px;
+  color: #8792a3;
+  font-family: inherit;
+  font-size: 0.63rem;
+  background: #f0f3f7;
+  border: 1px solid #dce2ea;
+  border-radius: 4px;
+}
+
 .image-navigation > span {
   color: var(--muted);
   font-size: 0.7rem;
@@ -1657,7 +1675,8 @@ h2,
   }
 
   .tool-tip,
-  .annotations-panel {
+  .annotations-panel,
+  .shortcut-hint {
     display: none;
   }
 

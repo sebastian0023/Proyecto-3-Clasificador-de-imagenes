@@ -1,5 +1,5 @@
 import type { Readable } from 'node:stream';
-import { and, count, eq, exists, gte, lte, sql } from 'drizzle-orm';
+import { and, count, desc, eq, exists, gt, gte, lt, lte, sql } from 'drizzle-orm';
 import { imageSize } from 'image-size';
 import { unprocessable } from '../api/errors.js';
 import { db } from '../db/index.js';
@@ -75,6 +75,41 @@ export async function countImages(filters: ImageFilters = {}): Promise<number> {
 export async function getImage(id: number): Promise<ImageRow | null> {
   const rows = await db.select().from(images).where(eq(images.id, id)).limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * Vecinos por `id` y posición absoluta dentro del dataset completo.
+ * El portal de anotación no puede derivar esto de `GET /images` porque esa
+ * lista está topada a 100 filas por página: con 800+ imágenes el siguiente
+ * quedaba fuera de la ventana y la navegación se apagaba.
+ */
+export interface ImageNeighbors {
+  previousId: number | null;
+  nextId: number | null;
+  position: number;
+  total: number;
+}
+
+/** Anterior/siguiente por `id` (mismo orden que `listImages`), resuelto en SQL. */
+export async function getImageNeighbors(id: number): Promise<ImageNeighbors> {
+  const [previousRows, nextRows, behindRows, totalRows] = await Promise.all([
+    db
+      .select({ id: images.id })
+      .from(images)
+      .where(lt(images.id, id))
+      .orderBy(desc(images.id))
+      .limit(1),
+    db.select({ id: images.id }).from(images).where(gt(images.id, id)).orderBy(images.id).limit(1),
+    db.select({ total: count() }).from(images).where(lte(images.id, id)),
+    db.select({ total: count() }).from(images),
+  ]);
+
+  return {
+    previousId: previousRows[0]?.id ?? null,
+    nextId: nextRows[0]?.id ?? null,
+    position: Number(behindRows[0]?.total ?? 0),
+    total: Number(totalRows[0]?.total ?? 0),
+  };
 }
 
 export interface ImageFile {

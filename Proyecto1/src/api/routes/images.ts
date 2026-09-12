@@ -65,6 +65,16 @@ imagesRoutes.get('/:id/file', async (c) => {
   });
 });
 
+/** Anterior/siguiente y posición absoluta, para navegar sin depender de la paginación. */
+imagesRoutes.get('/:id/neighbors', async (c) => {
+  const { id } = idParamSchema.parse(c.req.param());
+  const image = await service.getImage(id);
+  if (!image) {
+    throw notFound(`La imagen ${id} no existe`);
+  }
+  return c.json({ data: await service.getImageNeighbors(id) });
+});
+
 imagesRoutes.post('/', async (c) => {
   const input = imageCreateSchema.parse(await readJson(c));
   const created = await service.createImage(input);

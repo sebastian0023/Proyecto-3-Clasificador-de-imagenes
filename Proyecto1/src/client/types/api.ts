@@ -3,6 +3,7 @@ import type {
   apiAnnotationSchema,
   apiCategorySchema,
   apiErrorSchema,
+  apiImageNeighborsSchema,
   apiImageSchema,
   imageStatusSchema,
   paginationSchema,
@@ -10,6 +11,7 @@ import type {
 
 export type ImageStatus = z.infer<typeof imageStatusSchema>;
 export type ApiImage = z.infer<typeof apiImageSchema>;
+export type ApiImageNeighbors = z.infer<typeof apiImageNeighborsSchema>;
 export type ApiCategory = z.infer<typeof apiCategorySchema>;
 export type ApiAnnotation = z.infer<typeof apiAnnotationSchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
