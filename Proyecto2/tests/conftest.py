@@ -19,6 +19,7 @@ BASE_ENV = {
     "MINIO_USE_SSL": "false",
     "MINIO_BUCKET_RELEASES": "dataset-releases",
     "MINIO_BUCKET_DVC_CACHE": "dvc-cache",
+    "MINIO_BUCKET_IMAGES": "dataset-images",
 }
 
 

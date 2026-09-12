@@ -1,0 +1,107 @@
+"""Tablas relacionales (SQLAlchemy 2.0).
+
+Ojo con la palabra "modelo", que aqui significa dos cosas distintas:
+
+  - `dataset_quality.models` son modelos **Pydantic**: contratos que validan
+    datos que cruzan la frontera del sistema. Viven en memoria y se descartan.
+  - este modulo define modelos **SQLAlchemy**: las tablas donde viven las filas.
+
+El Tier 1 traduce de los primeros a los segundos.
+
+Reparto de responsabilidades entre los dos almacenes:
+
+  - **MariaDB** guarda lo que se consulta y se agrega: que imagenes hay, sus
+    dimensiones, que cajas tienen y de que clase.
+  - **MinIO** guarda los bytes de las imagenes. En `images.storage_key` queda
+    la llave del objeto; el binario nunca entra en una columna.
+
+Meter un JPEG en la base funciona con diez fotos y se derrumba con novecientas:
+las copias de seguridad tardan horas y no se puede servir la imagen sin pasarla
+entera por el servidor.
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+from sqlalchemy import (
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    SmallInteger,
+    String,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+def utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Category(Base):
+    """Una clase del dataset. El id es el del COCO, no autoincremental."""
+
+    __tablename__ = "categories"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    name: Mapped[str] = mapped_column(String(100), unique=True)
+    supercategory: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    annotations: Mapped[list[Annotation]] = relationship(back_populates="category")
+
+
+class Image(Base):
+    """Metadatos de una imagen. Los bytes viven en MinIO, no aqui."""
+
+    __tablename__ = "images"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    file_name: Mapped[str] = mapped_column(String(255), unique=True)
+    width: Mapped[int] = mapped_column(Integer)
+    height: Mapped[int] = mapped_column(Integer)
+
+    # Llave del objeto en el bucket de imagenes, p. ej. `raw/img_0001.jpg`.
+    storage_key: Mapped[str] = mapped_column(String(512))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    # Huella del contenido: permite saltarse una subida ya hecha y detectar
+    # que un archivo cambio sin depender de la fecha de modificacion.
+    sha256: Mapped[str] = mapped_column(String(64))
+
+    ingested_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    annotations: Mapped[list[Annotation]] = relationship(
+        back_populates="image", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (Index("idx_images_sha256", "sha256"),)
+
+
+class Annotation(Base):
+    """Una bounding box. Coordenadas absolutas en pixeles, como exige COCO."""
+
+    __tablename__ = "annotations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    image_id: Mapped[int] = mapped_column(ForeignKey("images.id", ondelete="CASCADE"))
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="RESTRICT"))
+
+    x: Mapped[float] = mapped_column(Float)
+    y: Mapped[float] = mapped_column(Float)
+    width: Mapped[float] = mapped_column(Float)
+    height: Mapped[float] = mapped_column(Float)
+    area: Mapped[float] = mapped_column(Float)
+    iscrowd: Mapped[int] = mapped_column(SmallInteger, default=0)
+
+    image: Mapped[Image] = relationship(back_populates="annotations")
+    category: Mapped[Category] = relationship(back_populates="annotations")
+
+    __table_args__ = (
+        Index("idx_annotations_image", "image_id"),
+        Index("idx_annotations_category", "category_id"),
+    )

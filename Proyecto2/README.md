@@ -189,6 +189,68 @@ un conteo *antes* de colapsar casi-duplicados; el numero que vale para la
 evaluacion es el de despues, que dara el analizador de duplicados.
 
 
+## Ingerir el dataset (Tier 1)
+
+Una vez los datos estan en `data/raw/`, este comando los reparte entre los dos
+almacenes:
+
+```bash
+dq ingest
+```
+
+```
+data/raw/annotations.coco.json ──► CocoDataset (Pydantic)
+                                        │
+                      ┌─────────────────┴─────────────────┐
+                      ▼                                   ▼
+        MinIO: los bytes de cada imagen       MariaDB: metadatos y cajas
+        bucket `dataset-images`,              categories / images / annotations
+        llave `raw/<archivo>`
+```
+
+### Por que las imagenes no van a MariaDB
+
+Los metadatos se consultan y se agregan (*¿cuantas cajas de clase `dog` hay?*);
+eso en SQL es una linea. Los binarios solo se guardan y se sirven, y para eso
+una base de datos es el peor sitio: meter 877 JPEGs en columnas hace que las
+copias de seguridad tarden horas y obliga a pasar cada imagen entera por el
+servidor para mostrarla.
+
+El reparto es el estandar: **los metadatos a la base, los bytes al almacen de
+objetos**. En `images.storage_key` queda la llave del objeto; el binario nunca
+entra en una columna. Hay una prueba que lo verifica (`test_ingest.py`).
+
+En local ese almacen es MinIO; en produccion es S3. El codigo es el mismo — solo
+cambia el endpoint.
+
+### Tres propiedades del Tier 1
+
+**Valida antes de escribir.** El COCO pasa entero por los modelos Pydantic del
+Frente 2. Un archivo roto se rechaza nombrando el campo:
+
+```
+data/raw/annotations.coco.json: 1 error(es) de validacion
+  - images.0.width: Input should be greater than 0 (recibido: 0)
+```
+
+**Sube antes de registrar.** Los objetos van primero y las filas despues, de
+modo que nunca queda una fila apuntando a un objeto que no existe.
+
+**Es idempotente.** Correrlo dos veces deja el mismo estado: las imagenes que ya
+estan en MinIO no se vuelven a subir (se comparan por tamano) y las tablas se
+redefinen en vez de acumular.
+
+### Verificar
+
+```bash
+# filas en MariaDB
+docker compose exec mariadb sh -c   'mariadb -u"$MARIADB_USER" -p"$MARIADB_PASSWORD" "$MARIADB_DATABASE" -e    "SELECT COUNT(*) FROM images; SELECT COUNT(*) FROM annotations;"'
+
+# objetos en MinIO
+docker compose exec minio sh -c   'mc alias set l http://localhost:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" &&    mc du l/dataset-images'
+```
+
+
 ## Verificación
 
 | Comando | Qué verifica |
