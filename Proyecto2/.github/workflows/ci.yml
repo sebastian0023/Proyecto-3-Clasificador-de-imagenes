@@ -9,6 +9,9 @@ jobs:
   quality:
     name: Ruff + pytest
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto2
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +36,9 @@ jobs:
   smoke:
     name: Arranque desde cero
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto2
     steps:
       - uses: actions/checkout@v4
 
