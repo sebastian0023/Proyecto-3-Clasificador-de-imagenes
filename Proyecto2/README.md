@@ -294,6 +294,9 @@ credencial en el código.
 `quality.yaml` y los tres contratos de salida (`quality.json`, `splits.json`,
 `versions.json`) congelados con ejemplos escritos a mano.
 
+**Frente 9 (Infraestructura — Terraform) — cerrado.** 3 módulos por capa (red con VPC Endpoint para S3, almacenamiento S3 versionado con SSE-S3 y bloqueo público, e IAM OIDC sin claves estáticas para GitHub Actions). Validación automática integrada en CI.
+
+
 Lo que sigue, en el orden en que desbloquea:
 
 1. **Modelo de datos + migraciones** — `dataset_versions`, `quality_reports`,

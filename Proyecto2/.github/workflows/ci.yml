@@ -59,3 +59,29 @@ jobs:
       - name: Apagar
         if: always()
         run: docker compose down -v
+
+  terraform:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto2/terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+
+      # Verifica formato estricto según la guía de estilo de Terraform
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      # Inicialización sin backend remoto
+      - name: Terraform Init
+        run: terraform init -backend=false
+
+      # Validación estricta de tipos y recursos
+      - name: Terraform Validate
+        run: terraform validate
+
