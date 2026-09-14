@@ -13,6 +13,7 @@ from dataset_quality.analyzers.descriptive import describe
 from dataset_quality.analyzers.duplicates import (
     analyze_duplicates,
     compute_hashes,
+    duplicate_groups,
     find_pairs,
     hamming,
     perceptual_hash,
@@ -38,6 +39,7 @@ __all__ = [
     "analyze_spatial_bias",
     "compute_hashes",
     "describe",
+    "duplicate_groups",
     "find_pairs",
     "hamming",
     "images_per_class",

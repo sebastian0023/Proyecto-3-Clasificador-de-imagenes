@@ -105,3 +105,52 @@ class Annotation(Base):
         Index("idx_annotations_image", "image_id"),
         Index("idx_annotations_category", "category_id"),
     )
+
+
+class Split(Base):
+    """La asignacion de una imagen a train/val/test (Frente 5).
+
+    El artefacto canonico es `reports/splits.json`; esta tabla es la misma
+    informacion consultable desde SQL para la app web (Frente 7). Una imagen
+    tiene como maximo una fila — reflejo del "cero fuga" que ya exige
+    `SplitsManifest` en el JSON — y `id` es autoincremental porque, a
+    diferencia de images/categories/annotations, no viene de un id de COCO.
+    """
+
+    __tablename__ = "splits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    image_id: Mapped[int] = mapped_column(ForeignKey("images.id", ondelete="CASCADE"), unique=True)
+    split: Mapped[str] = mapped_column(String(10))
+    seed: Mapped[int] = mapped_column(Integer)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    image: Mapped[Image] = relationship()
+
+    __table_args__ = (Index("idx_splits_split", "split"),)
+
+
+class DatasetVersionRow(Base):
+    """Una version publicada del dataset (Frente 6, `dq release`).
+
+    El artefacto canonico sigue siendo `reports/versions.json`; esta tabla
+    es para consulta desde la app web (Frente 7), igual que `Split`. Se llama
+    `DatasetVersionRow` y no `DatasetVersion` para no chocar con el modelo
+    Pydantic del mismo nombre en `models.versions` — son dos objetos
+    distintos (fila SQL vs. contrato validado) que conviene poder importar
+    juntos sin alias.
+    """
+
+    __tablename__ = "dataset_versions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    version: Mapped[str] = mapped_column(String(32), unique=True)
+    dataset_fingerprint: Mapped[str] = mapped_column(String(64))
+    quality_report_fingerprint: Mapped[str] = mapped_column(String(64))
+    splits_fingerprint: Mapped[str] = mapped_column(String(64))
+    storage_uri: Mapped[str] = mapped_column(String(512))
+    quality_status: Mapped[str] = mapped_column(String(10))
+    notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    __table_args__ = (Index("idx_dataset_versions_created_at", "created_at"),)

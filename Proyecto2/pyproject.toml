@@ -20,6 +20,10 @@ dependencies = [
     # pHash para el analizador de duplicados. Arrastra Pillow, numpy y
     # scipy (la DCT). Se usa la libreria en vez de implementarlo a mano.
     "imagehash>=4.3",
+    # Compresion del artefacto de release (Frente 6, `dq release`). No es lo
+    # mismo que `dvc[s3]`: esa es la herramienta de pipeline, esta es la
+    # libreria que empaqueta el `.tar.zst` que sube `tiers/release.py`.
+    "zstandard>=0.22",
 ]
 
 [project.optional-dependencies]
@@ -29,6 +33,12 @@ dev = [
     "httpx>=0.27",
     "ruff>=0.7",
     "types-pyyaml>=6.0",
+]
+# `dvc` orquesta el pipeline (`dvc.yaml`) y empuja/trae datos hacia los
+# remotes S3; ningun modulo de `dataset_quality` lo importa, por eso vive
+# aparte de `dependencies` en vez de junto a boto3/pydantic.
+pipeline = [
+    "dvc[s3]>=3.55",
 ]
 
 [project.scripts]

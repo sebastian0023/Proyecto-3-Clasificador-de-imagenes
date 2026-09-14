@@ -31,7 +31,9 @@ from dataset_quality.models.quality import (
     QualityConfig,
     SmallObjectsCheck,
     SpatialBiasCheck,
+    SplitsConfig,
 )
+from dataset_quality.models.splits import SplitRatios
 
 
 # --------------------------------------------------------------------------
@@ -466,6 +468,7 @@ def full_config(**overrides) -> QualityConfig:
         "duplicates": DuplicatesCheck(phash_hamming_distance=6, max_ratio=0.1),
         "degenerate_boxes": DegenerateBoxesCheck(max_ratio=0.0),
         "spatial_bias": SpatialBiasCheck(grid_size=4, max_cell_share=0.9),
+        "splits": SplitsConfig(ratios=SplitRatios(train=0.7, val=0.15, test=0.15)),
     }
     return QualityConfig(**{**base, **overrides})
 

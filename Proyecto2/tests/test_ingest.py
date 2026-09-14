@@ -139,8 +139,14 @@ def test_sha256_cambia_con_el_contenido(tmp_path) -> None:
 # --------------------------------------------------------------------------
 # Tablas
 # --------------------------------------------------------------------------
-def test_las_tres_tablas_estan_declaradas() -> None:
-    assert set(Base.metadata.tables) == {"categories", "images", "annotations"}
+def test_las_tablas_estan_declaradas() -> None:
+    assert set(Base.metadata.tables) == {
+        "categories",
+        "images",
+        "annotations",
+        "splits",
+        "dataset_versions",
+    }
 
 
 def test_la_imagen_guarda_la_llave_no_el_binario() -> None:
