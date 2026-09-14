@@ -64,6 +64,35 @@ def find_pairs(hashes: dict[int, int], max_distance: int) -> list[tuple[int, int
     ]
 
 
+def duplicate_groups(hashes: dict[int, int], max_distance: int) -> list[set[int]]:
+    """Componentes conexas del grafo de casi-duplicados.
+
+    Un par por debajo del umbral no basta para decidir con quien viaja cada
+    imagen: si A~B y B~C pero A y C quedan por encima del umbral entre si, los
+    tres deben repartirse juntos igual, porque A y C comparten una copia (B) y
+    separarlos filtraria esa copia entre splits. Union-find sobre los pares de
+    `find_pairs` agrupa por esa relacion transitiva. Las imagenes sin ningun
+    par cercano quedan en su propio grupo de tamano 1.
+    """
+    parent = {image_id: image_id for image_id in hashes}
+
+    def find(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for a, b, _ in find_pairs(hashes, max_distance):
+        root_a, root_b = find(a), find(b)
+        if root_a != root_b:
+            parent[root_b] = root_a
+
+    groups: dict[int, set[int]] = {}
+    for image_id in hashes:
+        groups.setdefault(find(image_id), set()).add(image_id)
+    return list(groups.values())
+
+
 def analyze_duplicates(dataset: CocoDataset, config: DuplicatesCheck, images_dir: Path) -> Result:
     """Marca como infractora la copia, no el original.
 

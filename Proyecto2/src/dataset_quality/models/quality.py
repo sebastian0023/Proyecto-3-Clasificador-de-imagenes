@@ -20,6 +20,7 @@ from yaml import YAMLError
 
 from dataset_quality.models import StrictModel
 from dataset_quality.models.errors import from_pydantic, single_issue
+from dataset_quality.models.splits import SplitRatios
 
 Severity = Literal["error", "warning"]
 
@@ -84,6 +85,26 @@ class SpatialBiasCheck(StrictModel):
     max_cell_share: float = Field(gt=0.0, le=1.0)
 
 
+class SplitsConfig(StrictModel):
+    """Parametros del reparto estratificado (Frente 5).
+
+    No es un check de la compuerta (no tiene `severity` ni `max_ratio`): es la
+    configuracion que consume `tiers/splits.py` para producir `splits.json`.
+    Vive aqui, junto a los demas umbrales, para que un solo archivo — rastreado
+    por DVC en el Frente 6 — sea la fuente de verdad de todos los parametros.
+    """
+
+    seed: int = 42
+    ratios: SplitRatios
+    # Desviacion maxima tolerada entre la proporcion de una clase en un split
+    # y su proporcion global. Por encima de esto el reparto no cuenta como
+    # "estratificado dentro de tolerancia".
+    tolerance: float = Field(default=0.05, ge=0.0, le=1.0)
+    # Los grupos de casi-duplicados (pHash del Frente 3) viajan juntos a un
+    # solo split; desactivarlo reparte imagen por imagen y arriesga fuga.
+    group_near_duplicates: bool = True
+
+
 class QualityConfig(StrictModel):
     """Umbrales de calidad. Se carga desde `quality.yaml`."""
 
@@ -94,6 +115,7 @@ class QualityConfig(StrictModel):
     duplicates: DuplicatesCheck
     degenerate_boxes: DegenerateBoxesCheck
     spatial_bias: SpatialBiasCheck
+    splits: SplitsConfig
 
     def enabled_checks(self) -> tuple[str, ...]:
         """Nombres de los analizadores activos, en el orden declarado arriba."""

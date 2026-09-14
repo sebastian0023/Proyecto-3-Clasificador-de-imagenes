@@ -105,3 +105,26 @@ class Annotation(Base):
         Index("idx_annotations_image", "image_id"),
         Index("idx_annotations_category", "category_id"),
     )
+
+
+class Split(Base):
+    """La asignacion de una imagen a train/val/test (Frente 5).
+
+    El artefacto canonico es `reports/splits.json`; esta tabla es la misma
+    informacion consultable desde SQL para la app web (Frente 7). Una imagen
+    tiene como maximo una fila — reflejo del "cero fuga" que ya exige
+    `SplitsManifest` en el JSON — y `id` es autoincremental porque, a
+    diferencia de images/categories/annotations, no viene de un id de COCO.
+    """
+
+    __tablename__ = "splits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    image_id: Mapped[int] = mapped_column(ForeignKey("images.id", ondelete="CASCADE"), unique=True)
+    split: Mapped[str] = mapped_column(String(10))
+    seed: Mapped[int] = mapped_column(Integer)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    image: Mapped[Image] = relationship()
+
+    __table_args__ = (Index("idx_splits_split", "split"),)

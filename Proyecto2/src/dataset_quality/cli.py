@@ -184,6 +184,98 @@ def cmd_gate(args: argparse.Namespace) -> int:
     return report.exit_code
 
 
+def _load_quality_report(path: Path) -> object | None:
+    """Lee `quality.json` si existe; `None` si nunca se corrio la compuerta."""
+    from dataset_quality.models.quality import QualityReport
+
+    if not path.is_file():
+        return None
+    return QualityReport.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def cmd_split(args: argparse.Namespace) -> int:
+    """Tier 4 — reparte train/val/test: estratificado, con semilla, sin fuga.
+
+    Antes de repartir, exige que la compuerta de calidad (Tier 3) haya
+    pasado: `reports/quality.json` debe existir y no estar en `fail`. Es lo
+    que hace real la promesa de F4 de que "la etapa siguiente no se ejecuta"
+    — sin este chequeo, F5 seria esa etapa que se ejecuta igual. `--force`
+    lo salta a proposito, dejando constancia en la terminal.
+    """
+    from dataset_quality.models.coco import load_coco
+    from dataset_quality.models.quality import QualityConfig
+    from dataset_quality.tiers import splits as splits_module
+    from dataset_quality.tiers.ingest import RAW_ANNOTATIONS, RAW_IMAGES
+
+    quality_report = _load_quality_report(Path(args.quality_report))
+
+    if quality_report is None and not args.force:
+        print(
+            f"\n{RED}No existe {args.quality_report}.{RESET} "
+            f"Corre `dq gate` antes de repartir splits, o pasa --force.",
+            file=sys.stderr,
+        )
+        return 1
+
+    if quality_report is not None and quality_report.status == "fail" and not args.force:
+        nombres = ", ".join(
+            check.name
+            for check in quality_report.checks
+            if check.status == "fail" and check.severity == "error"
+        )
+        print(
+            f"\n{RED}La compuerta de calidad esta en fail{RESET} "
+            f"({nombres}). No se generan splits sobre un dataset bloqueado. "
+            f"Usa --force para saltar esta comprobacion.",
+            file=sys.stderr,
+        )
+        return 1
+
+    if args.force and (quality_report is None or quality_report.status == "fail"):
+        print(f"{YELLOW}--force: se ignora el estado de la compuerta de calidad.{RESET}")
+
+    try:
+        dataset = load_coco(RAW_ANNOTATIONS)
+        config = QualityConfig.from_yaml(Path(args.config))
+    except DatasetValidationError as error:
+        print(f"\n{RED}{error}{RESET}", file=sys.stderr)
+        return 1
+
+    if args.seed is not None:
+        splits_config = config.splits.model_copy(update={"seed": args.seed})
+        config = config.model_copy(update={"splits": splits_config})
+
+    heading("Splits estratificados")
+    result = splits_module.run(dataset, config, RAW_IMAGES, out=Path(args.out))
+
+    for split_name in ("train", "val", "test"):
+        print(f"  {split_name:<6}{result.manifest.counts[split_name]:>6} imagenes")
+
+    tolerancia = config.splits.tolerance
+    print(f"\n  {DIM}desviacion maxima por clase (tolerancia {tolerancia:.1%}):{RESET}")
+    peor = max(result.deviations.values(), default=0.0)
+    for name, value in sorted(result.deviations.items(), key=lambda item: -item[1]):
+        color = RED if value > config.splits.tolerance else GREEN
+        print(f"    {color}{value:>6.1%}{RESET}  {name}")
+
+    print(
+        f"\n  {result.duplicate_group_count} grupo(s) de casi-duplicados "
+        f"mantenidos juntos en un solo split."
+    )
+    print(f"\n  seed={config.splits.seed}")
+    print(f"reporte: {args.out}")
+
+    if peor > config.splits.tolerance:
+        print(
+            f"\n{YELLOW}Aviso:{RESET} la desviacion maxima ({peor:.1%}) supera la "
+            f"tolerancia configurada ({config.splits.tolerance:.1%})."
+        )
+    else:
+        print(f"\n{GREEN}Reparto dentro de tolerancia.{RESET}")
+
+    return 0
+
+
 def cmd_init_db(args: argparse.Namespace) -> int:
     """Crea las tablas que falten. Idempotente."""
     del args
@@ -220,6 +312,27 @@ def build_parser() -> argparse.ArgumentParser:
     gate.add_argument("--config", default="quality.yaml", help="Ruta de quality.yaml.")
     gate.add_argument("--out", default="reports/quality.json", help="Donde escribir el reporte.")
     gate.set_defaults(handler=cmd_gate)
+
+    split = subcommands.add_parser(
+        "split",
+        help="Tier 4 — reparte train/val/test estratificado, con semilla y sin fuga.",
+    )
+    split.add_argument("--config", default="quality.yaml", help="Ruta de quality.yaml.")
+    split.add_argument("--out", default="reports/splits.json", help="Donde escribir el reparto.")
+    split.add_argument(
+        "--quality-report",
+        default="reports/quality.json",
+        help="Reporte de la compuerta (Tier 3) que debe estar en pass.",
+    )
+    split.add_argument(
+        "--seed", type=int, default=None, help="Sobreescribe la semilla de quality.yaml."
+    )
+    split.add_argument(
+        "--force",
+        action="store_true",
+        help="Reparte aunque la compuerta de calidad este en fail o no exista.",
+    )
+    split.set_defaults(handler=cmd_split)
 
     init_db = subcommands.add_parser("init-db", help="Crea las tablas que falten.")
     init_db.set_defaults(handler=cmd_init_db)

@@ -64,3 +64,24 @@ spatial_bias:
   severity: warning
   grid_size: 3 # cuadricula 3x3 sobre cada imagen
   max_cell_share: 0.60 # ninguna celda debe concentrar mas del 60%
+
+# Splits estratificados (Frente 5). No es un check de la compuerta: son los
+# parametros que usa `dq split` para repartir train/val/test.
+#
+# La semilla fija el reparto para que sea reproducible: correr `dq split` dos
+# veces con el mismo `seed` da exactamente las mismas asignaciones.
+#
+# `tolerance` es la desviacion maxima permitida entre la proporcion de una
+# clase en un split y su proporcion en el dataset completo.
+#
+# `group_near_duplicates` mantiene unido en un solo split a cada grupo de
+# imagenes casi identicas que detecta el pHash del Frente 3 (`duplicates`):
+# es lo que garantiza cero fuga de near-duplicates entre splits.
+splits:
+  seed: 42
+  ratios:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+  tolerance: 0.05
+  group_near_duplicates: true

@@ -251,6 +251,73 @@ docker compose exec minio sh -c   'mc alias set l http://localhost:9000 "$MINIO_
 ```
 
 
+## Generar los splits (Tier 4)
+
+Una vez el dataset esta en `data/raw/` y la compuerta de calidad (Tier 3) pasa,
+este comando reparte las imagenes en train/val/test:
+
+```bash
+dq gate     # Tier 3 — tiene que pasar antes
+dq split    # Tier 4 — splits.json
+```
+
+```
+reports/quality.json ──► ¿status == pass? ──► CocoDataset + pHash (Frente 3)
+                                                        │
+                                          agrupa casi-duplicados en unidades
+                                                        │
+                                       reparte por estrato (semilla + largest
+                                       remainder) ──► reports/splits.json
+```
+
+### Por que la compuerta bloquea a `dq split`
+
+`quality.json` en `fail` significa que la compuerta del Tier 3 detecto algo
+que no debe publicarse (por ejemplo, demasiados duplicados). Generar splits
+sobre ese dataset produciria un `splits.json` que habria que tirar en cuanto
+se arreglara el problema. `dq split` lee `reports/quality.json` y se niega a
+correr si no existe o si `status == "fail"`, con el mismo espiritu que el
+docstring de la compuerta promete: *"la etapa siguiente del pipeline no se
+ejecuta"*. `--force` salta la comprobacion a proposito, dejando constancia en
+la terminal — util para iterar en local sin un dataset completo todavia.
+
+### Por que se agrupan los casi-duplicados en vez de descartarlos
+
+La unidad que reparte `dq split` no es la imagen: es el **grupo de
+casi-duplicados** que ya detecta el pHash del Frente 3
+(`analyzers.duplicates.duplicate_groups`, componentes conexas sobre la
+distancia de Hamming). Un grupo entero viaja a un solo split, lo que hace la
+fuga estructuralmente imposible en vez de ser un chequeo que alguien podria
+olvidar. Descartar las copias en vez de agruparlas era la alternativa mas
+simple, pero reduce el dataset y puede tirar el minimo de 300 imagenes por
+clase que exige la compuerta M3 — agrupar no pierde ninguna imagen.
+
+### Por que se estratifica por la clase minoritaria de la imagen
+
+Una imagen puede tener cajas de varias clases. Usar la clase **menos
+frecuente** de cada imagen como etiqueta de estratificacion (en vez de la mas
+frecuente, o de la combinacion completa) protege a las clases raras: son las
+que mas se perjudican si quedan mal representadas en val/test, y una clase
+con pocas imagenes en todo el dataset no puede permitirse perderlas todas en
+train.
+
+### Verificar
+
+```bash
+# El artefacto valida contra su propio contrato congelado
+python -c "
+from pathlib import Path
+from dataset_quality.models.splits import SplitsManifest
+m = SplitsManifest.model_validate_json(Path('reports/splits.json').read_text())
+print(m.counts, 'total:', len(m.assignments))
+"
+
+# Reproducibilidad: misma semilla, mismo reparto
+dq split --out /tmp/a.json && dq split --out /tmp/b.json
+diff <(python -c "import json;d=json.load(open('/tmp/a.json'));d.pop('generated_at');print(d)") \
+     <(python -c "import json;d=json.load(open('/tmp/b.json'));d.pop('generated_at');print(d)")
+```
+
 ## Verificación
 
 | Comando | Qué verifica |
@@ -308,12 +375,20 @@ cumple. Dos jobs:
 ├── scripts/
 │   ├── up.py                   # el comando: levanta y verifica todo
 │   └── down.py                 # apaga el entorno
-├── quality.yaml                 # umbrales de la compuerta de calidad (Frente 4)
+├── quality.yaml                 # umbrales de calidad (Frente 4) y parametros de splits (Frente 5)
 ├── src/dataset_quality/
 │   ├── settings.py             # pydantic-settings: la frontera con el entorno
 │   ├── db.py                   # engine SQLAlchemy -> MariaDB
 │   ├── storage.py              # cliente S3 -> MinIO
-│   ├── main.py                 # FastAPI: /, /health, /api/config, /docs
+│   ├── tables.py                # tablas SQLAlchemy: images, annotations, categories, splits
+│   ├── cli.py                   # subcomandos `dq`: ingest, analyze, gate, split, init-db
+│   ├── main.py                  # FastAPI: /, /health, /api/config, /docs
+│   ├── analyzers/                # Frente 3: los cinco analizadores + descriptiva
+│   │   └── duplicates.py        # pHash, distancia de Hamming, grupos de casi-duplicados
+│   ├── tiers/                    # un modulo por etapa del pipeline
+│   │   ├── ingest.py             # Tier 1 — COCO -> MinIO + MariaDB
+│   │   ├── gate.py               # Tier 3 — compuerta de calidad -> quality.json
+│   │   └── splits.py             # Tier 4 — splits estratificados -> splits.json
 │   ├── models/                 # Pydantic v2: COCO, quality.yaml y los 3 contratos de salida
 │   │   ├── coco.py             # dataset COCO crudo (entrada)
 │   │   ├── quality.py          # quality.yaml (entrada) y quality.json (salida)
@@ -356,12 +431,26 @@ credencial en el código.
 `quality.yaml` y los tres contratos de salida (`quality.json`, `splits.json`,
 `versions.json`) congelados con ejemplos escritos a mano.
 
+**Frente 3 (Analizadores de calidad) — cerrado.** Los cinco analizadores
+(objetos pequeños, desbalance de clases, duplicados por pHash, cajas
+degeneradas, sesgo espacial) corren sobre `CocoDataset` y devuelven
+`CheckResult`; `dq analyze` los orquesta.
+
+**Frente 4 (Compuerta de calidad) — cerrado.** `dq gate` evalúa la política de
+`quality.yaml`, escribe `quality.json` y **devuelve el exit code real**: un
+`fail` con `severity=error` detiene el pipeline de verdad.
+
+**Frente 5 (Splits estratificados) — cerrado.** `dq split` reparte
+train/val/test estratificando por la clase minoritaria de cada imagen, agrupa
+los casi-duplicados del pHash (Frente 3) en una sola unidad para garantizar
+cero fuga, reparte por semilla con *largest remainder*, y se niega a correr
+si la compuerta de calidad (Frente 4) está en `fail` — salvo `--force`.
+
 Lo que sigue, en el orden en que desbloquea:
 
-1. **Modelo de datos + migraciones** — `dataset_versions`, `quality_reports`,
-   `check_results`, `splits`.
-2. **Frente 3** — los cinco analizadores (objetos pequeños, desbalance,
-   duplicados por pHash, cajas degeneradas, sesgo espacial).
-3. **Frente 4** — la compuerta: `quality.yaml`, `quality.json` y exit code real.
-4. **Frente 5** — splits estratificados con semilla y sin fuga.
-5. **Frente 6** — `dvc init`, pipeline por etapas y remotes DEV/PROD.
+1. **Frente 6** — `dvc init`, pipeline por etapas (`ingest` → `analyze` →
+   `gate` → `split`) y remotes DEV/PROD hacia MinIO/S3.
+2. **Migraciones** — Alembic para versionar el esquema de `tables.py`
+   (`dataset_versions`, `quality_reports`, `check_results` siguen sin tabla).
+3. **Frente 7** — la app web que consulta `quality.json` y `splits.json`.
+4. **Frente 8** — el Copilot que interpreta los reportes.
