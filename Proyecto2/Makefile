@@ -1,10 +1,15 @@
-.PHONY: up down logs test lint fmt shell
+PYTHON ?= $(shell which python3 2>/dev/null || which python 2>/dev/null || echo python3)
+
+.PHONY: up down logs test lint fmt shell check
+
+check:       ## Validacion rapida completa en <30s (Ruff + Pytest + Terraform + Secretos)
+	$(PYTHON) scripts/check.py
 
 up:          ## Levanta todo el entorno local (app + MariaDB + MinIO)
-	python scripts/up.py
+	$(PYTHON) scripts/up.py
 
 down:        ## Apaga los contenedores (conserva los datos)
-	python scripts/down.py
+	$(PYTHON) scripts/down.py
 
 logs:        ## Sigue los logs de la app
 	docker compose logs -f app
@@ -20,3 +25,4 @@ fmt:         ## Ruff en modo escritura
 
 shell:       ## Shell dentro del contenedor de la app
 	docker compose exec app bash
+

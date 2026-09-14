@@ -193,6 +193,7 @@ evaluacion es el de despues, que dara el analizador de duplicados.
 
 | Comando | Qué verifica |
 | ------- | ------------ |
+| `python scripts/check.py` (o `make check`) | **Validación diaria (<30s, Frente 10)**: Ruff lint + format, pytest, Terraform validate e higiene de Git/secretos en un solo paso. |
 | `python scripts/up.py` | App + MariaDB + MinIO arriba, buckets creados y `/health` en OK. |
 | `curl localhost:8000/health` | `200` con ambos checks en `up`; `503` si alguno está caído. |
 | `curl localhost:8000/api/config` | Configuración efectiva sin credenciales. |
@@ -295,6 +296,9 @@ credencial en el código.
 `versions.json`) congelados con ejemplos escritos a mano.
 
 **Frente 9 (Infraestructura — Terraform) — cerrado.** 3 módulos por capa (red con VPC Endpoint para S3, almacenamiento S3 versionado con SSE-S3 y bloqueo público, e IAM OIDC sin claves estáticas para GitHub Actions). Validación automática integrada en CI.
+ 
+**Frente 10 (Ruff, pytest y CI) — cerrado.** Lint en cero (`ruff check`), formato estricto (`ruff format`), suite de pruebas con verificación de mutación (Red→Green) y comando único de validación rápida en menos de 5 segundos (`scripts/check.py` / `make check`). Pipeline de CI fail-fast sin `continue-on-error`.
+
 
 
 Lo que sigue, en el orden en que desbloquea:
