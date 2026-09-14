@@ -31,10 +31,15 @@ htmlcov/
 node_modules/
 dist/
 
-# Datos y artefactos: los versiona DVC, no Git
+# Dataset crudo: nunca lo versiona Git ni DVC como `outs`, lo trae
+# `scripts/export_from_mp1.py` y el pipeline solo lo lee (Frente 6).
 /data/
-# Salida de los analizadores: artefacto derivado, lo versiona DVC (F6)
-/reports/
+# Los `reports/*.json` (quality.json, splits.json, stats.json, versions.json)
+# SI se versionan: son salidas de `dvc.yaml` con `cache: false` -- texto
+# pequeño que interesa poder diferenciar entre commits. Lo que no se
+# versiona es el contenido pesado de cada release: el `.tar.zst` vive solo
+# en el remote de DVC/S3 (`dq release` lo sube con `dvc push`).
+/reports/releases/
 *.jpg
 *.jpeg
 *.png

@@ -318,6 +318,110 @@ diff <(python -c "import json;d=json.load(open('/tmp/a.json'));d.pop('generated_
      <(python -c "import json;d=json.load(open('/tmp/b.json'));d.pop('generated_at');print(d)")
 ```
 
+## Versionar y publicar (Tier 5, Frente 6)
+
+Con la compuerta en `pass` y los splits generados, `dq release` empaqueta el
+dataset y sus dos reportes en un artefacto inmutable, lo sube al almacen de
+objetos y registra la version:
+
+```bash
+dq gate && dq split   # tienen que pasar antes
+dq release            # Tier 5 — versions.json + s3://dataset-releases/...
+```
+
+```
+quality.json + splits.json + annotations.coco.json
+                    │
+      tar + zstandard, metadata deterministica
+      (mtime fijo, orden fijo de miembros)
+                    │
+                    ▼
+      s3://dataset-releases/<version>/dataset.tar.zst
+                    │
+                    ▼
+              reports/versions.json  (registro acumulado)
+```
+
+### El pipeline por etapas: `dvc.yaml`
+
+Las cuatro etapas puras del pipeline — `analyze`, `gate`, `split`, `release` —
+estan declaradas en `dvc.yaml` con sus `deps`/`outs` exactos, para que
+`dvc repro` reejecute solo lo que cambio:
+
+```bash
+dvc dag       # dibuja el grafo: gate -> split -> release (analyze es aparte)
+dvc repro     # corre lo que haga falta; si nada cambio, no hace nada
+```
+
+`gate` depende de `data/raw/` y `quality.yaml`; `split` depende ademas de
+`reports/quality.json`, así que **DVC no genera splits si la compuerta no
+paso** — el mismo candado que ya aplica `dq split` por su cuenta, ahora
+tambien expresado en el grafo. `release` depende de `quality.json` y
+`splits.json`.
+
+### Por que `dq ingest` no es una etapa de `dvc.yaml`
+
+`dvc repro` tiene que ser una funcion determinista de archivos a archivos.
+La ingesta escribe en MinIO y MariaDB, no deja un artefacto en disco que DVC
+pueda cachear, y exigiria Docker levantado para reproducir el pipeline. Queda
+como paso manual previo — igual que `export_from_mp1.py`, y por la misma
+razon: ocurre una vez, no en cada corrida del pipeline.
+
+### Que va a Git y que no
+
+| Se versiona en Git | Vive solo en el remote (`dvc push`) |
+| --- | --- |
+| `dvc.yaml`, `dvc.lock` | `data/raw/` (el dataset crudo) |
+| `reports/*.json` (`cache: false`: texto pequeño y diferenciable) | `reports/releases/<version>/dataset.tar.zst` |
+| `.dvc/config` (URLs de los remotes, sin credenciales) | — |
+| `.dvc/config.local` **nunca** — esta en `.dvc/.gitignore` | credenciales de `dev`/`prod` |
+
+### Remotes DEV/PROD
+
+`dev` (MinIO local) es el remote por defecto; `prod` (S3 real) esta declarado
+pero sin credenciales hasta que exista un bucket de produccion:
+
+```bash
+cat .dvc/config              # solo URLs, versionado, sin secretos
+python scripts/dvc_remote.py # escribe .dvc/config.local desde .env (MinIO)
+dvc push                     # sube al remote activo (dev)
+dvc push -r prod              # cuando 'prod' tenga sus propias credenciales
+```
+
+El mismo dataset da el mismo `dataset_fingerprint` sin importar a que remote
+se suba: el archivo se arma con metadata deterministica (mtime fijo a epoca
+0, miembros en orden fijo), asi que el contenido —no el destino— es lo unico
+que determina el hash.
+
+### Auto-incremento de version
+
+`dq release` sube el patch de la ultima version publicada (`0.1.0 -> 0.1.1`);
+`--minor`/`--major` suben esa parte, y `--version X.Y.Z` fuerza un valor.
+Sin historial previo arranca en `0.1.0`.
+
+### Verificar
+
+```bash
+# El registro valida contra su propio contrato congelado
+python -c "
+from pathlib import Path
+from dataset_quality.models.versions import VersionsManifest
+m = VersionsManifest.model_validate_json(Path('reports/versions.json').read_text())
+last = m.versions[-1]
+print(last.version, last.storage_uri, last.quality_status)
+"
+
+# El release esta de verdad en el bucket
+docker compose exec minio sh -c \
+  'mc alias set l http://localhost:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" && mc ls -r l/dataset-releases'
+
+# Reproducibilidad del grafo: sin cambios, dvc no reejecuta nada
+dvc repro     # "Stage ... didn't change, skipping"
+
+# --dry-run arma el archivo y calcula sus huellas sin subir nada
+dq release --dry-run
+```
+
 ## Verificación
 
 | Comando | Qué verifica |
@@ -353,6 +457,10 @@ ruff check . && ruff format .
 Las pruebas no tocan Docker ni la red: `tests/conftest.py` inyecta un entorno
 completo y `/health` se prueba con dobles de las dependencias.
 
+Para usar `dvc` (correr el pipeline, `dvc push`/`pull`), instala tambien el
+extra `pipeline`: `pip install -e ".[dev,pipeline]"`. No hace falta para
+`pytest`/`ruff`, solo para orquestar el grafo de `dvc.yaml`.
+
 ## Integración continua
 
 `.github/workflows/ci.yml` corre en cada push y **falla el build** si algo no
@@ -371,24 +479,29 @@ cumple. Dos jobs:
 ├── docker-compose.yml          # app + MariaDB + MinIO + minio-init
 ├── docker/Dockerfile           # imagen de la app (python:3.12-slim, usuario no root)
 ├── .env.example                # plantilla: el ÚNICO lugar con credenciales
-├── .github/workflows/ci.yml    # lint, pruebas y arranque desde cero
+├── .github/workflows/ci.yml    # lint, pruebas, arranque desde cero y grafo de DVC
+├── dvc.yaml                     # pipeline por etapas (Frente 6): analyze, gate, split, release
+├── dvc.lock                      # hashes de deps/outs de cada etapa — se versiona en Git
+├── .dvc/config                   # URLs de los remotes dev (MinIO) y prod (S3); sin credenciales
 ├── scripts/
 │   ├── up.py                   # el comando: levanta y verifica todo
-│   └── down.py                 # apaga el entorno
+│   ├── down.py                  # apaga el entorno
+│   └── dvc_remote.py             # escribe .dvc/config.local (credenciales) desde .env
 ├── quality.yaml                 # umbrales de calidad (Frente 4) y parametros de splits (Frente 5)
 ├── src/dataset_quality/
 │   ├── settings.py             # pydantic-settings: la frontera con el entorno
 │   ├── db.py                   # engine SQLAlchemy -> MariaDB
 │   ├── storage.py              # cliente S3 -> MinIO
-│   ├── tables.py                # tablas SQLAlchemy: images, annotations, categories, splits
-│   ├── cli.py                   # subcomandos `dq`: ingest, analyze, gate, split, init-db
+│   ├── tables.py                # tablas SQLAlchemy: images, annotations, categories, splits, dataset_versions
+│   ├── cli.py                   # subcomandos `dq`: ingest, analyze, gate, split, release, init-db
 │   ├── main.py                  # FastAPI: /, /health, /api/config, /docs
 │   ├── analyzers/                # Frente 3: los cinco analizadores + descriptiva
 │   │   └── duplicates.py        # pHash, distancia de Hamming, grupos de casi-duplicados
 │   ├── tiers/                    # un modulo por etapa del pipeline
-│   │   ├── ingest.py             # Tier 1 — COCO -> MinIO + MariaDB
+│   │   ├── ingest.py             # Tier 1 — COCO -> MinIO + MariaDB (fuera del grafo DVC)
 │   │   ├── gate.py               # Tier 3 — compuerta de calidad -> quality.json
-│   │   └── splits.py             # Tier 4 — splits estratificados -> splits.json
+│   │   ├── splits.py             # Tier 4 — splits estratificados -> splits.json
+│   │   └── release.py            # Tier 5 — empaqueta y publica -> versions.json (Frente 6)
 │   ├── models/                 # Pydantic v2: COCO, quality.yaml y los 3 contratos de salida
 │   │   ├── coco.py             # dataset COCO crudo (entrada)
 │   │   ├── quality.py          # quality.yaml (entrada) y quality.json (salida)
@@ -446,11 +559,19 @@ los casi-duplicados del pHash (Frente 3) en una sola unidad para garantizar
 cero fuga, reparte por semilla con *largest remainder*, y se niega a correr
 si la compuerta de calidad (Frente 4) está en `fail` — salvo `--force`.
 
+**Frente 6 (Versionado con DVC) — cerrado.** `dvc.yaml` declara el pipeline
+por etapas (`analyze`, `gate`, `split`, `release`); `dq release` empaqueta el
+dataset y sus reportes en un `.tar.zst` deterministico, lo publica en
+`s3://dataset-releases/<version>/` y registra la entrada en `versions.json`
+— el tercer contrato congelado, ya con productor. Dos remotes (`dev` hacia
+MinIO local, `prod` hacia S3) comparten el mismo content hash sin importar
+a cual se suba.
+
 Lo que sigue, en el orden en que desbloquea:
 
-1. **Frente 6** — `dvc init`, pipeline por etapas (`ingest` → `analyze` →
-   `gate` → `split`) y remotes DEV/PROD hacia MinIO/S3.
-2. **Migraciones** — Alembic para versionar el esquema de `tables.py`
-   (`dataset_versions`, `quality_reports`, `check_results` siguen sin tabla).
-3. **Frente 7** — la app web que consulta `quality.json` y `splits.json`.
-4. **Frente 8** — el Copilot que interpreta los reportes.
+1. **Migraciones** — Alembic para versionar el esquema de `tables.py`
+   (`quality_reports` y `check_results` siguen sin tabla; `splits` y
+   `dataset_versions` ya existen).
+2. **Frente 7** — la app web que consulta `quality.json`, `splits.json` y
+   `versions.json`.
+3. **Frente 8** — el Copilot que interpreta los reportes.

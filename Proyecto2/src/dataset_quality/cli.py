@@ -193,6 +193,49 @@ def _load_quality_report(path: Path) -> object | None:
     return QualityReport.model_validate_json(path.read_text(encoding="utf-8"))
 
 
+class _CompuertaBloqueadaError(Exception):
+    """La etapa debe abortar: `quality.json` falta o esta en `fail` sin --force."""
+
+
+def _exigir_compuerta_en_pass(path: Path, *, force: bool, accion: str) -> object | None:
+    """Bloquea una etapa si `quality.json` falta o esta en `fail`.
+
+    Devuelve el reporte cargado (o `None` si nunca se corrio la compuerta y se
+    sigue por `--force`) cuando la etapa puede continuar. Lanza
+    `_CompuertaBloqueadaError` — ya con el mensaje impreso — cuando debe abortar.
+    Compartida por `dq split` y `dq release`: las dos etapas posteriores a la
+    compuerta necesitan la misma comprobacion, y duplicarla es como se termina
+    teniendo dos politicas que divergen.
+    """
+    quality_report = _load_quality_report(path)
+
+    if quality_report is None and not force:
+        print(
+            f"\n{RED}No existe {path}.{RESET} Corre `dq gate` antes de {accion}, o pasa --force.",
+            file=sys.stderr,
+        )
+        raise _CompuertaBloqueadaError
+
+    if quality_report is not None and quality_report.status == "fail" and not force:
+        nombres = ", ".join(
+            check.name
+            for check in quality_report.checks
+            if check.status == "fail" and check.severity == "error"
+        )
+        print(
+            f"\n{RED}La compuerta de calidad esta en fail{RESET} "
+            f"({nombres}). No se puede {accion} sobre un dataset bloqueado. "
+            f"Usa --force para saltar esta comprobacion.",
+            file=sys.stderr,
+        )
+        raise _CompuertaBloqueadaError
+
+    if force and (quality_report is None or quality_report.status == "fail"):
+        print(f"{YELLOW}--force: se ignora el estado de la compuerta de calidad.{RESET}")
+
+    return quality_report
+
+
 def cmd_split(args: argparse.Namespace) -> int:
     """Tier 4 — reparte train/val/test: estratificado, con semilla, sin fuga.
 
@@ -207,32 +250,12 @@ def cmd_split(args: argparse.Namespace) -> int:
     from dataset_quality.tiers import splits as splits_module
     from dataset_quality.tiers.ingest import RAW_ANNOTATIONS, RAW_IMAGES
 
-    quality_report = _load_quality_report(Path(args.quality_report))
-
-    if quality_report is None and not args.force:
-        print(
-            f"\n{RED}No existe {args.quality_report}.{RESET} "
-            f"Corre `dq gate` antes de repartir splits, o pasa --force.",
-            file=sys.stderr,
+    try:
+        _exigir_compuerta_en_pass(
+            Path(args.quality_report), force=args.force, accion="repartir splits"
         )
+    except _CompuertaBloqueadaError:
         return 1
-
-    if quality_report is not None and quality_report.status == "fail" and not args.force:
-        nombres = ", ".join(
-            check.name
-            for check in quality_report.checks
-            if check.status == "fail" and check.severity == "error"
-        )
-        print(
-            f"\n{RED}La compuerta de calidad esta en fail{RESET} "
-            f"({nombres}). No se generan splits sobre un dataset bloqueado. "
-            f"Usa --force para saltar esta comprobacion.",
-            file=sys.stderr,
-        )
-        return 1
-
-    if args.force and (quality_report is None or quality_report.status == "fail"):
-        print(f"{YELLOW}--force: se ignora el estado de la compuerta de calidad.{RESET}")
 
     try:
         dataset = load_coco(RAW_ANNOTATIONS)
@@ -272,6 +295,73 @@ def cmd_split(args: argparse.Namespace) -> int:
         )
     else:
         print(f"\n{GREEN}Reparto dentro de tolerancia.{RESET}")
+
+    return 0
+
+
+def cmd_release(args: argparse.Namespace) -> int:
+    """Tier 5 — empaqueta, sube y registra una version del dataset.
+
+    Misma compuerta que `dq split`: sin `reports/quality.json` en `pass` no
+    hay release, salvo `--force`. `--dry-run` arma la entrada completa
+    (incluye armar el `.tar.zst` para calcular su huella) pero no sube nada
+    ni toca `versions.json` — util para ver que version y que huellas saldrian
+    antes de publicar de verdad.
+    """
+    from dataset_quality.models.coco import load_coco
+    from dataset_quality.settings import get_settings
+    from dataset_quality.tiers import release as release_module
+    from dataset_quality.tiers.gate import dataset_fingerprint
+    from dataset_quality.tiers.ingest import RAW_ANNOTATIONS
+
+    try:
+        _exigir_compuerta_en_pass(
+            Path(args.quality_report), force=args.force, accion="publicar un release"
+        )
+    except _CompuertaBloqueadaError:
+        return 1
+
+    if not Path(args.splits).is_file():
+        print(
+            f"\n{RED}No existe {args.splits}.{RESET} Corre `dq split` antes de publicar.",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        dataset = load_coco(RAW_ANNOTATIONS)
+    except DatasetValidationError as error:
+        print(f"\n{RED}{error}{RESET}", file=sys.stderr)
+        return 1
+
+    heading("Release")
+    bucket = get_settings().minio_bucket_releases
+    result = release_module.run(
+        coco_path=RAW_ANNOTATIONS,
+        quality_report_path=Path(args.quality_report),
+        splits_path=Path(args.splits),
+        dataset_fingerprint=dataset_fingerprint(dataset),
+        bucket=bucket,
+        bump=args.bump,
+        version=args.version,
+        notes=args.notes,
+        out=Path(args.out),
+        upload=not args.dry_run,
+    )
+
+    entry = result.entry
+    print(f"  version         {entry.version}")
+    print(f"  storage_uri     {entry.storage_uri}")
+    print(f"  quality_status  {entry.quality_status}")
+    print(f"  dataset         {entry.dataset_fingerprint[:16]}...")
+    print(f"  quality.json    {entry.quality_report_fingerprint[:16]}...")
+    print(f"  splits.json     {entry.splits_fingerprint[:16]}...")
+    print(f"  archivo         {result.archive_path}")
+
+    if args.dry_run:
+        print(f"\n{YELLOW}--dry-run:{RESET} no se subio nada ni se escribio {args.out}.")
+    else:
+        print(f"\n{GREEN}Release publicado.{RESET} reporte: {args.out}")
 
     return 0
 
@@ -333,6 +423,41 @@ def build_parser() -> argparse.ArgumentParser:
         help="Reparte aunque la compuerta de calidad este en fail o no exista.",
     )
     split.set_defaults(handler=cmd_split)
+
+    release = subcommands.add_parser(
+        "release",
+        help="Tier 5 — empaqueta, sube y registra una version publicada del dataset.",
+    )
+    release.add_argument(
+        "--quality-report",
+        default="reports/quality.json",
+        help="Reporte de la compuerta (Tier 3) que debe estar en pass.",
+    )
+    release.add_argument(
+        "--splits", default="reports/splits.json", help="Manifiesto de splits (Tier 4)."
+    )
+    release.add_argument("--out", default="reports/versions.json", help="Registro de versiones.")
+    release.add_argument(
+        "--version", default=None, help="Fuerza el semver en vez de auto-incrementar."
+    )
+    release.add_argument(
+        "--bump",
+        choices=("patch", "minor", "major"),
+        default="patch",
+        help="Que parte del semver subir si no se pasa --version (default: patch).",
+    )
+    release.add_argument("--notes", default=None, help="Nota libre para esta version.")
+    release.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Arma la entrada y el archivo, pero no sube nada ni escribe versions.json.",
+    )
+    release.add_argument(
+        "--force",
+        action="store_true",
+        help="Publica aunque la compuerta de calidad este en fail o no exista.",
+    )
+    release.set_defaults(handler=cmd_release)
 
     init_db = subcommands.add_parser("init-db", help="Crea las tablas que falten.")
     init_db.set_defaults(handler=cmd_init_db)
