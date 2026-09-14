@@ -93,9 +93,7 @@ class Client:
 
     def _connect(self) -> http.client.HTTPConnection:
         if self._connection is None:
-            factory = (
-                http.client.HTTPSConnection if self._secure else http.client.HTTPConnection
-            )
+            factory = http.client.HTTPSConnection if self._secure else http.client.HTTPConnection
             self._connection = factory(self._host, self._port, timeout=self._timeout)
         return self._connection
 
@@ -230,14 +228,18 @@ def report_minimum(counts: dict[str, int], min_images: int, min_classes: int) ->
     ok = len(qualifying) >= min_classes
     print()
     if ok:
-        print(f"{GREEN}Minimo cumplido.{RESET} {len(qualifying)} clases con >= {min_images}: "
-              f"{', '.join(qualifying)}")
+        print(
+            f"{GREEN}Minimo cumplido.{RESET} {len(qualifying)} clases con >= {min_images}: "
+            f"{', '.join(qualifying)}"
+        )
     else:
         faltan = min_classes - len(qualifying)
         # Las mas cercanas son las candidatas naturales a terminar primero.
         objetivo = [f"{name} (+{min_images - count})" for name, count in ranked[:min_classes]]
-        print(f"{RED}Minimo NO cumplido.{RESET} Hacen falta {faltan} clase(s) mas "
-              f"con >= {min_images} imagenes.")
+        print(
+            f"{RED}Minimo NO cumplido.{RESET} Hacen falta {faltan} clase(s) mas "
+            f"con >= {min_images} imagenes."
+        )
         print(f"Las mas cercanas: {', '.join(objetivo)}")
 
     print(

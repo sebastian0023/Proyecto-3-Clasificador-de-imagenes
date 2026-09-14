@@ -33,6 +33,8 @@ dist/
 
 # Datos y artefactos: los versiona DVC, no Git
 /data/
+# Salida de los analizadores: artefacto derivado, lo versiona DVC (F6)
+/reports/
 *.jpg
 *.jpeg
 *.png
