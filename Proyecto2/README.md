@@ -535,7 +535,6 @@ ejemplos de oro en `tests/fixtures/`. Cambiar su forma sin subir la versión y
 actualizar esos fixtures rompe la prueba a propósito: es lo que permite que
 los Frentes 3, 4, 5, 7 y 8 desarrollen en paralelo contra un contrato estable.
 
-
 ## Estado y siguiente paso
 
 **Frente 1 (Arquitectura y entorno) — cerrado.** Un comando levanta app +
@@ -579,7 +578,6 @@ formato estricto (`ruff format`), suite de pruebas con verificación de
 mutación (Red→Green) y comando único de validación rápida en menos de 5
 segundos (`scripts/check.py` / `make check`). Pipeline de CI fail-fast sin
 `continue-on-error`.
-
 
 Lo que sigue, en el orden en que desbloquea:
 

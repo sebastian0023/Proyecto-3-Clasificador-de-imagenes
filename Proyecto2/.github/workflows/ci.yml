@@ -23,6 +23,7 @@ jobs:
       - name: Instalar dependencias
         run: pip install -e ".[dev,pipeline]"
 
+      # El build DEBE fallar si el lint o las pruebas fallan: sin `continue-on-error`.
       - name: Ruff (lint)
         run: ruff check .
 
@@ -32,6 +33,11 @@ jobs:
       - name: pytest
         run: pytest
 
+      # No corre `dvc repro` de verdad: necesitaria el dataset de 300+
+      # imagenes y MinIO levantado, y el job `smoke` ya prueba que la
+      # infraestructura arranca. Esto solo valida que `dvc.yaml` describe un
+      # grafo bien formado (sin ciclos, sin una etapa que quedo sin conectar
+      # por un typo en `deps`/`outs`) sin ejecutar ningun comando del pipeline.
       - name: dvc.yaml es un grafo valido
         run: dvc dag
 
@@ -48,6 +54,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Reproduce la compuerta M1 de la rubrica: un clon limpio tiene que
+      # levantar app + MariaDB + MinIO con un solo comando, sin pasos extra.
+      # `up.py` falla con codigo != 0 si /health no queda en OK.
       - name: python scripts/up.py
         run: python scripts/up.py
 
@@ -98,11 +107,17 @@ jobs:
       - name: Instalar dependencias
         run: pip install -e ".[dev]"
 
+      # El dataset real vive en el remote de DVC y pesa 400 MB: traerlo aqui
+      # seria lento y necesitaria credenciales. Para probar que la compuerta
+      # BLOQUEA basta un dataset que no cumpla el minimo, y la fixture de F2
+      # tiene 3 imagenes: falla `min_images_per_class` por definicion.
       - name: Preparar un dataset que no cumple el minimo
         run: |
           mkdir -p data/raw/images
           cp tests/fixtures/coco_valido.json data/raw/annotations.coco.json
 
+      # Este paso es el que da sentido al Frente 4 en CI. Sin el, el `exit 1`
+      # de la compuerta solo existe en la terminal de quien lo corre a mano.
       - name: La compuerta debe rechazar un dataset insuficiente
         run: |
           if dq gate; then
@@ -136,6 +151,8 @@ jobs:
       run:
         working-directory: Proyecto2
     env:
+      # Un fork no tiene secretos: el paso de `dvc pull` se salta en vez de
+      # fallar. Referenciar `secrets` directamente en un `if` no es fiable.
       HAY_CREDENCIALES: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
 
     steps:
@@ -149,6 +166,9 @@ jobs:
       - name: Instalar dependencias
         run: pip install -e ".[pipeline]"
 
+      # Guarda contra el fallo silencioso que tuvimos: si alguien borra el
+      # puntero, `dvc pull` deja de recuperar el dataset y nadie se entera
+      # hasta que un companero clona el repo y se encuentra `data/raw` vacio.
       - name: El puntero de DVC existe y es valido
         run: |
           test -f data/raw.dvc || {
@@ -158,6 +178,7 @@ jobs:
 
           python - <<'PY'
           import sys
+
           import yaml
 
           puntero = yaml.safe_load(open("data/raw.dvc", encoding="utf-8"))
@@ -169,6 +190,8 @@ jobs:
           print(f"data/raw -> {outs[0]['md5']}  ({outs[0]['nfiles']} archivos)")
           PY
 
+      # Solo corre cuando el repositorio tiene credenciales del remote `prod`.
+      # Sin ellas el paso se salta en vez de fallar: un fork no tiene secretos.
       - name: Recuperar el dataset desde el remote
         if: env.HAY_CREDENCIALES == 'true'
         env:
