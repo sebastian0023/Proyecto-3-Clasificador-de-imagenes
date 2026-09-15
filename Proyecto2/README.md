@@ -535,6 +535,7 @@ ejemplos de oro en `tests/fixtures/`. Cambiar su forma sin subir la versión y
 actualizar esos fixtures rompe la prueba a propósito: es lo que permite que
 los Frentes 3, 4, 5, 7 y 8 desarrollen en paralelo contra un contrato estable.
 
+
 ## Estado y siguiente paso
 
 **Frente 1 (Arquitectura y entorno) — cerrado.** Un comando levanta app +
