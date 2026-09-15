@@ -366,6 +366,67 @@ def cmd_release(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_dedupe(args: argparse.Namespace) -> int:
+    """Mueve a cuarentena las copias que marco el analizador de duplicados.
+
+    Es la unica operacion que modifica el dataset crudo, asi que por defecto
+    solo ENSENA el plan: hace falta `--yes` para ejecutarlo.
+    """
+    from dataset_quality.models.coco import load_coco
+    from dataset_quality.models.quality import QualityReport
+    from dataset_quality.tiers import dedupe
+    from dataset_quality.tiers.ingest import RAW_ANNOTATIONS, RAW_IMAGES
+
+    reporte_path = Path("reports/quality.json")
+    if not reporte_path.is_file():
+        print(f"{RED}No hay `reports/quality.json`. Corre `dq gate` antes.{RESET}", file=sys.stderr)
+        return 1
+
+    try:
+        dataset = load_coco(RAW_ANNOTATIONS)
+        reporte = QualityReport.model_validate_json(reporte_path.read_text(encoding="utf-8"))
+        plan = dedupe.build_plan(dataset, reporte)
+    except DatasetValidationError as error:
+        print(f"{RED}{error}{RESET}", file=sys.stderr)
+        return 1
+    except dedupe.DedupeError as error:
+        print(f"{RED}{error}{RESET}", file=sys.stderr)
+        return 1
+
+    heading("Duplicados")
+    if plan.is_empty:
+        print(f"  {GREEN}No hay duplicados que eliminar.{RESET}")
+        return 0
+
+    print(f"  se eliminarian {plan.remove_ids.__len__()} imagenes de {plan.total_images}")
+    print(f"  y {plan.annotations_removed} cajas asociadas")
+    print(f"  quedarian {plan.kept}")
+    print(f"\n{DIM}muestra:{RESET}")
+    for nombre in plan.remove_files[:8]:
+        print(f"    {DIM}{nombre[:72]}{RESET}")
+    if len(plan.remove_files) > 8:
+        print(f"    {DIM}... y {len(plan.remove_files) - 8} mas{RESET}")
+
+    if not args.yes:
+        print(f"\n{YELLOW}Esto es solo el plan.{RESET} Anade --yes para ejecutarlo.")
+        return 0
+
+    resultado = dedupe.apply(plan, dataset, RAW_ANNOTATIONS, RAW_IMAGES)
+    print(f"\n{GREEN}Hecho.{RESET}")
+    print(f"  {resultado.removed_images} imagenes movidas a {resultado.quarantine_dir}/")
+    print(f"  {resultado.removed_annotations} cajas eliminadas del COCO")
+    print(f"  quedan {resultado.remaining_images} imagenes")
+    if resultado.missing_on_disk:
+        print(f"  {YELLOW}{len(resultado.missing_on_disk)} no estaban en disco{RESET}")
+
+    print(f"\n{DIM}El dataset cambio: los reportes anteriores ya no lo describen.{RESET}")
+    print("  dq analyze --json reports/stats.json")
+    print("  dq gate")
+    print("  dvc add data/raw && dvc push")
+    print(f"\n{DIM}Para revertir: mueve los archivos de vuelta a data/raw/images/.{RESET}")
+    return 0
+
+
 def cmd_init_db(args: argparse.Namespace) -> int:
     """Crea las tablas que falten. Idempotente."""
     del args
@@ -458,6 +519,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Publica aunque la compuerta de calidad este en fail o no exista.",
     )
     release.set_defaults(handler=cmd_release)
+
+    dedupe = subcommands.add_parser(
+        "dedupe", help="Mueve a cuarentena las copias que marco el analizador."
+    )
+    dedupe.add_argument(
+        "--yes", action="store_true", help="Ejecuta; sin esto solo muestra el plan."
+    )
+    dedupe.set_defaults(handler=cmd_dedupe)
 
     init_db = subcommands.add_parser("init-db", help="Crea las tablas que falten.")
     init_db.set_defaults(handler=cmd_init_db)
