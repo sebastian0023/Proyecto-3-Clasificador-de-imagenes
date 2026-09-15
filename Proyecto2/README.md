@@ -535,6 +535,7 @@ ejemplos de oro en `tests/fixtures/`. Cambiar su forma sin subir la versión y
 actualizar esos fixtures rompe la prueba a propósito: es lo que permite que
 los Frentes 3, 4, 5, 7 y 8 desarrollen en paralelo contra un contrato estable.
 
+
 ## Estado y siguiente paso
 
 **Frente 1 (Arquitectura y entorno) — cerrado.** Un comando levanta app +
@@ -545,13 +546,6 @@ credencial en el código.
 `quality.yaml` y los tres contratos de salida (`quality.json`, `splits.json`,
 `versions.json`) congelados con ejemplos escritos a mano.
 
-<<<<<<< HEAD
-**Frente 9 (Infraestructura — Terraform) — cerrado.** 3 módulos por capa (red con VPC Endpoint para S3, almacenamiento S3 versionado con SSE-S3 y bloqueo público, e IAM OIDC sin claves estáticas para GitHub Actions). Validación automática integrada en CI.
- 
-**Frente 10 (Ruff, pytest y CI) — cerrado.** Lint en cero (`ruff check`), formato estricto (`ruff format`), suite de pruebas con verificación de mutación (Red→Green) y comando único de validación rápida en menos de 5 segundos (`scripts/check.py` / `make check`). Pipeline de CI fail-fast sin `continue-on-error`.
-
-
-=======
 **Frente 3 (Analizadores de calidad) — cerrado.** Los cinco analizadores
 (objetos pequeños, desbalance de clases, duplicados por pHash, cajas
 degeneradas, sesgo espacial) corren sobre `CocoDataset` y devuelven
@@ -569,12 +563,23 @@ si la compuerta de calidad (Frente 4) está en `fail` — salvo `--force`.
 
 **Frente 6 (Versionado con DVC) — cerrado.** `dvc.yaml` declara el pipeline
 por etapas (`analyze`, `gate`, `split`, `release`); `dq release` empaqueta el
-dataset y sus reportes en un `.tar.zst` deterministico, lo publica en
+dataset y sus reportes en un `.tar.zst` determinístico, lo publica en
 `s3://dataset-releases/<version>/` y registra la entrada en `versions.json`
 — el tercer contrato congelado, ya con productor. Dos remotes (`dev` hacia
 MinIO local, `prod` hacia S3) comparten el mismo content hash sin importar
-a cual se suba.
->>>>>>> origin/main
+a cuál se suba.
+
+**Frente 9 (Infraestructura — Terraform) — cerrado.** 3 módulos por capa:
+red con VPC Endpoint para S3, almacenamiento S3 versionado con SSE-S3 y
+bloqueo público, e IAM OIDC sin claves estáticas para GitHub Actions.
+Validación automática integrada en CI.
+
+**Frente 10 (Ruff, pytest y CI) — cerrado.** Lint en cero (`ruff check`),
+formato estricto (`ruff format`), suite de pruebas con verificación de
+mutación (Red→Green) y comando único de validación rápida en menos de 5
+segundos (`scripts/check.py` / `make check`). Pipeline de CI fail-fast sin
+`continue-on-error`.
+
 
 Lo que sigue, en el orden en que desbloquea:
 
