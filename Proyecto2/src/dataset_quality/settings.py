@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     minio_use_ssl: bool = False
     minio_bucket_releases: str = Field(min_length=1)
     minio_bucket_dvc_cache: str = Field(min_length=1)
+    # Binarios del dataset crudo. Una base de datos es pesima guardando
+    # JPEGs: los bytes van al almacen de objetos y en MariaDB queda la llave.
+    minio_bucket_images: str = Field(min_length=1)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -74,7 +77,11 @@ class Settings(BaseSettings):
     @property
     def buckets(self) -> tuple[str, ...]:
         """Buckets que el entorno local debe tener creados."""
-        return (self.minio_bucket_releases, self.minio_bucket_dvc_cache)
+        return (
+            self.minio_bucket_releases,
+            self.minio_bucket_dvc_cache,
+            self.minio_bucket_images,
+        )
 
     def public_summary(self) -> dict[str, object]:
         """Vista de la configuracion SIN secretos, apta para exponer por HTTP."""

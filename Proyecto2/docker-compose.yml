@@ -54,6 +54,7 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
       MINIO_BUCKET_RELEASES: ${MINIO_BUCKET_RELEASES:?falta MINIO_BUCKET_RELEASES en .env}
       MINIO_BUCKET_DVC_CACHE: ${MINIO_BUCKET_DVC_CACHE:?falta MINIO_BUCKET_DVC_CACHE en .env}
+      MINIO_BUCKET_IMAGES: ${MINIO_BUCKET_IMAGES:?falta MINIO_BUCKET_IMAGES en .env}
     entrypoint:
       - sh
       - -c
@@ -62,7 +63,8 @@ services:
         mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
         mc mb --ignore-existing "local/$$MINIO_BUCKET_RELEASES"
         mc mb --ignore-existing "local/$$MINIO_BUCKET_DVC_CACHE"
-        echo "buckets listos: $$MINIO_BUCKET_RELEASES, $$MINIO_BUCKET_DVC_CACHE"
+        mc mb --ignore-existing "local/$$MINIO_BUCKET_IMAGES"
+        echo "buckets listos: $$MINIO_BUCKET_RELEASES, $$MINIO_BUCKET_DVC_CACHE, $$MINIO_BUCKET_IMAGES"
 
   app:
     build:
@@ -84,6 +86,14 @@ services:
     volumes:
       # Codigo montado en vivo: editar en el host recarga uvicorn.
       - ./src:/app/src:ro
+      # La politica de calidad, en solo lectura: cambiar un umbral en el host
+      # surte efecto sin reconstruir la imagen. Sin esto el contenedor puede
+      # servir reportes pero no volver a medir el dataset.
+      - ./quality.yaml:/app/quality.yaml:ro
+      # El dataset y los reportes se comparten con el host, para que dé igual
+      # correr `dq` dentro del contenedor o fuera: ambos ven los mismos datos.
+      - ./data:/app/data
+      - ./reports:/app/reports
     command:
       - uvicorn
       - dataset_quality.main:app

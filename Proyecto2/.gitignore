@@ -31,8 +31,21 @@ htmlcov/
 node_modules/
 dist/
 
-# Datos y artefactos: los versiona DVC, no Git
-/data/
+# Dataset crudo: nunca lo versiona Git ni DVC como `outs`, lo trae
+# `scripts/export_from_mp1.py` y el pipeline solo lo lee (Frente 6).
+# DVC gestiona el contenido de `data/`: al hacer `dvc add` escribe el ignore
+# correspondiente en `data/.gitignore`. Lo que SI entra en Git son los punteros
+# `.dvc`, que son tres lineas de texto con el hash del contenido. Sin ellos
+# nadie puede hacer `dvc pull` para recuperar el dataset de un commit dado.
+/data/*
+!/data/*.dvc
+!/data/.gitignore
+# Los `reports/*.json` (quality.json, splits.json, stats.json, versions.json)
+# SI se versionan: son salidas de `dvc.yaml` con `cache: false` -- texto
+# pequeño que interesa poder diferenciar entre commits. Lo que no se
+# versiona es el contenido pesado de cada release: el `.tar.zst` vive solo
+# en el remote de DVC/S3 (`dq release` lo sube con `dvc push`).
+/reports/releases/
 *.jpg
 *.jpeg
 *.png
@@ -45,3 +58,9 @@ dist/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# App web (Frente 7). El build es artefacto derivado: lo produce
+# `npm run build` en el host y el Dockerfile dentro de la imagen.
+/web/node_modules/
+/src/dataset_quality/static/assets/
+/src/dataset_quality/static/index.html

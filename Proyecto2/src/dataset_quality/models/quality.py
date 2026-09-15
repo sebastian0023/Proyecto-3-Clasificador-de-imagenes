@@ -20,8 +20,26 @@ from yaml import YAMLError
 
 from dataset_quality.models import StrictModel
 from dataset_quality.models.errors import from_pydantic, single_issue
+from dataset_quality.models.splits import SplitRatios
 
 Severity = Literal["error", "warning"]
+
+
+class MinImagesPerClassCheck(StrictModel):
+    """Exige volumen suficiente: N imagenes distintas en al menos M clases.
+
+    Es el requisito del curso (compuerta M3) y el unico check que mide si hay
+    dataset con el que entrenar algo. Nace en `error` a proposito: sin volumen
+    no hay nada que publicar, por bien que salgan los demas analizadores.
+
+    Se cuentan IMAGENES distintas que contienen al menos una caja de la clase,
+    no cajas: una foto con siete coches aporta una imagen a `car`, no siete.
+    """
+
+    enabled: bool = True
+    severity: Severity = "error"
+    min_images: int = Field(ge=1)
+    min_classes: int = Field(ge=1)
 
 
 class SmallObjectsCheck(StrictModel):
@@ -67,19 +85,42 @@ class SpatialBiasCheck(StrictModel):
     max_cell_share: float = Field(gt=0.0, le=1.0)
 
 
+class SplitsConfig(StrictModel):
+    """Parametros del reparto estratificado (Frente 5).
+
+    No es un check de la compuerta (no tiene `severity` ni `max_ratio`): es la
+    configuracion que consume `tiers/splits.py` para producir `splits.json`.
+    Vive aqui, junto a los demas umbrales, para que un solo archivo — rastreado
+    por DVC en el Frente 6 — sea la fuente de verdad de todos los parametros.
+    """
+
+    seed: int = 42
+    ratios: SplitRatios
+    # Desviacion maxima tolerada entre la proporcion de una clase en un split
+    # y su proporcion global. Por encima de esto el reparto no cuenta como
+    # "estratificado dentro de tolerancia".
+    tolerance: float = Field(default=0.05, ge=0.0, le=1.0)
+    # Los grupos de casi-duplicados (pHash del Frente 3) viajan juntos a un
+    # solo split; desactivarlo reparte imagen por imagen y arriesga fuga.
+    group_near_duplicates: bool = True
+
+
 class QualityConfig(StrictModel):
     """Umbrales de calidad. Se carga desde `quality.yaml`."""
 
     version: int = Field(default=1, ge=1)
+    min_images_per_class: MinImagesPerClassCheck
     small_objects: SmallObjectsCheck
     class_imbalance: ClassImbalanceCheck
     duplicates: DuplicatesCheck
     degenerate_boxes: DegenerateBoxesCheck
     spatial_bias: SpatialBiasCheck
+    splits: SplitsConfig
 
     def enabled_checks(self) -> tuple[str, ...]:
         """Nombres de los analizadores activos, en el orden declarado arriba."""
         names = (
+            "min_images_per_class",
             "small_objects",
             "class_imbalance",
             "duplicates",
