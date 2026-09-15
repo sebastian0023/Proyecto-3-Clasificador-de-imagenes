@@ -86,6 +86,10 @@ services:
     volumes:
       # Codigo montado en vivo: editar en el host recarga uvicorn.
       - ./src:/app/src:ro
+      # La politica de calidad, en solo lectura: cambiar un umbral en el host
+      # surte efecto sin reconstruir la imagen. Sin esto el contenedor puede
+      # servir reportes pero no volver a medir el dataset.
+      - ./quality.yaml:/app/quality.yaml:ro
       # El dataset y los reportes se comparten con el host, para que dé igual
       # correr `dq` dentro del contenedor o fuera: ambos ven los mismos datos.
       - ./data:/app/data
