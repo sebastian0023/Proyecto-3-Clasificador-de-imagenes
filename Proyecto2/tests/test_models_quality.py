@@ -20,6 +20,7 @@ def test_el_quality_yaml_real_del_repo_carga_y_valida() -> None:
     assert config.version == 1
     assert config.duplicates.phash_hamming_distance == 5
     assert config.enabled_checks() == (
+        "min_images_per_class",
         "small_objects",
         "class_imbalance",
         "duplicates",

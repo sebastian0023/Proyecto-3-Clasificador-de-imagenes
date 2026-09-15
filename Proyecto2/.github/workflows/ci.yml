@@ -21,7 +21,7 @@ jobs:
           cache: pip
 
       - name: Instalar dependencias
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,pipeline]"
 
       # El build DEBE fallar si el lint o las pruebas fallan: sin `continue-on-error`.
       - name: Ruff (lint)
@@ -32,6 +32,14 @@ jobs:
 
       - name: pytest
         run: pytest
+
+      # No corre `dvc repro` de verdad: necesitaria el dataset de 300+
+      # imagenes y MinIO levantado, y el job `smoke` ya prueba que la
+      # infraestructura arranca. Esto solo valida que `dvc.yaml` describe un
+      # grafo bien formado (sin ciclos, sin una etapa que quedo sin conectar
+      # por un typo en `deps`/`outs`) sin ejecutar ningun comando del pipeline.
+      - name: dvc.yaml es un grafo valido
+        run: dvc dag
 
   smoke:
     name: Arranque desde cero

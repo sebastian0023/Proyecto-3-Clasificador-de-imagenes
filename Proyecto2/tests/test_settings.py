@@ -22,7 +22,7 @@ def test_carga_desde_el_entorno(env) -> None:
 
     assert settings.app_env == "test"
     assert settings.db_name == "test_db"
-    assert settings.buckets == ("dataset-releases", "dvc-cache")
+    assert settings.buckets == ("dataset-releases", "dvc-cache", "dataset-images")
 
 
 def test_falta_una_credencial_y_aborta(env) -> None:
