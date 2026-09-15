@@ -580,6 +580,7 @@ mutación (Red→Green) y comando único de validación rápida en menos de 5
 segundos (`scripts/check.py` / `make check`). Pipeline de CI fail-fast sin
 `continue-on-error`.
 
+
 Lo que sigue, en el orden en que desbloquea:
 
 1. **Migraciones** — Alembic para versionar el esquema de `tables.py`

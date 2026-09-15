@@ -154,7 +154,6 @@ jobs:
       # Un fork no tiene secretos: el paso de `dvc pull` se salta en vez de
       # fallar. Referenciar `secrets` directamente en un `if` no es fiable.
       HAY_CREDENCIALES: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -175,7 +174,6 @@ jobs:
             echo "::error::Falta data/raw.dvc. El dataset dejo de estar versionado."
             exit 1
           }
-
           python - <<'PY'
           import sys
 
@@ -183,10 +181,8 @@ jobs:
 
           puntero = yaml.safe_load(open("data/raw.dvc", encoding="utf-8"))
           outs = puntero.get("outs") or []
-
           if not outs or "md5" not in outs[0] or not outs[0].get("nfiles"):
               sys.exit("data/raw.dvc no declara un directorio con hash y nfiles")
-
           print(f"data/raw -> {outs[0]['md5']}  ({outs[0]['nfiles']} archivos)")
           PY
 
