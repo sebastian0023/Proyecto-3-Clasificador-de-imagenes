@@ -1,0 +1,132 @@
+"""Endpoints que sirven los artefactos del pipeline a la app web.
+
+Cada artefacto se lee de `reports/`, se **valida contra su contrato** y se
+devuelve envuelto en un sobre que dice de donde salio:
+
+    {"source": "pipeline", "produced_by": "dq gate", "data": {...}}
+
+Validar antes de servir no es ceremonia: si un archivo en disco dejo de cumplir
+su contrato — porque alguien cambio un modelo y no regenero el artefacto — es
+mejor un 500 que lo diga que una pantalla pintando basura en silencio.
+
+Ningun endpoint recalcula nada. La app web dibuja lo que el pipeline decidio, y
+esa separacion es la que permite construir la UI contra los contratos sin
+esperar a que el pipeline termine.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, HTTPException
+
+from dataset_quality.models.exploration import ExplorationManifest
+from dataset_quality.models.quality import QualityReport
+from dataset_quality.models.splits import SplitsManifest
+from dataset_quality.models.versions import VersionsManifest
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+REPORTS = REPO_ROOT / "reports"
+
+router = APIRouter(prefix="/api", tags=["artefactos"])
+
+
+@dataclass(frozen=True)
+class Artifact:
+    """Un artefacto del pipeline: donde vive, que contrato cumple y quien lo crea."""
+
+    name: str
+    path: Path
+    model: type
+    produced_by: str
+
+
+ARTIFACTS: dict[str, Artifact] = {
+    "quality": Artifact("quality", REPORTS / "quality.json", QualityReport, "dq gate"),
+    "splits": Artifact("splits", REPORTS / "splits.json", SplitsManifest, "dq split"),
+    "versions": Artifact("versions", REPORTS / "versions.json", VersionsManifest, "dq release"),
+    "exploration": Artifact(
+        "exploration", REPORTS / "exploration.json", ExplorationManifest, "dq analyze"
+    ),
+}
+
+
+def load(artifact: Artifact) -> dict[str, Any]:
+    """Lee, valida y envuelve un artefacto. 503 si el pipeline aun no lo produjo."""
+    if not artifact.path.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"Todavia no existe `{artifact.path.name}`. "
+                f"Corre `{artifact.produced_by}` para generarlo."
+            ),
+        )
+
+    try:
+        validado = artifact.model.model_validate_json(artifact.path.read_text(encoding="utf-8"))
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"`{artifact.path.name}` ya no cumple el contrato de "
+                f"{artifact.model.__name__}: {error}"
+            ),
+        ) from error
+
+    return {
+        "source": "pipeline",
+        "produced_by": artifact.produced_by,
+        "data": json.loads(validado.model_dump_json()),
+    }
+
+
+@router.get("/status")
+def status() -> dict[str, Any]:
+    """Que artefactos existen. La app lo consulta al arrancar para orientarse."""
+    return {
+        name: {"available": artifact.path.is_file(), "produced_by": artifact.produced_by}
+        for name, artifact in ARTIFACTS.items()
+    }
+
+
+@router.get("/quality")
+def quality() -> dict[str, Any]:
+    """Overview y Analyzers: el veredicto de la compuerta, valor contra umbral."""
+    return load(ARTIFACTS["quality"])
+
+
+@router.get("/splits")
+def splits() -> dict[str, Any]:
+    """Splits: reparto train/val/test, su semilla y sus conteos."""
+    return load(ARTIFACTS["splits"])
+
+
+@router.get("/versions")
+def versions() -> dict[str, Any]:
+    """Versions: historial de releases con sus tres huellas."""
+    return load(ARTIFACTS["versions"])
+
+
+@router.get("/exploration")
+def exploration() -> dict[str, Any]:
+    """Exploracion: la proyeccion 2D precomputada."""
+    return load(ARTIFACTS["exploration"])
+
+
+@router.get("/stats")
+def stats() -> dict[str, Any]:
+    """Descriptiva del Tier 2: el contexto sin el cual un umbral no dice nada."""
+    path = REPORTS / "stats.json"
+    if not path.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail="Todavia no existe `stats.json`. Corre `dq analyze --json reports/stats.json`.",
+        )
+    return {
+        "source": "pipeline",
+        "produced_by": "dq analyze",
+        "data": json.loads(path.read_text(encoding="utf-8")),
+    }
