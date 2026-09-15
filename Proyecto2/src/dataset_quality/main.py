@@ -10,6 +10,9 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from dataset_quality import __version__
+from dataset_quality.api.artifacts import router as artifacts_router
+from dataset_quality.api.duplicates import router as duplicates_router
+from dataset_quality.api.pipeline import router as pipeline_router
 from dataset_quality.db import check_database
 from dataset_quality.storage import check_object_storage
 
@@ -57,11 +60,33 @@ def create_app() -> FastAPI:
 
         return get_settings().public_summary()
 
-    @app.get("/", include_in_schema=False)
-    def index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+    app.include_router(artifacts_router)
+    app.include_router(duplicates_router)
+    app.include_router(pipeline_router)
 
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    # El build de Vite (si existe). En desarrollo puede no estar compilado
+    # todavia: la API sigue respondiendo y /docs tambien.
+    if (STATIC_DIR / "assets").is_dir():
+        app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
+
+    index_html = STATIC_DIR / "index.html"
+
+    # `response_model=None`: el retorno es una union de Response y FastAPI
+    # intentaria construir un modelo Pydantic a partir de ella.
+    @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
+    def spa(full_path: str) -> FileResponse | JSONResponse:
+        """Cualquier ruta de navegacion devuelve el index de la SPA."""
+        del full_path
+        if index_html.is_file():
+            return FileResponse(index_html)
+        return JSONResponse(
+            content={
+                "mensaje": "La app web no esta compilada.",
+                "como": "npm --prefix web ci && npm --prefix web run build",
+                "api": "/docs",
+            }
+        )
+
     return app
 
 
