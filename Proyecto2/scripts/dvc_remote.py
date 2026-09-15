@@ -33,9 +33,11 @@ def find_dvc() -> str:
     sale si alguien corre `python scripts/dvc_remote.py` con el venv sin
     activar, en vez de `.venv/bin/python scripts/dvc_remote.py`.
     """
-    junto_al_interprete = Path(sys.executable).with_name("dvc")
-    if junto_al_interprete.is_file():
-        return str(junto_al_interprete)
+    # En Windows el ejecutable es `dvc.exe`; en Linux y macOS, `dvc` a secas.
+    for nombre in ("dvc.exe", "dvc"):
+        junto_al_interprete = Path(sys.executable).with_name(nombre)
+        if junto_al_interprete.is_file():
+            return str(junto_al_interprete)
 
     en_path = shutil.which("dvc")
     if en_path is not None:
