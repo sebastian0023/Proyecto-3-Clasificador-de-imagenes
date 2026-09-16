@@ -81,15 +81,118 @@ jobs:
         with:
           terraform_version: "1.10.0"
 
-      # Verifica formato estricto según la guía de estilo de Terraform
       - name: Terraform Format Check
         run: terraform fmt -check
 
-      # Inicialización sin backend remoto
       - name: Terraform Init
         run: terraform init -backend=false
 
-      # Validación estricta de tipos y recursos
       - name: Terraform Validate
         run: terraform validate
 
+  compuerta:
+    name: La compuerta bloquea el build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -e ".[dev]"
+
+      # El dataset real vive en el remote de DVC y pesa 400 MB: traerlo aqui
+      # seria lento y necesitaria credenciales. Para probar que la compuerta
+      # BLOQUEA basta un dataset que no cumpla el minimo, y la fixture de F2
+      # tiene 3 imagenes: falla `min_images_per_class` por definicion.
+      - name: Preparar un dataset que no cumple el minimo
+        run: |
+          mkdir -p data/raw/images
+          cp tests/fixtures/coco_valido.json data/raw/annotations.coco.json
+
+      # Este paso es el que da sentido al Frente 4 en CI. Sin el, el `exit 1`
+      # de la compuerta solo existe en la terminal de quien lo corre a mano.
+      - name: La compuerta debe rechazar un dataset insuficiente
+        run: |
+          if dq gate; then
+            echo "::error::La compuerta dejo pasar un dataset de 3 imagenes."
+            exit 1
+          fi
+          echo "La compuerta bloqueo, como debe."
+
+      - name: El reporte nombra la regla que fallo
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          reporte = json.loads(Path("reports/quality.json").read_text(encoding="utf-8"))
+          bloquean = [
+              check["name"]
+              for check in reporte["checks"]
+              if check["status"] == "fail" and check["severity"] == "error"
+          ]
+          assert reporte["status"] == "fail", reporte["status"]
+          assert reporte["exit_code"] == 1, reporte["exit_code"]
+          assert "min_images_per_class" in bloquean, bloquean
+          print("Bloquean:", ", ".join(bloquean))
+          PY
+
+  versionado:
+    name: El dataset sigue versionado
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto2
+    env:
+      # Un fork no tiene secretos: el paso de `dvc pull` se salta en vez de
+      # fallar. Referenciar `secrets` directamente en un `if` no es fiable.
+      HAY_CREDENCIALES: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -e ".[pipeline]"
+
+      # Guarda contra el fallo silencioso que tuvimos: si alguien borra el
+      # puntero, `dvc pull` deja de recuperar el dataset y nadie se entera
+      # hasta que un companero clona el repo y se encuentra `data/raw` vacio.
+      - name: El puntero de DVC existe y es valido
+        run: |
+          test -f data/raw.dvc || {
+            echo "::error::Falta data/raw.dvc. El dataset dejo de estar versionado."
+            exit 1
+          }
+          python - <<'PY'
+          import sys
+
+          import yaml
+
+          puntero = yaml.safe_load(open("data/raw.dvc", encoding="utf-8"))
+          outs = puntero.get("outs") or []
+          if not outs or "md5" not in outs[0] or not outs[0].get("nfiles"):
+              sys.exit("data/raw.dvc no declara un directorio con hash y nfiles")
+          print(f"data/raw -> {outs[0]['md5']}  ({outs[0]['nfiles']} archivos)")
+          PY
+
+      # Solo corre cuando el repositorio tiene credenciales del remote `prod`.
+      # Sin ellas el paso se salta en vez de fallar: un fork no tiene secretos.
+      - name: Recuperar el dataset desde el remote
+        if: env.HAY_CREDENCIALES == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          dvc pull -r prod data/raw.dvc
+          dq gate || echo "La compuerta bloqueo el dataset real (esperado hoy)."
