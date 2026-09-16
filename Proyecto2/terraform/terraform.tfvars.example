@@ -1,0 +1,19 @@
+# =============================================================================
+# Ejemplo de configuración para Terraform (cero secretos, compuerta M2)
+# Para usarlo: copia este archivo como `terraform.tfvars` (ignorado por Git).
+# =============================================================================
+
+aws_region         = "us-east-1"
+environment        = "prod"
+project_name       = "dataset-quality"
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b"]
+s3_bucket_name     = "dataset-quality-prod-storage-example"
+github_repository  = "stephy0410/ruta-al-dataset-v1"
+
+tags = {
+  Project     = "dataset-quality"
+  Environment = "prod"
+  ManagedBy   = "Terraform"
+}
+
