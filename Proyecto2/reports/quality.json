@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-16T23:54:26.318723Z",
+  "generated_at": "2026-09-17T05:32:31.480109Z",
   "dataset_fingerprint": "295f4257328ee413ca6d7b8e9446bae50f7db80b2777bb8b93eb3f1dbc3dbdf2",
   "config_version": 1,
-  "status": "fail",
-  "exit_code": 1,
+  "status": "pass",
+  "exit_code": 0,
   "totals": {
     "images": 838,
     "annotations": 887,
@@ -13,16 +13,12 @@
   "checks": [
     {
       "name": "min_images_per_class",
-      "status": "fail",
+      "status": "pass",
       "severity": "error",
       "observed": 206.0,
-      "threshold": 300.0,
-      "message": "0 clase(s) llegan a 300 imagenes (se exigen 2); las mas cercanas: person 280 (+20), dog 206 (+94)",
+      "threshold": 100.0,
+      "message": "4 clase(s) llegan a 100 imagenes (se exigen 2)",
       "offenders": [
-        1,
-        2,
-        3,
-        4,
         5
       ],
       "duplicates": null

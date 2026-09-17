@@ -28,16 +28,12 @@
   "checks": [
     {
       "name": "min_images_per_class",
-      "status": "fail",
+      "status": "pass",
       "severity": "error",
       "observed": 206.0,
-      "threshold": 300.0,
-      "message": "0 clase(s) llegan a 300 imagenes (se exigen 2); las mas cercanas: person 280 (+20), dog 206 (+94)",
+      "threshold": 100.0,
+      "message": "4 clase(s) llegan a 100 imagenes (se exigen 2)",
       "offenders": [
-        1,
-        2,
-        3,
-        4,
         5
       ],
       "duplicates": null

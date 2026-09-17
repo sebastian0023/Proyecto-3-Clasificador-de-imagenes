@@ -150,10 +150,21 @@ jobs:
     defaults:
       run:
         working-directory: Proyecto2
+    # `id-token: write` es lo que deja a GitHub emitir el JWT que AWS cambia
+    # por credenciales temporales. Sin esta linea el paso de OIDC falla con
+    # "Unable to get ACTIONS_ID_TOKEN_REQUEST_URL". Al declarar `permissions`
+    # a nivel de job, lo que no se nombre queda en none: de ahi el
+    # `contents: read`, que es lo minimo que necesita el checkout.
+    permissions:
+      contents: read
+      id-token: write
     env:
-      # Un fork no tiene secretos: el paso de `dvc pull` se salta en vez de
-      # fallar. Referenciar `secrets` directamente en un `if` no es fiable.
-      HAY_CREDENCIALES: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+      # El ARN del rol va en `vars`, no en `secrets`: no es material sensible
+      # y la compuerta M2 exige cero llaves de larga vida guardadas en el
+      # repo. Un fork no tiene la variable, asi que el `dvc pull` se salta en
+      # vez de fallar. Referenciar el contexto directamente en un `if` no es
+      # fiable, por eso se resuelve aqui.
+      HAY_ROL: ${{ vars.AWS_ROLE_ARN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -186,13 +197,23 @@ jobs:
           print(f"data/raw -> {outs[0]['md5']}  ({outs[0]['nfiles']} archivos)")
           PY
 
-      # Solo corre cuando el repositorio tiene credenciales del remote `prod`.
-      # Sin ellas el paso se salta en vez de fallar: un fork no tiene secretos.
+      # Federacion OIDC contra el rol que crea `terraform/modules/oidc_github`:
+      # GitHub presenta un JWT, AWS devuelve credenciales temporales de ~1h.
+      # No queda ninguna llave de larga vida guardada en el repositorio, y la
+      # trust policy del rol solo acepta `repo:<owner>/<repo>:*`, asi que un
+      # fork no puede asumirlo aunque conozca el ARN.
+      - name: Autenticar contra AWS por OIDC
+        if: env.HAY_ROL == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          # Misma region que `aws_region` en terraform/variables.tf.
+          aws-region: us-east-1
+
+      # Solo corre cuando el repositorio tiene configurado el rol de `prod`.
+      # Sin el, el paso se salta en vez de fallar: un fork no tiene la variable.
       - name: Recuperar el dataset desde el remote
-        if: env.HAY_CREDENCIALES == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        if: env.HAY_ROL == 'true'
         run: |
           dvc pull -r prod data/raw.dvc
           dq gate || echo "La compuerta bloqueo el dataset real (esperado hoy)."

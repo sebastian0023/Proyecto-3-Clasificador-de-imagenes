@@ -13,9 +13,9 @@ variable "github_repository" {
   type        = string
 }
 
-variable "s3_bucket_arn" {
-  description = "ARN del bucket S3 de datasets para otorgar permisos mínimos de lectura/escritura"
-  type        = string
+variable "s3_bucket_arns" {
+  description = "ARNs de los buckets S3 a los que el rol puede acceder (cache DVC y releases)"
+  type        = list(string)
 }
 
 variable "tags" {
