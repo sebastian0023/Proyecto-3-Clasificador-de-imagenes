@@ -28,4 +28,12 @@ class DatasetStats(StrictModel):
 
     # Area de la caja relativa a su imagen. Da la escala en la que hay que leer
     # el umbral de `small_objects`.
+    #
+    # Van las tres cifras y no solo una porque la distribucion esta sesgada: en
+    # un dataset con muchos objetos diminutos y unos pocos enormes, la media se
+    # va detras de los grandes y la mediana no dice nada de esa cola. La media
+    # por encima de la mediana es, precisamente, la senal de que la cola larga
+    # existe; el percentil 90 dice cuanto llega a estirarse.
+    mean_box_area_ratio: float = Field(ge=0.0, le=1.0)
     median_box_area_ratio: float = Field(ge=0.0, le=1.0)
+    p90_box_area_ratio: float = Field(ge=0.0, le=1.0)

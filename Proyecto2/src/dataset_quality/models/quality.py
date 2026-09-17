@@ -24,6 +24,9 @@ from dataset_quality.models.splits import SplitRatios
 
 Severity = Literal["error", "warning"]
 
+# Longitud del pHash de `imagehash.phash`: 8x8 bits de bajas frecuencias.
+PHASH_BITS = 64
+
 
 class MinImagesPerClassCheck(StrictModel):
     """Exige volumen suficiente: N imagenes distintas en al menos M clases.
@@ -156,6 +159,48 @@ class QualityTotals(StrictModel):
     categories: int = Field(ge=0)
 
 
+class DuplicatePair(StrictModel):
+    """Dos imagenes que el pHash considera la misma foto.
+
+    `kept` es el id menor — la que se subio primero y se conserva — y
+    `duplicate` la copia sobrante. `similarity` es la distancia de Hamming
+    traducida a proporcion de bits iguales (1.0 = pHash identico), que es como
+    se lee en pantalla; `distance` se conserva porque es lo que compara el
+    umbral de `quality.yaml`.
+    """
+
+    kept: int
+    duplicate: int
+    distance: int = Field(ge=0, le=PHASH_BITS)
+    similarity: float = Field(ge=0.0, le=1.0)
+
+
+class DuplicatesDetail(StrictModel):
+    """A que clases afecta el duplicado, no solo cuantos hay.
+
+    El analizador ya calculaba los pares para decidir el veredicto y los tiraba
+    al construir el `CheckResult`: lo unico que sobrevivia era la lista de ids
+    sobrantes. Con eso no se puede responder "cuantos duplicados hay y a que
+    clase afectan" sin volver a abrir todas las imagenes, que es justo lo caro.
+
+    `images_by_class` cuenta las imagenes SOBRANTES que contienen al menos una
+    caja de esa clase; una copia con cajas de dos clases suma en las dos, asi
+    que la suma de este diccionario puede superar el numero de imagenes
+    sobrantes. Es la cifra que dice cuanto bajaria el conteo por clase de la
+    compuerta M3 al colapsar los duplicados.
+    """
+
+    max_distance: int = Field(ge=0, le=PHASH_BITS)
+    pairs: list[DuplicatePair] = Field(default_factory=list)
+    # Grupos de casi-duplicados con mas de una imagen: cuantas fotos distintas
+    # hay de verdad detras de las copias.
+    groups: int = Field(default=0, ge=0)
+    images_by_class: dict[str, int] = Field(default_factory=dict)
+    boxes_by_class: dict[str, int] = Field(default_factory=dict)
+    # Copias que no aportan a ninguna clase porque no tienen ninguna caja.
+    images_without_class: int = Field(default=0, ge=0)
+
+
 class CheckResult(StrictModel):
     """Resultado de un analizador individual."""
 
@@ -166,6 +211,10 @@ class CheckResult(StrictModel):
     threshold: float
     message: str
     offenders: list[int] = Field(default_factory=list)
+    # Detalle especifico del check `duplicates`; `None` en todos los demas.
+    # Es un anadido opcional al contrato: un `quality.json` escrito antes de
+    # que existiera sigue validando, por eso `schema_version` sigue en 1.
+    duplicates: DuplicatesDetail | None = None
 
 
 class QualityReport(StrictModel):

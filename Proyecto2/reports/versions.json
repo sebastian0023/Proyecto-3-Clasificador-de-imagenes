@@ -4,18 +4,34 @@
     {
       "schema_version": 1,
       "version": "0.1.0",
-      "created_at": "2026-09-17T04:53:53.033931Z",
-      "dataset_fingerprint": "295f4257328ee413ca6d7b8e9446bae50f7db80b2777bb8b93eb3f1dbc3dbdf2",
-      "quality_report_fingerprint": "54db5567ba71006e6fd9678a93da03746b064780572b08a1a271b05d872e7ded",
-      "splits_fingerprint": "e7579f4ee0ab772ad491f7aa7374e991a4114d57589410b3a40b659bab676bf3",
+      "created_at": "2026-09-14T23:49:12.533291Z",
+      "dataset_fingerprint": "d994dd1a298efb8f899739fb2b5cbc59a3f70ecde9c6ea02876fc36da2f261b3",
+      "quality_report_fingerprint": "3a0c3a2f42b13c9b9ba356feaa3fb373aa579bb641efcde97af1882d09a0adec",
+      "splits_fingerprint": "729729a90d30cc8f5aa29734250f75ae1f19d47ad17c5c0a495c52771a65e35c",
       "storage_uri": "s3://dataset-releases/0.1.0/dataset.tar.zst",
+      "quality_status": "fail",
+      "counts": {
+        "images": 877,
+        "annotations": 943,
+        "categories": 5
+      },
+      "notes": null
+    },
+    {
+      "schema_version": 1,
+      "version": "0.1.1",
+      "created_at": "2026-09-15T01:14:15.883464Z",
+      "dataset_fingerprint": "295f4257328ee413ca6d7b8e9446bae50f7db80b2777bb8b93eb3f1dbc3dbdf2",
+      "quality_report_fingerprint": "d2cd9e197f4e8870d99aa923d849e220cb5b5c4317ef31db25695d7533af3432",
+      "splits_fingerprint": "5b0a9d30b5bfd0afa1fd4dff57da6e1375d48ed52b867def67c06b08c82349af",
+      "storage_uri": "s3://dataset-releases/0.1.1/dataset.tar.zst",
       "quality_status": "pass",
       "counts": {
         "images": 838,
         "annotations": 887,
         "categories": 5
       },
-      "notes": null
+      "notes": "Ensayo del camino completo con umbral temporal en 150; 838 imagenes tras deduplicar."
     }
   ]
 }
