@@ -31,9 +31,16 @@ htmlcov/
 node_modules/
 dist/
 
-# Dataset crudo: nunca lo versiona Git ni DVC como `outs`, lo trae
-# `scripts/export_from_mp1.py` y el pipeline solo lo lee (Frente 6).
-/data/
+# Dataset crudo: el contenido pesado (las 838 imagenes) vive solo en el
+# remote de DVC, nunca en Git. Lo que SI entra a Git es el puntero
+# `data/raw.dvc`: el hash del directorio, que es lo unico que `dvc pull`
+# necesita para recuperarlo. Antes esto era `/data/` a secas, que tapaba
+# tambien el puntero -- y sin puntero el dataset solo se podia reconstruir
+# levantando el Proyecto 1 y corriendo `scripts/export_from_mp1.py`, que no
+# es una opcion para quien clona el repo. La excepcion es solo `*.dvc`: el
+# resto de `data/` (raw/, quarantine/, roboflow/) sigue fuera de Git.
+/data/**
+!/data/*.dvc
 # Los `reports/*.json` (quality.json, splits.json, stats.json, versions.json)
 # SI se versionan: son salidas de `dvc.yaml` con `cache: false` -- texto
 # pequeño que interesa poder diferenciar entre commits. Lo que no se

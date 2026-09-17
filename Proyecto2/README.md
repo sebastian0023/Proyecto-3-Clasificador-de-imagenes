@@ -166,6 +166,23 @@ python scripts/export_from_mp1.py
 La descarga es **reanudable**: si se corta, vuelve a correr el script y retoma
 donde se quedo en vez de empezar de cero.
 
+### Despues de exportar: versionar el dataset
+
+El script deja el dataset en disco, pero no lo versiona. Ese es un paso
+aparte, y hay que darlo una vez por cada version del dataset:
+
+```bash
+dvc add data/raw    # calcula el hash del directorio -> data/raw.dvc
+dvc push            # sube el contenido al remote activo
+git add data/raw.dvc .gitignore
+```
+
+`data/raw.dvc` (112 bytes) es lo unico que entra a Git; las 838 imagenes
+viven en el remote. Quien clona el repo **no necesita el Proyecto 1
+levantado**: le basta `dvc pull` para reconstruir `data/raw/` byte a byte. El
+job `versionado` del CI comprueba que ese puntero siga existiendo y siga
+declarando `md5` y `nfiles`.
+
 ### Por que por HTTP y no leyendo su base de datos
 
 `GET /api/coco/export` es el contrato publico que el propio README del
@@ -372,6 +389,7 @@ razon: ocurre una vez, no en cada corrida del pipeline.
 | Se versiona en Git | Vive solo en el remote (`dvc push`) |
 | --- | --- |
 | `dvc.yaml`, `dvc.lock` | `data/raw/` (el dataset crudo) |
+| `data/raw.dvc` (el puntero: hash del directorio, 112 bytes) | — |
 | `reports/*.json` (`cache: false`: texto pequeño y diferenciable) | `reports/releases/<version>/dataset.tar.zst` |
 | `.dvc/config` (URLs de los remotes, sin credenciales) | — |
 | `.dvc/config.local` **nunca** — esta en `.dvc/.gitignore` | credenciales de `dev`/`prod` |
