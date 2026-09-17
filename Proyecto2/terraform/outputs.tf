@@ -43,3 +43,13 @@ output "oidc_provider_arn" {
   value       = module.oidc_github.oidc_provider_arn
 }
 
+
+output "s3_releases_bucket_name" {
+  description = "Nombre del bucket S3 de releases del dataset"
+  value       = module.s3_releases.bucket_name
+}
+
+output "s3_releases_bucket_arn" {
+  description = "ARN del bucket S3 de releases del dataset"
+  value       = module.s3_releases.bucket_arn
+}

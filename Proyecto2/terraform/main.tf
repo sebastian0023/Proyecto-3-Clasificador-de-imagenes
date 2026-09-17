@@ -22,13 +22,32 @@ module "s3" {
   tags         = var.tags
 }
 
+# Segundo bucket: los releases (`dataset.tar.zst` de cada version) no comparten
+# bucket con el cache de DVC. Son ciclos de vida distintos -- el cache es
+# contenido direccionable por hash que se puede regenerar, un release es un
+# artefacto inmutable que se publica -- y mezclarlos hace que una regla de
+# lifecycle pensada para uno afecte al otro.
+module "s3_releases" {
+  source = "./modules/s3"
+
+  bucket_name  = var.s3_releases_bucket_name
+  environment  = var.environment
+  project_name = var.project_name
+  tags         = var.tags
+}
+
 module "oidc_github" {
   source = "./modules/oidc_github"
 
   project_name      = var.project_name
   environment       = var.environment
   github_repository = var.github_repository
-  s3_bucket_arn     = module.s3.bucket_arn
-  tags              = var.tags
+  # El rol necesita los dos buckets: `dvc pull` lee del cache y `dq release`
+  # publica el artefacto de la version.
+  s3_bucket_arns = [
+    module.s3.bucket_arn,
+    module.s3_releases.bucket_arn,
+  ]
+  tags = var.tags
 }
 

@@ -227,10 +227,9 @@ def run(
             ),
         )
 
-    # Las credenciales solo se necesitan despues de validar por completo la
-    # entrada. Asi un dataset incompleto se rechaza sin tocar infraestructura.
-    settings = get_settings()
-    bucket = settings.minio_bucket_images
+    # La configuracion se lee despues de validar: un COCO roto se rechaza
+    # igual, aunque el entorno todavia no tenga credenciales (p. ej. en CI).
+    bucket = get_settings().minio_bucket_images
     stored, uploaded = upload_images(dataset, images_dir, bucket, on_progress)
 
     persist(dataset, stored)
