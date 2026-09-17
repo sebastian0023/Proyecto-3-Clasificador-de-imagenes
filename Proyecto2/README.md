@@ -172,10 +172,17 @@ El script deja el dataset en disco, pero no lo versiona. Ese es un paso
 aparte, y hay que darlo una vez por cada version del dataset:
 
 ```bash
-dvc add data/raw    # calcula el hash del directorio -> data/raw.dvc
-dvc push            # sube el contenido al remote activo
+dvc add data/raw                 # calcula el hash del directorio -> data/raw.dvc
+dvc push data/raw.dvc            # sube el contenido al remote activo (dev)
+dvc push -r prod data/raw.dvc    # y a S3
 git add data/raw.dvc .gitignore
 ```
+
+**El puntero en el `push` no es opcional.** `dvc push` a secas recorre las
+etapas de `dvc.yaml`, y todas sus salidas son `cache: false`, asi que no sube
+nada: imprime `Everything is up to date` y sale con codigo 0 aunque el bucket
+este vacio. Verificado: con el bucket de prod recien creado, `dvc push -r prod`
+reporto exito y subio 0 objetos; `dvc push -r prod data/raw.dvc` subio los 840.
 
 `data/raw.dvc` (112 bytes) es lo unico que entra a Git; las 838 imagenes
 viven en el remote. Quien clona el repo **no necesita el Proyecto 1
@@ -400,11 +407,17 @@ razon: ocurre una vez, no en cada corrida del pipeline.
 pero sin credenciales hasta que exista un bucket de produccion:
 
 ```bash
-cat .dvc/config              # solo URLs, versionado, sin secretos
-python scripts/dvc_remote.py # escribe .dvc/config.local desde .env (MinIO)
-dvc push                     # sube al remote activo (dev)
-dvc push -r prod              # cuando 'prod' tenga sus propias credenciales
+cat .dvc/config                   # solo URLs y region, versionado, sin secretos
+python scripts/dvc_remote.py      # escribe .dvc/config.local desde .env (MinIO)
+dvc push data/raw.dvc             # sube al remote activo (dev)
+dvc push -r prod data/raw.dvc     # y al bucket de S3
 ```
+
+Las credenciales de `prod` **no** viven en el repositorio, ni siquiera en un
+archivo ignorado: `.dvc/config.local` solo guarda el NOMBRE de un perfil de
+`~/.aws` (`dvc remote modify --local prod profile <perfil>`), y DVC resuelve
+las llaves desde ahi. En CI no hay perfil ni llaves: el workflow asume un rol
+por OIDC y DVC toma las credenciales temporales del entorno.
 
 El mismo dataset da el mismo `dataset_fingerprint` sin importar a que remote
 se suba: el archivo se arma con metadata deterministica (mtime fijo a epoca
