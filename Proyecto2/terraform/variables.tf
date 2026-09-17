@@ -31,7 +31,11 @@ variable "availability_zones" {
 variable "s3_bucket_name" {
   description = "Nombre único global para el bucket S3 del remote DVC"
   type        = string
-  default     = "dataset-quality-prod-storage"
+  # Tiene que ser EXACTAMENTE la URL del remote `prod` de `.dvc/config`
+  # (s3://dataset-quality-dvc-cache-prod). Si los dos nombres se separan,
+  # `dvc push -r prod` apunta a un bucket que no existe y el fallo aparece
+  # recien en CI, no aqui.
+  default = "dataset-quality-dvc-cache-prod"
 }
 
 variable "github_repository" {

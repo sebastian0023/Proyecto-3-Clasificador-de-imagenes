@@ -5,3 +5,4 @@
     endpointurl = http://localhost:9100
 ['remote "prod"']
     url = s3://dataset-quality-dvc-cache-prod
+    region = us-east-1

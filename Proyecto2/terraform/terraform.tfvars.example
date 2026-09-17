@@ -8,7 +8,7 @@ environment        = "prod"
 project_name       = "dataset-quality"
 vpc_cidr           = "10.0.0.0/16"
 availability_zones = ["us-east-1a", "us-east-1b"]
-s3_bucket_name     = "dataset-quality-prod-storage-example"
+s3_bucket_name     = "dataset-quality-dvc-cache-prod"  # debe coincidir con .dvc/config
 github_repository  = "stephy0410/ruta-al-dataset-v1"
 
 tags = {
