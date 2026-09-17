@@ -38,6 +38,12 @@ variable "s3_bucket_name" {
   default = "dataset-quality-dvc-cache-prod"
 }
 
+variable "s3_releases_bucket_name" {
+  description = "Nombre único global para el bucket S3 de releases del dataset"
+  type        = string
+  default     = "dataset-quality-releases-prod"
+}
+
 variable "github_repository" {
   description = "Repositorio de GitHub en formato 'owner/repo' para la asunción del rol OIDC"
   type        = string

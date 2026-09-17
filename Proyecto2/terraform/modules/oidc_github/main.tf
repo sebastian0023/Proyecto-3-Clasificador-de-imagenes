@@ -81,7 +81,7 @@ data "aws_iam_policy_document" "dvc_s3_access" {
       "s3:ListBucket",
       "s3:GetBucketLocation"
     ]
-    resources = [var.s3_bucket_arn]
+    resources = var.s3_bucket_arns
   }
 
   statement {
@@ -92,7 +92,7 @@ data "aws_iam_policy_document" "dvc_s3_access" {
       "s3:PutObject",
       "s3:DeleteObject"
     ]
-    resources = ["${var.s3_bucket_arn}/*"]
+    resources = [for arn in var.s3_bucket_arns : "${arn}/*"]
   }
 }
 
