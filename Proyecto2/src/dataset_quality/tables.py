@@ -25,6 +25,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    JSON,
     DateTime,
     Float,
     ForeignKey,
@@ -154,3 +155,28 @@ class DatasetVersionRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     __table_args__ = (Index("idx_dataset_versions_created_at", "created_at"),)
+
+
+class CopilotToolCall(Base):
+    """Auditoria de una llamada MCP, sin conservar la conversacion.
+
+    Se registran argumentos saneados y la revision del reporte, pero nunca la
+    pregunta, respuesta, payload completo de la herramienta ni secretos.
+    """
+
+    __tablename__ = "copilot_tool_calls"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    request_id: Mapped[str] = mapped_column(String(36), index=True)
+    call_id: Mapped[str] = mapped_column(String(128), unique=True)
+    tool_name: Mapped[str] = mapped_column(String(80))
+    arguments: Mapped[dict[str, object]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(16))
+    duration_ms: Mapped[int] = mapped_column(Integer)
+    source_artifact: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    source_revision: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_dataset_fingerprint: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    __table_args__ = (Index("idx_copilot_tool_calls_request_created", "request_id", "created_at"),)

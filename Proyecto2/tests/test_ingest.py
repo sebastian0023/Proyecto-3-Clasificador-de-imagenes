@@ -146,6 +146,7 @@ def test_las_tablas_estan_declaradas() -> None:
         "annotations",
         "splits",
         "dataset_versions",
+        "copilot_tool_calls",
     }
 
 

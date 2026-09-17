@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,7 @@ from fastapi import APIRouter, HTTPException
 from dataset_quality.models.exploration import ExplorationManifest
 from dataset_quality.models.quality import QualityReport
 from dataset_quality.models.splits import SplitsManifest
+from dataset_quality.models.stats import AnalysisArtifact
 from dataset_quality.models.versions import VersionsManifest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -51,11 +53,31 @@ ARTIFACTS: dict[str, Artifact] = {
     "exploration": Artifact(
         "exploration", REPORTS / "exploration.json", ExplorationManifest, "dq analyze"
     ),
+    "stats": Artifact("stats", REPORTS / "stats.json", AnalysisArtifact, "dq analyze --json"),
 }
 
 
-def load(artifact: Artifact) -> dict[str, Any]:
-    """Lee, valida y envuelve un artefacto. 503 si el pipeline aun no lo produjo."""
+@dataclass(frozen=True)
+class LoadedArtifact:
+    """Artefacto validado y su revision inmutable para consumidores internos."""
+
+    artifact: Artifact
+    data: Any
+    revision: str
+
+    def source(self) -> dict[str, str | None]:
+        generated_at = getattr(self.data, "generated_at", None)
+        dataset_fingerprint = getattr(self.data, "dataset_fingerprint", None)
+        return {
+            "artifact": self.artifact.path.name,
+            "artifact_revision": self.revision,
+            "generated_at": generated_at.isoformat() if generated_at is not None else None,
+            "dataset_fingerprint": dataset_fingerprint,
+        }
+
+
+def read(artifact: Artifact) -> LoadedArtifact:
+    """Lee y valida un artefacto; nunca entrega JSON no validado al Copilot."""
     if not artifact.path.is_file():
         raise HTTPException(
             status_code=503,
@@ -66,7 +88,8 @@ def load(artifact: Artifact) -> dict[str, Any]:
         )
 
     try:
-        validado = artifact.model.model_validate_json(artifact.path.read_text(encoding="utf-8"))
+        raw = artifact.path.read_bytes()
+        validado = artifact.model.model_validate_json(raw)
     except Exception as error:
         raise HTTPException(
             status_code=500,
@@ -76,10 +99,16 @@ def load(artifact: Artifact) -> dict[str, Any]:
             ),
         ) from error
 
+    return LoadedArtifact(artifact=artifact, data=validado, revision=sha256(raw).hexdigest())
+
+
+def load(artifact: Artifact) -> dict[str, Any]:
+    """Envuelve un artefacto validado para los endpoints de la SPA."""
+    loaded = read(artifact)
     return {
         "source": "pipeline",
         "produced_by": artifact.produced_by,
-        "data": json.loads(validado.model_dump_json()),
+        "data": json.loads(loaded.data.model_dump_json()),
     }
 
 
@@ -119,14 +148,4 @@ def exploration() -> dict[str, Any]:
 @router.get("/stats")
 def stats() -> dict[str, Any]:
     """Descriptiva del Tier 2: el contexto sin el cual un umbral no dice nada."""
-    path = REPORTS / "stats.json"
-    if not path.is_file():
-        raise HTTPException(
-            status_code=503,
-            detail="Todavia no existe `stats.json`. Corre `dq analyze --json reports/stats.json`.",
-        )
-    return {
-        "source": "pipeline",
-        "produced_by": "dq analyze",
-        "data": json.loads(path.read_text(encoding="utf-8")),
-    }
+    return load(ARTIFACTS["stats"])

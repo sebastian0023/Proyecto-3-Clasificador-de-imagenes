@@ -213,7 +213,6 @@ def run(
     on_progress: Callable[[int, int], None] | None = None,
 ) -> IngestSummary:
     """Ejecuta el Tier 1 completo."""
-    settings = get_settings()
     dataset = load_raw(path)
 
     missing = check_files_present(dataset, images_dir)
@@ -228,6 +227,9 @@ def run(
             ),
         )
 
+    # Las credenciales solo se necesitan despues de validar por completo la
+    # entrada. Asi un dataset incompleto se rechaza sin tocar infraestructura.
+    settings = get_settings()
     bucket = settings.minio_bucket_images
     stored, uploaded = upload_images(dataset, images_dir, bucket, on_progress)
 

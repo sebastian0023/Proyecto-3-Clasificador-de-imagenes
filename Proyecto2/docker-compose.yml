@@ -66,6 +66,29 @@ services:
         mc mb --ignore-existing "local/$$MINIO_BUCKET_IMAGES"
         echo "buckets listos: $$MINIO_BUCKET_RELEASES, $$MINIO_BUCKET_DVC_CACHE, $$MINIO_BUCKET_IMAGES"
 
+  # El protocolo MCP queda aislado de la red del host. Solo el servicio `app`
+  # puede alcanzarlo por `http://mcp:8001/mcp`; no recibe secretos ni permisos
+  # sobre MariaDB, MinIO, el dataset o la politica.
+  mcp:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: dq_mcp
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+    volumes:
+      - ./reports:/app/reports:ro
+    command:
+      - python
+      - -m
+      - dataset_quality.mcp_server
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=5)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   app:
     build:
       context: .
@@ -81,6 +104,7 @@ services:
       DB_PORT: "3306"
       MINIO_ENDPOINT: minio
       MINIO_PORT: "9000"
+      MCP_SERVER_URL: http://mcp:8001/mcp
     ports:
       - "${APP_PORT:?falta APP_PORT en .env}:8000"
     volumes:
@@ -123,6 +147,8 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+      mcp:
+        condition: service_healthy
 
 volumes:
   mariadb_data:

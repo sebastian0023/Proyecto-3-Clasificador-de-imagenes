@@ -145,6 +145,25 @@ verificar contra qué base y qué bucket está trabajando el entorno.
 
 ---
 
+## Dataset Copilot (MCP)
+
+La pantalla **Copilot** consulta exclusivamente los artefactos ya producidos
+por el pipeline. Para activarla, agrega una clave de Gemini a tu `.env`:
+
+```bash
+GEMINI_API_KEY=...
+# GEMINI_MODEL=gemini-flash-latest  # configurable
+```
+
+Al arrancar con Compose, el servidor MCP vive en un contenedor interno sin
+puerto publicado. Solo la API puede usar sus cinco herramientas de lectura:
+calidad, checks fallidos, distribución de clases, splits y versiones. Cada
+respuesta muestra las llamadas ejecutadas y cita el artefacto con su revisión
+SHA-256; MariaDB guarda una auditoría de las llamadas, no de las conversaciones.
+
+Si la clave no está configurada, el resto de la plataforma sigue disponible y
+el endpoint del Copilot devuelve `503` con la instrucción de configuración.
+
 ## Traer el dataset del Proyecto 1
 
 El portal de anotacion expone su dataset por HTTP. Este script lo descarga a
@@ -618,6 +637,13 @@ dataset y sus reportes en un `.tar.zst` determinístico, lo publica en
 MinIO local, `prod` hacia S3) comparten el mismo content hash sin importar
 a cuál se suba.
 
+**Frente 7 (App web) — cerrado.** La SPA presenta los artefactos validados y
+las acciones disponibles del pipeline.
+
+**Frente 8 (Dataset Copilot MCP) — cerrado.** Un sidecar interno de lectura
+expone cinco herramientas sobre reportes validados; la API orquesta sus
+llamadas, las audita y muestra evidencia versionada bajo cada respuesta.
+
 **Frente 9 (Infraestructura — Terraform) — cerrado.** 3 módulos por capa:
 red con VPC Endpoint para S3, almacenamiento S3 versionado con SSE-S3 y
 bloqueo público, e IAM OIDC sin claves estáticas para GitHub Actions.
@@ -635,6 +661,3 @@ Lo que sigue, en el orden en que desbloquea:
 1. **Migraciones** — Alembic para versionar el esquema de `tables.py`
    (`quality_reports` y `check_results` siguen sin tabla; `splits` y
    `dataset_versions` ya existen).
-2. **Frente 7** — la app web que consulta `quality.json`, `splits.json` y
-   `versions.json`.
-3. **Frente 8** — el Copilot que interpreta los reportes.

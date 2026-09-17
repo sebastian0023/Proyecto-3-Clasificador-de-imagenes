@@ -207,8 +207,27 @@ export interface RefreshResult {
 }
 
 export interface CopilotAnswer {
+  request_id: string;
   answer: string;
-  tool_calls: { name: string; arguments: Record<string, unknown> }[];
+  tool_calls: CopilotToolCall[];
+  citations: CopilotCitation[];
+}
+
+export interface CopilotCitation {
+  artifact: string;
+  artifact_revision: string;
+  generated_at: string | null;
+  dataset_fingerprint: string | null;
+}
+
+export interface CopilotToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+  status: 'success' | 'failed' | 'rejected';
+  duration_ms: number;
+  citation: CopilotCitation | null;
+  error: string | null;
 }
 
 /** Error que conserva el mensaje de la API, no un `fetch failed` generico. */

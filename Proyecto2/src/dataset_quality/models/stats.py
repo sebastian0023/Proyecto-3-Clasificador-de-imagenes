@@ -10,7 +10,7 @@ from __future__ import annotations
 from pydantic import Field
 
 from dataset_quality.models import StrictModel
-from dataset_quality.models.quality import QualityTotals
+from dataset_quality.models.quality import CheckResult, QualityTotals
 
 
 class DatasetStats(StrictModel):
@@ -37,3 +37,14 @@ class DatasetStats(StrictModel):
     mean_box_area_ratio: float = Field(ge=0.0, le=1.0)
     median_box_area_ratio: float = Field(ge=0.0, le=1.0)
     p90_box_area_ratio: float = Field(ge=0.0, le=1.0)
+
+
+class AnalysisArtifact(StrictModel):
+    """Contrato del artefacto descriptivo que escribe ``dq analyze --json``.
+
+    No es un contrato congelado de release, pero el Copilot nunca debe leerlo
+    como JSON sin validar: una cifra sin un artefacto valido no es evidencia.
+    """
+
+    stats: DatasetStats
+    checks: list[CheckResult]
