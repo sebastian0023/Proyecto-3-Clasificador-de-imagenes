@@ -116,7 +116,13 @@ export default function Overview() {
 
             {stats.kind === 'ready' && (
               <div style={{ marginTop: 14 }}>
-                <Card title="Contexto del dataset">
+                {/* Media, mediana y p90 del área de caja van juntas a propósito:
+                    la distribución está sesgada y una sola cifra engañaría. La
+                    media por encima de la mediana es la señal de la cola larga. */}
+                <Card
+                  title="Contexto del dataset"
+                  hint="El área de caja se lee con las tres cifras: si la media supera a la mediana, unas pocas cajas enormes arrastran el promedio y el p90 dice cuánto se estira esa cola."
+                >
                   <div className="tiles" style={{ marginBottom: 0 }}>
                     <Tile
                       value={stats.data.data.stats.annotations_per_image.toFixed(2)}
@@ -124,9 +130,19 @@ export default function Overview() {
                       tone="d"
                     />
                     <Tile
+                      value={`${(stats.data.data.stats.mean_box_area_ratio * 100).toFixed(1)}%`}
+                      label="Área media de una caja"
+                      tone={stats.data.data.stats.mean_box_area_ratio > 0.5 ? 'c' : 'b'}
+                    />
+                    <Tile
                       value={`${(stats.data.data.stats.median_box_area_ratio * 100).toFixed(1)}%`}
                       label="Área mediana de una caja"
                       tone={stats.data.data.stats.median_box_area_ratio > 0.5 ? 'c' : 'b'}
+                    />
+                    <Tile
+                      value={`${(stats.data.data.stats.p90_box_area_ratio * 100).toFixed(1)}%`}
+                      label="Área de caja — p90"
+                      tone="d"
                     />
                     <Tile
                       value={stats.data.data.stats.images_without_annotations}

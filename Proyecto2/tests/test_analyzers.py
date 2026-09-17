@@ -20,6 +20,7 @@ from dataset_quality.analyzers import (
     analyze_small_objects,
     analyze_spatial_bias,
     describe,
+    percentile,
     run_all,
 )
 from dataset_quality.models.coco import CocoDataset
@@ -411,6 +412,135 @@ def test_la_proporcion_de_duplicados_es_sobre_el_total_de_imagenes(photos) -> No
     assert result.observed == pytest.approx(0.25)  # 1 de 4
 
 
+def test_el_detalle_dice_a_que_clase_afectan_los_duplicados(photos) -> None:
+    """La pregunta del Copilot: cuantos duplicados hay y a que clase afectan.
+
+    Sin esto el check solo deja los ids sobrantes, y responderla obligaria a
+    volver a abrir todas las imagenes para recalcular los pares.
+    """
+    images_dir = photos(a=1, b=9)
+    (images_dir / "copia_de_a.jpg").write_bytes((images_dir / "a.jpg").read_bytes())
+
+    dataset = coco(
+        images=[
+            (1, "a.jpg", 256, 192),
+            (2, "b.jpg", 256, 192),
+            (3, "copia_de_a.jpg", 256, 192),
+        ],
+        boxes=[
+            (1, 1, 1, 0, 0, 10, 10),  # original: car
+            (2, 2, 2, 0, 0, 10, 10),  # distinta: cat
+            (3, 3, 1, 0, 0, 10, 10),  # la copia: car
+            (4, 3, 1, 20, 0, 10, 10),  # la copia: otra caja de car
+            (5, 3, 2, 40, 0, 10, 10),  # la copia: ademas cat
+        ],
+        categories=[(1, "car"), (2, "cat")],
+    )
+    result = analyze_duplicates(dataset, DUPLICATES, images_dir)
+    detalle = result.duplicates
+
+    assert result.offenders == [3]
+    assert detalle is not None
+    # La copia tiene cajas de dos clases, asi que afecta a las dos.
+    assert detalle.images_by_class == {"car": 1, "cat": 1}
+    # Pero se perderian tres cajas, no dos: dos de car y una de cat.
+    assert detalle.boxes_by_class == {"car": 2, "cat": 1}
+    assert detalle.images_without_class == 0
+    assert detalle.groups == 1
+    assert detalle.max_distance == DUPLICATES.phash_hamming_distance
+
+
+def test_el_detalle_conserva_los_pares_con_su_similitud(photos) -> None:
+    """La rubrica pide los pares con su similitud, no solo el conteo."""
+    images_dir = photos(a=1)
+    (images_dir / "copia.jpg").write_bytes((images_dir / "a.jpg").read_bytes())
+
+    dataset = coco(
+        images=[(1, "a.jpg", 256, 192), (2, "copia.jpg", 256, 192)],
+        boxes=[(1, 1, 1, 0, 0, 10, 10)],
+        categories=[(1, "car")],
+    )
+    detalle = analyze_duplicates(dataset, DUPLICATES, images_dir).duplicates
+
+    assert detalle is not None
+    assert len(detalle.pairs) == 1
+    par = detalle.pairs[0]
+    # Se conserva el id menor y sobra el mayor.
+    assert (par.kept, par.duplicate) == (1, 2)
+    # Copia byte a byte: mismo pHash, distancia cero, similitud total.
+    assert par.distance == 0
+    assert par.similarity == pytest.approx(1.0)
+
+
+def test_la_clase_mas_afectada_encabeza_el_detalle(photos) -> None:
+    """Ordenado por impacto: la primera clave responde la pregunta de un vistazo."""
+    images_dir = photos(a=1, b=9)
+    (images_dir / "copia_a.jpg").write_bytes((images_dir / "a.jpg").read_bytes())
+    (images_dir / "copia_b.jpg").write_bytes((images_dir / "b.jpg").read_bytes())
+
+    dataset = coco(
+        images=[
+            (1, "a.jpg", 256, 192),
+            (2, "b.jpg", 256, 192),
+            (3, "copia_a.jpg", 256, 192),
+            (4, "copia_b.jpg", 256, 192),
+        ],
+        boxes=[
+            (1, 3, 2, 0, 0, 10, 10),  # copia de a -> cat
+            (2, 4, 2, 0, 0, 10, 10),  # copia de b -> cat
+            (3, 4, 1, 20, 0, 10, 10),  # copia de b -> tambien car
+        ],
+        categories=[(1, "car"), (2, "cat")],
+    )
+    detalle = analyze_duplicates(dataset, DUPLICATES, images_dir).duplicates
+
+    assert detalle is not None
+    assert next(iter(detalle.images_by_class)) == "cat"
+    assert detalle.images_by_class == {"cat": 2, "car": 1}
+    assert detalle.groups == 2
+    assert "cat" in analyze_duplicates(dataset, DUPLICATES, images_dir).message
+
+
+def test_una_copia_sin_ninguna_caja_se_cuenta_aparte(photos) -> None:
+    """Una copia sin anotar no afecta a ninguna clase, pero sigue sobrando."""
+    images_dir = photos(a=1)
+    (images_dir / "copia.jpg").write_bytes((images_dir / "a.jpg").read_bytes())
+
+    dataset = coco(
+        images=[(1, "a.jpg", 256, 192), (2, "copia.jpg", 256, 192)],
+        boxes=[(1, 1, 1, 0, 0, 10, 10)],
+        categories=[(1, "car")],
+    )
+    detalle = analyze_duplicates(dataset, DUPLICATES, images_dir).duplicates
+
+    assert detalle is not None
+    assert detalle.images_by_class == {}
+    assert detalle.images_without_class == 1
+
+
+def test_el_detalle_solo_lo_lleva_el_check_de_duplicados(photos) -> None:
+    images_dir = photos(a=1)
+    dataset = coco([(1, "a.jpg", 256, 192)], [(1, 1, 1, 0, 0, 30, 30)], [(1, "car")])
+
+    results = {r.name: r for r in run_all(dataset, full_config(), images_dir)}
+
+    assert results["duplicates"].duplicates is not None
+    assert all(
+        result.duplicates is None for name, result in results.items() if name != "duplicates"
+    )
+
+
+def test_un_check_de_duplicados_desactivado_no_inventa_detalle(photos) -> None:
+    images_dir = photos(a=1)
+    dataset = coco([(1, "a.jpg", 256, 192)], [(1, 1, 1, 0, 0, 30, 30)], [(1, "car")])
+    config = DuplicatesCheck(enabled=False, phash_hamming_distance=6, max_ratio=0.1)
+
+    result = analyze_duplicates(dataset, config, images_dir)
+
+    assert result.status == "skipped"
+    assert result.duplicates is None
+
+
 def test_una_imagen_que_falta_en_disco_no_rompe_el_analisis(photos) -> None:
     images_dir = photos(a=1)
     dataset = coco(
@@ -444,6 +574,56 @@ def test_la_descriptiva_resume_el_dataset() -> None:
     assert stats.images_per_class == {"car": 1, "cat": 1}
     assert stats.boxes_per_class == {"car": 2, "cat": 1}
     assert stats.annotations_per_image == pytest.approx(1.5)
+
+
+def test_la_descriptiva_da_media_mediana_y_p90_del_area_relativa() -> None:
+    """Tres cifras y no una: la distribucion del area de caja esta sesgada.
+
+    Cuatro cajas en una imagen de 100x100 ocupando 1%, 1%, 4% y 64%. La mediana
+    (2.5%) dice que la caja tipica es diminuta; la media (17.5%) se va detras de
+    la grande, y el p90 muestra cuanto se estira la cola. Reportar solo una de
+    las tres describe mal el dataset.
+    """
+    dataset = coco(
+        images=[(1, "a.jpg", 100, 100)],
+        boxes=[
+            (1, 1, 1, 0, 0, 10, 10),  # 100 px  -> 1%
+            (2, 1, 1, 10, 0, 10, 10),  # 100 px  -> 1%
+            (3, 1, 1, 20, 0, 20, 20),  # 400 px  -> 4%
+            (4, 1, 1, 0, 20, 80, 80),  # 6400 px -> 64%
+        ],
+        categories=[(1, "car")],
+    )
+    stats = describe(dataset)
+
+    assert stats.median_box_area_ratio == pytest.approx(0.025)
+    assert stats.mean_box_area_ratio == pytest.approx(0.175)
+    # Con cuatro valores el p90 cae entre 4% y 64%: 0.9*(4-1) = 2.7.
+    assert stats.p90_box_area_ratio == pytest.approx(0.04 + 0.7 * (0.64 - 0.04))
+    # La senal de la cola larga: la media por encima de la mediana.
+    assert stats.mean_box_area_ratio > stats.median_box_area_ratio
+
+
+def test_un_dataset_sin_cajas_no_rompe_la_descriptiva() -> None:
+    dataset = coco(images=[(1, "a.jpg", 100, 100)], boxes=[], categories=[(1, "car")])
+    stats = describe(dataset)
+
+    assert stats.mean_box_area_ratio == 0.0
+    assert stats.median_box_area_ratio == 0.0
+    assert stats.p90_box_area_ratio == 0.0
+
+
+def test_el_percentil_interpola_entre_los_dos_vecinos() -> None:
+    valores = [0.0, 1.0, 2.0, 3.0, 4.0]
+
+    assert percentile(valores, 0.0) == pytest.approx(0.0)
+    assert percentile(valores, 0.5) == pytest.approx(2.0)
+    assert percentile(valores, 1.0) == pytest.approx(4.0)
+    # 0.9 * (5 - 1) = 3.6 -> entre el tercero y el cuarto.
+    assert percentile(valores, 0.9) == pytest.approx(3.6)
+    # Un solo valor es su propio percentil; sin valores, cero.
+    assert percentile([7.0], 0.9) == pytest.approx(7.0)
+    assert percentile([], 0.9) == 0.0
 
 
 def test_la_descriptiva_incluye_imagenes_sin_anotar() -> None:

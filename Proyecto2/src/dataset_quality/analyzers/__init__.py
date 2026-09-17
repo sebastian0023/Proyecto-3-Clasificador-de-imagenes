@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dataset_quality.analyzers.descriptive import describe
+from dataset_quality.analyzers.descriptive import describe, percentile
 from dataset_quality.analyzers.duplicates import (
     analyze_duplicates,
     compute_hashes,
@@ -43,6 +43,7 @@ __all__ = [
     "find_pairs",
     "hamming",
     "images_per_class",
+    "percentile",
     "perceptual_hash",
     "run_all",
 ]

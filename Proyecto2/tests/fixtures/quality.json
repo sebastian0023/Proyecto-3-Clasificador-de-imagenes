@@ -18,7 +18,8 @@
       "observed": 0.0,
       "threshold": 0.1,
       "message": "ninguna anotacion por debajo del area minima relativa",
-      "offenders": []
+      "offenders": [],
+      "duplicates": null
     },
     {
       "name": "class_imbalance",
@@ -27,7 +28,8 @@
       "observed": 2.0,
       "threshold": 20.0,
       "message": "relacion max/min de clases dentro del umbral",
-      "offenders": []
+      "offenders": [],
+      "duplicates": null
     },
     {
       "name": "duplicates",
@@ -36,7 +38,15 @@
       "observed": 0.0,
       "threshold": 0.01,
       "message": "no se encontraron imagenes duplicadas por pHash",
-      "offenders": []
+      "offenders": [],
+      "duplicates": {
+        "max_distance": 5,
+        "pairs": [],
+        "groups": 0,
+        "images_by_class": {},
+        "boxes_by_class": {},
+        "images_without_class": 0
+      }
     },
     {
       "name": "degenerate_boxes",
@@ -45,7 +55,8 @@
       "observed": 0.0,
       "threshold": 0.0,
       "message": "sin cajas degeneradas",
-      "offenders": []
+      "offenders": [],
+      "duplicates": null
     },
     {
       "name": "spatial_bias",
@@ -54,7 +65,11 @@
       "observed": 0.62,
       "threshold": 0.6,
       "message": "la celda central concentra el 62% de las anotaciones",
-      "offenders": [1, 3]
+      "offenders": [
+        1,
+        3
+      ],
+      "duplicates": null
     }
   ]
 }

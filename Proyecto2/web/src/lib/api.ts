@@ -16,6 +16,30 @@ export interface Envelope<T> {
 export type CheckStatus = 'pass' | 'fail' | 'skipped';
 export type Severity = 'error' | 'warning';
 
+/** Un par de imágenes que el pHash considera la misma foto. */
+export interface DuplicatePair {
+  kept: number;
+  duplicate: number;
+  distance: number;
+  similarity: number;
+}
+
+/**
+ * Detalle del check `duplicates`: los pares y a qué clases afectan.
+ *
+ * `images_by_class` cuenta imágenes SOBRANTES que contienen al menos una caja
+ * de esa clase, ordenadas de mayor a menor. Una copia con cajas de dos clases
+ * suma en las dos, así que la suma puede superar el total de sobrantes.
+ */
+export interface DuplicatesDetail {
+  max_distance: number;
+  pairs: DuplicatePair[];
+  groups: number;
+  images_by_class: Record<string, number>;
+  boxes_by_class: Record<string, number>;
+  images_without_class: number;
+}
+
 export interface CheckResult {
   name: string;
   status: CheckStatus;
@@ -24,6 +48,8 @@ export interface CheckResult {
   threshold: number;
   message: string;
   offenders: number[];
+  /** Solo lo lleva el check `duplicates`; `null` en todos los demás. */
+  duplicates?: DuplicatesDetail | null;
 }
 
 export interface QualityReport {
@@ -88,7 +114,9 @@ export interface DatasetStats {
   boxes_per_class: Record<string, number>;
   annotations_per_image: number;
   images_without_annotations: number;
+  mean_box_area_ratio: number;
   median_box_area_ratio: number;
+  p90_box_area_ratio: number;
 }
 
 export interface AnalysisArtifact {
@@ -100,6 +128,51 @@ export interface Config {
   app_env: string;
   database: { host: string; port: number; name: string; user: string };
   object_storage: { endpoint_url: string; buckets: string[] };
+}
+
+// --- quality.yaml -----------------------------------------------------------
+/**
+ * Un check de la política: `enabled`, `severity` y los umbrales propios de ese
+ * analizador. El tipo se deja abierto a propósito — los umbrales cambian de un
+ * check a otro y quien decide qué es válido es `QualityConfig` en el servidor,
+ * que responde 422 nombrando el campo. Duplicar aquí esas reglas solo crearía
+ * una segunda fuente de verdad que se desincroniza.
+ */
+export type PolicyValue = boolean | number | string;
+export type CheckPolicy = Record<string, PolicyValue>;
+
+export interface SplitsPolicy {
+  seed: number;
+  ratios: Record<SplitName, number>;
+  tolerance: number;
+  group_near_duplicates: boolean;
+}
+
+export interface QualityPolicy {
+  version: number;
+  min_images_per_class: CheckPolicy;
+  small_objects: CheckPolicy;
+  class_imbalance: CheckPolicy;
+  duplicates: CheckPolicy;
+  degenerate_boxes: CheckPolicy;
+  spatial_bias: CheckPolicy;
+  splits: SplitsPolicy;
+}
+
+export interface PolicyEnvelope {
+  source: 'quality.yaml';
+  path: string;
+  data: QualityPolicy;
+  warnings: string[];
+}
+
+export interface PolicySaved {
+  /** Rutas que cambiaron, como `duplicates.max_ratio`. */
+  changed: string[];
+  data: QualityPolicy;
+  warnings: string[];
+  stale_reports: boolean;
+  next_steps: string[];
 }
 
 export interface DedupePlan {
@@ -172,6 +245,13 @@ export const api = {
   exploration: () => request<Envelope<ExplorationManifest>>('/api/exploration'),
   stats: () => request<Envelope<AnalysisArtifact>>('/api/stats'),
   config: () => request<Config>('/api/config'),
+  policy: () => request<PolicyEnvelope>('/api/policy'),
+  savePolicy: (data: QualityPolicy) =>
+    request<PolicySaved>('/api/policy', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }),
   duplicatesPlan: () => request<DedupePlan>('/api/duplicates/plan'),
   duplicatesRemove: () =>
     request<DedupeResult>('/api/duplicates/remove', { method: 'POST' }),

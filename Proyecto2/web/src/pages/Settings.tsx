@@ -1,6 +1,7 @@
-/** Settings: la configuración efectiva y el estado de los artefactos. */
+/** Settings: la configuración efectiva, el estado de los artefactos y la política editable. */
 
 import type { ReactNode } from 'react';
+import PolicyEditor from '../components/PolicyEditor';
 import { Card, Pill, Resolve, useApi } from '../components/ui';
 import { api } from '../lib/api';
 
@@ -25,8 +26,10 @@ export default function Settings() {
             <div>
               <h1>Settings</h1>
               <p className="page-sub">
-                Configuración efectiva del entorno. Las credenciales nunca llegan aquí: el
-                endpoint devuelve solo campos no sensibles, y hay una prueba que lo verifica.
+                Dos configuraciones distintas. El entorno sale de <span className="mono">.env</span>{' '}
+                y aquí solo se lee. Los umbrales de la política viven en{' '}
+                <span className="mono">quality.yaml</span> y se editan abajo: lo que se guarda va al
+                archivo que lee la compuerta.
               </p>
             </div>
             <Pill kind="accent">{cfg.app_env}</Pill>
@@ -82,18 +85,38 @@ export default function Settings() {
 
               <Card title="Dónde se cambia esto">
                 <p style={{ margin: '0 0 10px', color: 'var(--ink-2)', fontSize: 13 }}>
-                  La configuración sale de <span className="mono">.env</span>, validada por{' '}
+                  El entorno sale de <span className="mono">.env</span>, validado por{' '}
                   <span className="mono">pydantic-settings</span> al arrancar. Si falta una
-                  credencial, el proceso aborta en el primer segundo diciendo cuál.
+                  credencial, el proceso aborta en el primer segundo diciendo cuál. Eso no se
+                  edita desde aquí: cambiar credenciales en caliente desde una pantalla web es
+                  justo lo que no debe poder hacerse.
                 </p>
                 <p style={{ margin: 0, color: 'var(--ink-2)', fontSize: 13 }}>
                   Los umbrales de calidad viven aparte, en{' '}
                   <span className="mono">quality.yaml</span>, para que ajustar una política sea un
-                  cambio de una línea que queda registrado en Git — y no una recompilación.
+                  cambio de una línea que queda registrado en Git — y no una recompilación. Por eso
+                  sí se editan aquí abajo.
                 </p>
               </Card>
             </div>
           </div>
+
+          {/* La política es lo único de esta pantalla que se escribe. Va debajo
+              y con su propio encabezado para que no se confunda con la
+              configuración del entorno, que es de solo lectura. */}
+          <div className="page-head" style={{ marginTop: 22 }}>
+            <div>
+              <h1 style={{ fontSize: 20 }}>Política de calidad</h1>
+              <p className="page-sub">
+                Los umbrales y la severidad de cada check, tal como están en{' '}
+                <span className="mono">quality.yaml</span>. Guardar reescribe solo las líneas que
+                cambian y el cambio se aplica en la siguiente corrida de la compuerta, sin tocar
+                una línea de código.
+              </p>
+            </div>
+          </div>
+
+          <PolicyEditor />
         </>
       )}
     </Resolve>
