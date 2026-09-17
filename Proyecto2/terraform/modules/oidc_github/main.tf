@@ -46,10 +46,30 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       values   = ["sts.amazonaws.com"]
     }
 
+    # GitHub emite el `sub` en dos formatos segun tenga o no activada la
+    # personalizacion del subject claim en el repositorio:
+    #
+    #   clasico: repo:<owner>/<repo>:ref:refs/heads/<rama>
+    #   con IDs: repo:<owner>@<owner_id>/<repo>@<repo_id>:ref:refs/heads/<rama>
+    #
+    # El segundo existe para sobrevivir a un renombre del repo. Este repo lo
+    # tiene activado, y como `StringLike` distingue mayusculas y no perdona un
+    # caracter, el patron clasico por si solo rechazaba el token: CloudTrail
+    # registraba AccessDenied contra
+    # repo:stephy0410@121455794/ruta-al-dataset-v1@1364960219:ref:...
+    #
+    # Se aceptan los dos para que la config no dependa de como este esa opcion.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:*"]
+      values = [
+        "repo:${var.github_repository}:*",
+        format(
+          "repo:%s@*/%s@*:*",
+          split("/", var.github_repository)[0],
+          split("/", var.github_repository)[1],
+        ),
+      ]
     }
   }
 }
