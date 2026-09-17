@@ -18,7 +18,10 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # El paquete se instala editable para recarga en desarrollo; conservar la
+    # ruta explicita hace que uvicorn encuentre tanto la app como el sidecar.
+    PYTHONPATH=/app/src
 
 WORKDIR /app
 

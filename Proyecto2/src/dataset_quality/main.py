@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from dataset_quality import __version__
 from dataset_quality.api.artifacts import router as artifacts_router
+from dataset_quality.api.copilot import router as copilot_router
 from dataset_quality.api.duplicates import router as duplicates_router
 from dataset_quality.api.pipeline import router as pipeline_router
 from dataset_quality.api.policy import router as policy_router
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
         return get_settings().public_summary()
 
     app.include_router(artifacts_router)
+    app.include_router(copilot_router)
     app.include_router(duplicates_router)
     app.include_router(pipeline_router)
     app.include_router(policy_router)

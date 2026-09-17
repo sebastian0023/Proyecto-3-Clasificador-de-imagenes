@@ -462,21 +462,55 @@ tbody tr:last-child td {
   border-bottom-left-radius: 4px;
 }
 
-.toolchips {
-  display: flex;
-  flex-wrap: wrap;
+.toolcalls,
+.citations {
+  display: grid;
   gap: 6px;
-  margin-top: 9px;
+  margin-top: 10px;
 }
 
-.toolchip {
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 10.5px;
-  background: var(--surface);
+.toolcall {
   border: 1px solid var(--line-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 11px;
+}
+
+.toolcall.failed,
+.toolcall.rejected {
+  border-left-color: var(--fail);
+}
+
+.toolcall summary {
+  display: flex;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+.toolcall summary span:last-child {
+  margin-left: auto;
   color: var(--muted);
-  padding: 2px 7px;
-  border-radius: 5px;
+}
+
+.toolcall-detail {
+  display: grid;
+  gap: 5px;
+  border-top: 1px solid var(--line-2);
+  padding: 7px 8px;
+  overflow-wrap: anywhere;
+}
+
+.citation {
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.tool-error {
+  color: var(--fail);
 }
 
 .composer {

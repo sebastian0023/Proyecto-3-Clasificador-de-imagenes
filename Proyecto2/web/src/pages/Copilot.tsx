@@ -9,12 +9,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Card, Pill } from '../components/ui';
-import { api, type CopilotAnswer } from '../lib/api';
+import { ApiError, api, type CopilotAnswer, type CopilotCitation } from '../lib/api';
 
 interface Turno {
   role: 'user' | 'bot';
   text: string;
   tools?: CopilotAnswer['tool_calls'];
+  citations?: CopilotAnswer['citations'];
 }
 
 const SUGERENCIAS = [
@@ -51,18 +52,23 @@ export default function Copilot() {
     try {
       const respuesta = await api.copilot(texto);
       setTurnos((previos) => [
-        ...previos,
-        { role: 'bot', text: respuesta.answer, tools: respuesta.tool_calls },
+          ...previos,
+        {
+          role: 'bot',
+          text: respuesta.answer,
+          tools: respuesta.tool_calls,
+          citations: respuesta.citations,
+        },
       ]);
-    } catch {
+    } catch (error) {
       setTurnos((previos) => [
         ...previos,
         {
           role: 'bot',
           text:
-            'El agente todavía no está conectado: es el Frente 8, el servidor MCP con las ' +
-            'herramientas de solo lectura. Esta pantalla ya está lista para cuando exista, y ' +
-            'el contrato de la respuesta ya incluye las llamadas a herramientas.',
+            error instanceof ApiError
+              ? error.message
+              : 'No se pudo contactar al Dataset Copilot. Intenta de nuevo.',
         },
       ]);
     } finally {
@@ -98,12 +104,17 @@ export default function Copilot() {
             {turnos.map((turno, index) => (
               <div key={index} className={`bubble ${turno.role}`}>
                 {turno.text}
-                {turno.tools && turno.tools.length > 0 && (
-                  <div className="toolchips">
-                    {turno.tools.map((llamada, posicion) => (
-                      <span className="toolchip" key={posicion}>
-                        {llamada.name}
-                      </span>
+                {turno.tools && (
+                  <div className="toolcalls" aria-label="Llamadas MCP">
+                    {turno.tools.map((llamada) => (
+                      <ToolCall key={llamada.id} call={llamada} />
+                    ))}
+                  </div>
+                )}
+                {turno.citations && turno.citations.length > 0 && (
+                  <div className="citations">
+                    {turno.citations.map((citation) => (
+                      <Citation key={citation.artifact_revision} citation={citation} />
                     ))}
                   </div>
                 )}
@@ -166,5 +177,37 @@ export default function Copilot() {
         </div>
       </div>
     </>
+  );
+}
+
+function ToolCall({ call }: { call: CopilotAnswer['tool_calls'][number] }) {
+  const inputs = Object.entries(call.arguments);
+  return (
+    <details className={`toolcall ${call.status}`}>
+      <summary>
+        <span className="mono">{call.name}</span>
+        <span>{call.status === 'success' ? 'consultada' : call.status}</span>
+        <span>{call.duration_ms} ms</span>
+      </summary>
+      <div className="toolcall-detail">
+        <div>
+          <strong>Entradas:</strong>{' '}
+          {inputs.length === 0 ? 'sin argumentos' : JSON.stringify(call.arguments)}
+        </div>
+        {call.citation && <Citation citation={call.citation} />}
+        {call.error && <div className="tool-error">{call.error}</div>}
+      </div>
+    </details>
+  );
+}
+
+function Citation({ citation }: { citation: CopilotCitation }) {
+  const revision = citation.artifact_revision.slice(0, 12);
+  return (
+    <div className="citation">
+      <span className="mono">{citation.artifact}</span> · rev. {revision}
+      {citation.generated_at && ` · ${new Date(citation.generated_at).toLocaleString()}`}
+      {citation.dataset_fingerprint && ` · dataset ${citation.dataset_fingerprint.slice(0, 12)}`}
+    </div>
   );
 }

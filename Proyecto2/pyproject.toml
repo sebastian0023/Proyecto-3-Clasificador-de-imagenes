@@ -24,6 +24,10 @@ dependencies = [
     # mismo que `dvc[s3]`: esa es la herramienta de pipeline, esta es la
     # libreria que empaqueta el `.tar.zst` que sube `tiers/release.py`.
     "zstandard>=0.22",
+    # El Copilot usa Gemini para orquestar herramientas y el SDK oficial de
+    # MCP para hablar con el sidecar interno de solo lectura.
+    "google-genai>=1.0",
+    "mcp>=2,<3",
 ]
 
 [project.optional-dependencies]

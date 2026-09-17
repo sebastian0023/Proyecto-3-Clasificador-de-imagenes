@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8000, gt=0, lt=65536)
     log_level: str = "info"
 
+    # --- Dataset Copilot ---------------------------------------------------
+    # No se exige al arranque: calidad, versionado y la UI siguen funcionando
+    # aunque el entorno aun no tenga una clave de Gemini. El endpoint del
+    # Copilot comprueba esta ausencia y responde 503 sin intentar llamar fuera.
+    gemini_api_key: SecretStr | None = None
+    gemini_model: str = Field(default="gemini-flash-latest", min_length=1)
+    mcp_server_url: str = Field(default="http://127.0.0.1:8001/mcp", min_length=1)
+
     # --- MariaDB ------------------------------------------------------------
     db_host: str = Field(min_length=1)
     db_port: int = Field(gt=0, lt=65536)
