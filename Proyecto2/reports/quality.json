@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-17T04:53:36.396334Z",
+  "dataset_fingerprint": "295f4257328ee413ca6d7b8e9446bae50f7db80b2777bb8b93eb3f1dbc3dbdf2",
+  "config_version": 1,
+  "status": "pass",
+  "exit_code": 0,
+  "totals": {
+    "images": 838,
+    "annotations": 887,
+    "categories": 5
+  },
+  "checks": [
+    {
+      "name": "min_images_per_class",
+      "status": "pass",
+      "severity": "error",
+      "observed": 206.0,
+      "threshold": 100.0,
+      "message": "4 clase(s) llegan a 100 imagenes (se exigen 2)",
+      "offenders": [
+        5
+      ]
+    },
+    {
+      "name": "small_objects",
+      "status": "pass",
+      "severity": "warning",
+      "observed": 0.015783540022547914,
+      "threshold": 0.1,
+      "message": "14 de 887 cajas ocupan menos del 2.00% de su imagen (1.6%; maximo permitido 10.0%)",
+      "offenders": [
+        5,
+        6,
+        18,
+        46,
+        59,
+        61,
+        83,
+        84,
+        136,
+        145,
+        146,
+        147,
+        148,
+        864
+      ]
+    },
+    {
+      "name": "class_imbalance",
+      "status": "pass",
+      "severity": "warning",
+      "observed": 4.375,
+      "threshold": 20.0,
+      "message": "la clase mas representada tiene 280 imagenes y la menos 64 (4.4x; maximo permitido 20.0x)",
+      "offenders": []
+    },
+    {
+      "name": "duplicates",
+      "status": "pass",
+      "severity": "error",
+      "observed": 0.0,
+      "threshold": 0.01,
+      "message": "0 par(es) de imagenes casi identicas a distancia <= 5 de 64 bits; 0 de 838 imagenes sobran (0.0%; maximo permitido 1.0%)",
+      "offenders": []
+    },
+    {
+      "name": "degenerate_boxes",
+      "status": "pass",
+      "severity": "error",
+      "observed": 0.0,
+      "threshold": 0.0,
+      "message": "0 de 887 cajas se salen del borde de su imagen (0.0%; maximo permitido 0.0%)",
+      "offenders": []
+    },
+    {
+      "name": "spatial_bias",
+      "status": "fail",
+      "severity": "warning",
+      "observed": 0.9537767756482526,
+      "threshold": 0.6,
+      "message": "la celda mas poblada de la rejilla 3x3 concentra el 95.4% de los objetos (reparto uniforme: 11.1%; maximo permitido 60.0%)",
+      "offenders": []
+    }
+  ]
+}
