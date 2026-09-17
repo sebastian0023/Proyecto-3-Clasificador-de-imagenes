@@ -213,7 +213,6 @@ def run(
     on_progress: Callable[[int, int], None] | None = None,
 ) -> IngestSummary:
     """Ejecuta el Tier 1 completo."""
-    settings = get_settings()
     dataset = load_raw(path)
 
     missing = check_files_present(dataset, images_dir)
@@ -228,7 +227,9 @@ def run(
             ),
         )
 
-    bucket = settings.minio_bucket_images
+    # La configuracion se lee despues de validar: un COCO roto se rechaza
+    # igual, aunque el entorno todavia no tenga credenciales (p. ej. en CI).
+    bucket = get_settings().minio_bucket_images
     stored, uploaded = upload_images(dataset, images_dir, bucket, on_progress)
 
     persist(dataset, stored)
