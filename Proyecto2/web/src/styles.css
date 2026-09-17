@@ -324,6 +324,21 @@ h1 {
   font-size: 12px;
 }
 
+/* Barra proporcional dentro de una fila. Va en CSS y no en SVG porque no
+   necesita ejes: la cifra exacta se lee al lado, la barra solo ordena. */
+.track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
 .banner {
   margin-top: 14px;
   padding: 10px 13px;
@@ -516,7 +531,20 @@ tbody tr:last-child td {
   cursor: pointer;
 }
 
+/* Controles del editor de la política. Llevan clase propia para no pisar los
+   estilos del compositor del chat, que también vive dentro de una tarjeta. */
+.campo {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
 input:focus-visible,
+select:focus-visible,
 button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

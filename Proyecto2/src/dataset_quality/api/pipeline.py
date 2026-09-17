@@ -18,18 +18,15 @@ Lo que NO hace, deliberadamente:
 from __future__ import annotations
 
 import threading
-from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from dataset_quality import policy
 from dataset_quality.api.artifacts import REPORTS
 from dataset_quality.models.errors import DatasetValidationError
 from dataset_quality.tiers import pipeline
 from dataset_quality.tiers.ingest import RAW_ANNOTATIONS, RAW_IMAGES
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CONFIG_PATH = REPO_ROOT / "quality.yaml"
 
 # Un recorrido dura segundos y escribe dos archivos. Dos peticiones a la vez
 # los escribirian entrelazados, asi que la segunda se rechaza en vez de
@@ -47,10 +44,13 @@ def refresh() -> dict[str, Any]:
             status_code=503,
             detail="No hay dataset en `data/raw/`. Corre `dvc pull data/raw.dvc`.",
         )
-    if not CONFIG_PATH.is_file():
+    if not policy.CONFIG_PATH.is_file():
         raise HTTPException(
             status_code=503,
-            detail=f"Falta `quality.yaml` en {CONFIG_PATH.parent}: sin politica no hay umbrales.",
+            detail=(
+                f"Falta `quality.yaml` en {policy.CONFIG_PATH.parent}: "
+                "sin politica no hay umbrales."
+            ),
         )
 
     if not LOCK.acquire(blocking=False):
@@ -62,7 +62,7 @@ def refresh() -> dict[str, Any]:
         resultado = pipeline.refresh(
             coco_path=RAW_ANNOTATIONS,
             images_dir=RAW_IMAGES,
-            config_path=CONFIG_PATH,
+            config_path=policy.CONFIG_PATH,
             stats_out=REPORTS / "stats.json",
             quality_out=REPORTS / "quality.json",
         )

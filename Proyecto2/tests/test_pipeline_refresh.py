@@ -23,6 +23,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from dataset_quality import policy
 from dataset_quality.api import artifacts, duplicates
 from dataset_quality.api import pipeline as api_pipeline
 from dataset_quality.main import create_app
@@ -257,7 +258,9 @@ def api(taller, monkeypatch, env):
     monkeypatch.setattr(dedupe, "QUARANTINE", reports.parent / "quarantine")
     monkeypatch.setattr(api_pipeline, "RAW_ANNOTATIONS", coco_path)
     monkeypatch.setattr(api_pipeline, "RAW_IMAGES", imagenes)
-    monkeypatch.setattr(api_pipeline, "CONFIG_PATH", config_path)
+    # La ruta de `quality.yaml` vive en `policy`: editarla desde Settings y
+    # recalcular tienen que apuntar al mismo archivo.
+    monkeypatch.setattr(policy, "CONFIG_PATH", config_path)
     monkeypatch.setattr(api_pipeline, "REPORTS", reports)
 
     client = TestClient(create_app(), raise_server_exceptions=False)
@@ -298,7 +301,7 @@ def test_sin_dataset_da_503_que_manda_a_dvc(api, monkeypatch, tmp_path) -> None:
 
 def test_sin_config_da_503_y_dice_cual_falta(api, monkeypatch, tmp_path) -> None:
     client, *_ = api
-    monkeypatch.setattr(api_pipeline, "CONFIG_PATH", tmp_path / "no-existe.yaml")
+    monkeypatch.setattr(policy, "CONFIG_PATH", tmp_path / "no-existe.yaml")
 
     response = client.post("/api/pipeline/refresh")
 

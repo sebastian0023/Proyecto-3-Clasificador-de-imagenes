@@ -90,7 +90,11 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         f"  {stats.annotations_per_image:.2f} cajas por imagen, "
         f"{stats.images_without_annotations} imagenes sin anotar"
     )
-    print(f"  area mediana de caja: {stats.median_box_area_ratio:.1%} de su imagen")
+    # Las tres juntas: la distribucion esta sesgada y una sola cifra enganaria.
+    print(
+        f"  area de caja sobre su imagen: media {stats.mean_box_area_ratio:.1%}, "
+        f"mediana {stats.median_box_area_ratio:.1%}, p90 {stats.p90_box_area_ratio:.1%}"
+    )
     for name, count in sorted(stats.images_per_class.items(), key=lambda item: -item[1]):
         print(f"    {name:<14}{count:>6} imagenes  ({stats.boxes_per_class[name]} cajas)")
 

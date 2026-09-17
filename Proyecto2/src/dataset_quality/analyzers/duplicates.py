@@ -15,6 +15,7 @@ conteo de imagenes por clase sin aportar variedad.
 
 from __future__ import annotations
 
+from collections import defaultdict
 from itertools import combinations
 from pathlib import Path
 
@@ -22,8 +23,13 @@ import imagehash
 from PIL import Image, UnidentifiedImageError
 
 from dataset_quality.models.coco import CocoDataset
+from dataset_quality.models.quality import (
+    PHASH_BITS,
+    DuplicatePair,
+    DuplicatesCheck,
+    DuplicatesDetail,
+)
 from dataset_quality.models.quality import CheckResult as Result
-from dataset_quality.models.quality import DuplicatesCheck
 
 
 def perceptual_hash(path: Path) -> int:
@@ -93,12 +99,65 @@ def duplicate_groups(hashes: dict[int, int], max_distance: int) -> list[set[int]
     return list(groups.values())
 
 
+def _por_impacto(conteos: dict[str, int]) -> dict[str, int]:
+    """De mayor a menor. La primera clave es la clase mas afectada, que es lo
+    primero que se pregunta; los empates se desempatan por nombre para que el
+    reporte sea reproducible."""
+    return dict(sorted(conteos.items(), key=lambda item: (-item[1], item[0])))
+
+
+def classes_of_image(dataset: CocoDataset) -> dict[int, list[str]]:
+    """Clases con al menos una caja en cada imagen, en el orden del COCO."""
+    names = {category.id: category.name for category in dataset.categories}
+    por_imagen: dict[int, list[str]] = {}
+    for annotation in dataset.annotations:
+        clases = por_imagen.setdefault(annotation.image_id, [])
+        nombre = names[annotation.category_id]
+        if nombre not in clases:
+            clases.append(nombre)
+    return por_imagen
+
+
+def affected_classes(
+    dataset: CocoDataset, offenders: list[int]
+) -> tuple[dict[str, int], dict[str, int], int]:
+    """A que clases afectan las copias: imagenes, cajas y copias sin clase.
+
+    Una copia con cajas de dos clases suma en las dos — inflo el conteo de las
+    dos — asi que la suma de `imagenes` puede superar `len(offenders)`. Ese es
+    el numero que hay que restarle a cada clase para saber con cuantas imagenes
+    distintas se queda de verdad.
+    """
+    names = {category.id: category.name for category in dataset.categories}
+    sobrantes = set(offenders)
+
+    por_imagen = classes_of_image(dataset)
+    imagenes: dict[str, int] = defaultdict(int)
+    for image_id in sobrantes:
+        for nombre in por_imagen.get(image_id, ()):
+            imagenes[nombre] += 1
+
+    cajas: dict[str, int] = defaultdict(int)
+    for annotation in dataset.annotations:
+        if annotation.image_id in sobrantes:
+            cajas[names[annotation.category_id]] += 1
+
+    sin_clase = sum(1 for image_id in sobrantes if not por_imagen.get(image_id))
+
+    return _por_impacto(imagenes), _por_impacto(cajas), sin_clase
+
+
 def analyze_duplicates(dataset: CocoDataset, config: DuplicatesCheck, images_dir: Path) -> Result:
     """Marca como infractora la copia, no el original.
 
     De cada par se reporta el id mayor: el primero en aparecer se considera el
     original y el segundo, la copia. Asi el conteo de infractoras equivale a
     "cuantas imagenes sobran".
+
+    Los pares y su reparto por clase viajan en `duplicates` dentro del propio
+    `CheckResult`: son lo unico caro de este analizador — abrir cada imagen y
+    calcular su pHash — y tirarlos obligaria a recalcularlos a todo el que
+    quiera responder "a que clase afectan estos duplicados".
     """
     if not config.enabled:
         return _skipped(config)
@@ -110,6 +169,10 @@ def analyze_duplicates(dataset: CocoDataset, config: DuplicatesCheck, images_dir
     total = len(dataset.images)
     observed = len(offenders) / total if total else 0.0
 
+    imagenes_por_clase, cajas_por_clase, sin_clase = affected_classes(dataset, offenders)
+    todos = duplicate_groups(hashes, config.phash_hamming_distance)
+    grupos = [grupo for grupo in todos if len(grupo) > 1]
+
     return Result(
         name="duplicates",
         status="fail" if observed > config.max_ratio else "pass",
@@ -118,11 +181,32 @@ def analyze_duplicates(dataset: CocoDataset, config: DuplicatesCheck, images_dir
         threshold=config.max_ratio,
         message=(
             f"{len(pairs)} par(es) de imagenes casi identicas a distancia "
-            f"<= {config.phash_hamming_distance} de 64 bits; "
+            f"<= {config.phash_hamming_distance} de {PHASH_BITS} bits; "
             f"{len(offenders)} de {total} imagenes sobran "
             f"({observed:.1%}; maximo permitido {config.max_ratio:.1%})"
+            + (
+                f"; la clase mas afectada es {next(iter(imagenes_por_clase))}"
+                if imagenes_por_clase
+                else ""
+            )
         ),
         offenders=offenders,
+        duplicates=DuplicatesDetail(
+            max_distance=config.phash_hamming_distance,
+            pairs=[
+                DuplicatePair(
+                    kept=menor,
+                    duplicate=mayor,
+                    distance=distancia,
+                    similarity=1 - distancia / PHASH_BITS,
+                )
+                for menor, mayor, distancia in pairs
+            ],
+            groups=len(grupos),
+            images_by_class=imagenes_por_clase,
+            boxes_by_class=cajas_por_clase,
+            images_without_class=sin_clase,
+        ),
     )
 
 

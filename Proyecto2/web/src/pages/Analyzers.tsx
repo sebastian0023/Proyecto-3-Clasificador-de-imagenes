@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { BarChart } from '../components/charts';
 import DedupeAction from '../components/DedupeAction';
 import { Card, Pill, Resolve, Tile, useApi } from '../components/ui';
-import { api, comparison, formatMetric, type CheckResult } from '../lib/api';
+import {
+  api,
+  comparison,
+  formatMetric,
+  type CheckResult,
+  type DuplicatesDetail,
+} from '../lib/api';
 
 const POR_QUE: Record<string, string> = {
   min_images_per_class:
@@ -20,6 +26,94 @@ const POR_QUE: Record<string, string> = {
   spatial_bias:
     'Si los objetos caen siempre en la misma zona, el modelo aprende la posición en vez del objeto y falla cuando uno entra por la orilla.',
 };
+
+/**
+ * A qué clases afectan los duplicados.
+ *
+ * El analizador ya calcula los pares para decidir el veredicto; antes los
+ * tiraba y solo sobrevivían los ids sobrantes. Con el detalle en `quality.json`
+ * esta tarjeta —y la herramienta MCP del Copilot— responden "cuántos duplicados
+ * hay y a qué clase afectan" sin volver a abrir una sola imagen.
+ */
+function Duplicados({ detalle }: { detalle: DuplicatesDetail }) {
+  const porClase = Object.entries(detalle.images_by_class);
+  // El backend las devuelve ordenadas de mayor a menor, así que la primera fija
+  // la escala de las barras.
+  const maximo = Math.max(0, ...porClase.map(([, imagenes]) => imagenes));
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div className="cols-2">
+        <Card
+          title="A qué clases afectan"
+          hint="Imágenes sobrantes que contienen al menos una caja de cada clase. Una copia con cajas de dos clases suma en las dos, así que el total puede superar el número de copias. Es lo que hay que restarle a cada clase para saber con cuántas imágenes distintas se queda."
+        >
+          {porClase.length === 0 ? (
+            <p className="state">
+              {detalle.images_without_class > 0
+                ? `Las ${detalle.images_without_class} copias detectadas no tienen ninguna caja: no afectan a ninguna clase.`
+                : 'No hay copias que afecten a ninguna clase.'}
+            </p>
+          ) : (
+            porClase.map(([clase, imagenes]) => (
+              <div className="row" key={clase}>
+                <div className="row-main">
+                  <div style={{ width: '100%' }}>
+                    <div style={{ fontWeight: 500 }}>{clase}</div>
+                    <div className="track" style={{ marginTop: 6 }}>
+                      <div
+                        className="fill"
+                        style={{ width: `${maximo > 0 ? (imagenes / maximo) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <span className="mono" style={{ whiteSpace: 'nowrap', marginLeft: 12 }}>
+                  {imagenes} img · {detalle.boxes_by_class[clase] ?? 0} cajas
+                </span>
+              </div>
+            ))
+          )}
+          {detalle.images_without_class > 0 && porClase.length > 0 && (
+            <div className="row">
+              <span style={{ color: 'var(--muted)' }}>sin ninguna caja</span>
+              <span className="mono">{detalle.images_without_class} img</span>
+            </div>
+          )}
+        </Card>
+
+        <Card
+          title="Pares detectados"
+          hint={`Distancia de Hamming entre pHash, umbral ≤ ${detalle.max_distance} de 64 bits. Se conserva el id menor.`}
+        >
+          <div className="row">
+            <span>Pares</span>
+            <span className="mono">{detalle.pairs.length}</span>
+          </div>
+          <div className="row">
+            <span>Grupos de copias</span>
+            <span className="mono">{detalle.groups}</span>
+          </div>
+          {detalle.pairs.slice(0, 12).map((par) => (
+            <div className="row" key={`${par.kept}-${par.duplicate}`}>
+              <span className="mono">
+                #{par.kept} ↔ #{par.duplicate}
+              </span>
+              <span className="mono" style={{ color: 'var(--muted)' }}>
+                {(par.similarity * 100).toFixed(1)}% · {par.distance} bits
+              </span>
+            </div>
+          ))}
+          {detalle.pairs.length > 12 && (
+            <p className="hint" style={{ marginBottom: 0 }}>
+              y {detalle.pairs.length - 12} par(es) más.
+            </p>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
 
 function Detalle({ check }: { check: CheckResult }) {
   const tone = check.status === 'fail' ? (check.severity === 'error' ? 'fail' : 'c') : 'b';
@@ -58,6 +152,8 @@ function Detalle({ check }: { check: CheckResult }) {
           </p>
         </Card>
       </div>
+
+      {check.duplicates && <Duplicados detalle={check.duplicates} />}
 
       {/* La accion vive junto al analizador que la justifica, no en un menu
           aparte: quien mira los 39 duplicados es quien decide eliminarlos. */}

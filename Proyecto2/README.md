@@ -430,6 +430,7 @@ dq release --dry-run
 | `python scripts/up.py` | App + MariaDB + MinIO arriba, buckets creados y `/health` en OK. |
 | `curl localhost:8000/health` | `200` con ambos checks en `up`; `503` si alguno está caído. |
 | `curl localhost:8000/api/config` | Configuración efectiva sin credenciales. |
+| `curl localhost:8000/api/policy` | Los umbrales vigentes de `quality.yaml`, tal como los lee la compuerta. |
 | `pytest` | Suite completa (configuración y health). |
 | `ruff check . && ruff format --check .` | Lint y formato en cero. |
 
@@ -495,7 +496,8 @@ cumple. Dos jobs:
 │   ├── storage.py              # cliente S3 -> MinIO
 │   ├── tables.py                # tablas SQLAlchemy: images, annotations, categories, splits, dataset_versions
 │   ├── cli.py                   # subcomandos `dq`: ingest, analyze, gate, split, release, init-db
-│   ├── main.py                  # FastAPI: /, /health, /api/config, /docs
+│   ├── main.py                  # FastAPI: /, /health, /api/config, /api/policy, /docs
+│   ├── policy.py                # reescribe quality.yaml sin perder sus comentarios
 │   ├── analyzers/                # Frente 3: los cinco analizadores + descriptiva
 │   │   └── duplicates.py        # pHash, distancia de Hamming, grupos de casi-duplicados
 │   ├── tiers/                    # un modulo por etapa del pipeline
@@ -534,6 +536,53 @@ Los tres contratos de salida están en `schema_version=1` y protegidos por
 ejemplos de oro en `tests/fixtures/`. Cambiar su forma sin subir la versión y
 actualizar esos fixtures rompe la prueba a propósito: es lo que permite que
 los Frentes 3, 4, 5, 7 y 8 desarrollen en paralelo contra un contrato estable.
+
+### El detalle de duplicados dentro de `quality.json`
+
+`CheckResult` lleva un campo opcional `duplicates` que **solo rellena el check
+del mismo nombre**; en los demás es `null`. Es un añadido compatible hacia
+atrás —un `quality.json` escrito antes de que existiera sigue validando— así
+que `schema_version` sigue en 1.
+
+```json
+"duplicates": {
+  "max_distance": 5,
+  "pairs": [{"kept": 1, "duplicate": 40, "distance": 0, "similarity": 1.0}],
+  "groups": 1,
+  "images_by_class": {"car": 1, "person": 1},
+  "boxes_by_class": {"person": 3, "car": 1},
+  "images_without_class": 0
+}
+```
+
+El analizador ya calculaba los pares para decidir el veredicto y los tiraba: lo
+único que sobrevivía era la lista de ids sobrantes. Con eso no se puede
+responder *cuántos duplicados hay y a qué clase afectan* sin volver a abrir
+todas las imágenes, que es la parte cara. Ahora el dato viaja en el reporte,
+que es lo que leen la pantalla de Analyzers y las herramientas del Copilot.
+
+`images_by_class` cuenta imágenes **sobrantes** que contienen al menos una caja
+de esa clase, ordenadas de mayor a menor. Una copia con cajas de dos clases
+suma en las dos, así que la suma puede superar el número de copias: es
+exactamente lo que hay que restarle a cada clase para saber con cuántas
+imágenes distintas se queda de verdad (la cuenta de la compuerta M3).
+
+### Editar la política desde la app: `/api/policy`
+
+| Endpoint | Qué hace |
+| --- | --- |
+| `GET /api/policy` | La política vigente, leída de `quality.yaml` y validada con `QualityConfig`. |
+| `PUT /api/policy` | La reescribe. El cuerpo es un `QualityConfig` completo: un umbral fuera de rango se rechaza con 422 nombrando el campo, antes de tocar el disco. |
+
+La escritura **no** hace `yaml.safe_dump` del modelo entero: eso borraría los
+comentarios de `quality.yaml`, que son los que explican por qué `min_images`
+son 300 y no 50. `src/dataset_quality/policy.py` reescribe solo las líneas cuyo
+valor cambia, así que el diff de Git enseña qué umbral se movió y a qué valor.
+Lo escrito se vuelve a leer y validar antes de reemplazar el archivo: si el
+texto reescrito no produce exactamente la política pedida, no se guarda nada.
+
+Cambiar la política no vuelve a medir el dataset. La respuesta lo dice
+(`stale_reports`) y la pantalla ofrece el botón de recalcular al lado.
 
 
 ## Estado y siguiente paso
