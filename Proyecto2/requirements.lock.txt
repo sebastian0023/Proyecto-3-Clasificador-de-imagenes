@@ -170,7 +170,7 @@ frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-fsspec==2026.7.0
+fsspec==2026.9.0
     # via
     #   dvc
     #   dvc-data
@@ -396,7 +396,7 @@ ruamel-yaml==0.19.1
     #   gto
 ruff==0.16.8
     # via dataset-quality (pyproject.toml)
-s3fs==2026.7.0
+s3fs==2026.9.0
     # via dvc-s3
 s3transfer==0.19.2
     # via boto3
