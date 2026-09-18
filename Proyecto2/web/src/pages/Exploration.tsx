@@ -30,7 +30,13 @@ export default function Exploration() {
           x: point.x,
           y: point.y,
           category: etiqueta(point.category_id),
+          imageId: point.image_id,
         }));
+
+        // La proyeccion anterior a `file_name` no puede servir miniaturas: sin
+        // el nombre del archivo el endpoint no sabe que imagen abrir. En vez de
+        // ensenar un hueco roto, el hover se desactiva hasta regenerarla.
+        const conMiniaturas = manifest.points.some((point) => Boolean(point.file_name));
         const categorias = [...new Set(points.map((p) => p.category).filter(Boolean))] as string[];
         categorias.sort();
 
@@ -75,7 +81,12 @@ export default function Exploration() {
               title={`Proyección ${manifest.method.toUpperCase()} en 2D`}
               hint="Pulsa una clase de la leyenda para aislarla."
             >
-              <ScatterPlot points={points} categories={categorias} highlight={aislada} />
+              <ScatterPlot
+                points={points}
+                categories={categorias}
+                highlight={aislada}
+                thumbnailUrl={conMiniaturas ? api.thumbnailUrl : undefined}
+              />
               <Legend
                 items={[
                   {

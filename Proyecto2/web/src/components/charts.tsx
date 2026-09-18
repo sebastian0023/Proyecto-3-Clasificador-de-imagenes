@@ -6,6 +6,8 @@
  * corresponde a un valor que la grafica alcanza de verdad.
  */
 
+import { useState } from 'react';
+
 const SERIES = [
   'var(--c1)',
   'var(--c2)',
@@ -159,11 +161,16 @@ export function ScatterPlot({
   points,
   categories,
   highlight,
+  thumbnailUrl,
 }: {
-  points: { x: number; y: number; category: string | null }[];
+  points: { x: number; y: number; category: string | null; imageId?: number }[];
   categories: string[];
   highlight: string | null;
+  /** Si se pasa, al posar el ratón sobre un punto se previsualiza su imagen. */
+  thumbnailUrl?: (imageId: number) => string;
 }) {
+  const [encima, setEncima] = useState<{ x: number; y: number; imageId: number } | null>(null);
+
   if (points.length === 0) return <p className="state">Sin puntos que dibujar.</p>;
 
   const width = 640;
@@ -178,6 +185,18 @@ export function ScatterPlot({
   const sx = (v: number) => pad + ((v - minX) / (maxX - minX || 1)) * (width - pad * 2);
   const sy = (v: number) => height - pad - ((v - minY) / (maxY - minY || 1)) * (height - pad * 2);
 
+  // La miniatura es un cuadrado de lado THUMB colocado junto al punto, que se
+  // voltea hacia dentro cerca de los bordes: si no, la vista previa se saldría
+  // del gráfico justo en los racimos de las esquinas, que son los que más
+  // interesa mirar.
+  const THUMB = 96;
+  const previa = encima
+    ? {
+        x: Math.min(Math.max(encima.x + 10, pad), width - THUMB - pad),
+        y: Math.min(Math.max(encima.y - THUMB - 10, pad), height - THUMB - pad),
+      }
+    : null;
+
   return (
     <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto' }} role="img">
       <rect
@@ -191,19 +210,56 @@ export function ScatterPlot({
       />
       {points.map((point, index) => {
         const dimmed = highlight !== null && point.category !== highlight;
+        const cx = sx(point.x);
+        const cy = sy(point.y);
+        const activo = encima?.imageId === point.imageId;
+        const conPrevia = thumbnailUrl !== undefined && point.imageId !== undefined && !dimmed;
         return (
           <circle
             key={index}
-            cx={sx(point.x)}
-            cy={sy(point.y)}
-            r={dimmed ? 2 : 3.2}
+            cx={cx}
+            cy={cy}
+            r={dimmed ? 2 : activo ? 5 : 3.2}
             fill={point.category ? seriesColor(categories.indexOf(point.category)) : 'var(--c8)'}
             opacity={dimmed ? 0.12 : 0.75}
+            stroke={activo ? 'var(--text)' : 'none'}
+            strokeWidth={activo ? 1.5 : 0}
+            style={conPrevia ? { cursor: 'crosshair' } : undefined}
+            onMouseEnter={
+              conPrevia
+                ? () => setEncima({ x: cx, y: cy, imageId: point.imageId as number })
+                : undefined
+            }
+            onMouseLeave={conPrevia ? () => setEncima(null) : undefined}
           >
             <title>{point.category ?? 'sin clase'}</title>
           </circle>
         );
       })}
+      {previa && encima && thumbnailUrl && (
+        // `pointerEvents: none` es lo que evita el parpadeo: sin él la propia
+        // miniatura recibe el ratón, el círculo dispara su onMouseLeave, la
+        // miniatura desaparece, el ratón vuelve al círculo, y así en bucle.
+        <g style={{ pointerEvents: 'none' }}>
+          <rect
+            x={previa.x - 3}
+            y={previa.y - 3}
+            width={THUMB + 6}
+            height={THUMB + 6}
+            rx="6"
+            fill="var(--surface)"
+            stroke="var(--line)"
+          />
+          <image
+            href={thumbnailUrl(encima.imageId)}
+            x={previa.x}
+            y={previa.y}
+            width={THUMB}
+            height={THUMB}
+            preserveAspectRatio="xMidYMid slice"
+          />
+        </g>
+      )}
       <text x={pad} y={height - 8} fontSize="10" fill="var(--muted)">
         componente principal 1 →
       </text>

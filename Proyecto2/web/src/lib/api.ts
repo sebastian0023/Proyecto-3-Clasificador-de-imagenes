@@ -129,6 +129,7 @@ export interface ExplorationManifest {
     x: number;
     y: number;
     category_id: number | null;
+    file_name: string;
   }[];
 }
 
@@ -287,6 +288,8 @@ export const api = {
   splits: () => request<Envelope<SplitsManifest>>('/api/splits'),
   versions: () => request<Envelope<VersionsManifest>>('/api/versions'),
   exploration: () => request<Envelope<ExplorationManifest>>('/api/exploration'),
+  /** URL de la miniatura de una imagen. No es una petición: la resuelve el <image> del SVG. */
+  thumbnailUrl: (imageId: number) => `/api/exploration/thumbnail/${imageId}`,
   stats: () => request<Envelope<AnalysisArtifact>>('/api/stats'),
   config: () => request<Config>('/api/config'),
   policy: () => request<PolicyEnvelope>('/api/policy'),

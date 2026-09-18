@@ -85,6 +85,7 @@ def build(dataset: CocoDataset, images_dir: Path, seed: int = 42) -> Exploration
     dominante = dominant_category(dataset)
 
     ids: list[int] = []
+    file_names: list[str] = []
     vectors: list[np.ndarray] = []
     for image in dataset.images:
         path = images_dir / image.file_name
@@ -95,6 +96,7 @@ def build(dataset: CocoDataset, images_dir: Path, seed: int = 42) -> Exploration
         except (UnidentifiedImageError, OSError):
             continue
         ids.append(image.id)
+        file_names.append(image.file_name)
 
     if vectors:
         projected, explicada = pca_2d(np.vstack(vectors))
@@ -113,7 +115,8 @@ def build(dataset: CocoDataset, images_dir: Path, seed: int = 42) -> Exploration
                 x=round(float(coords[0]), 5),
                 y=round(float(coords[1]), 5),
                 category_id=dominante.get(image_id),
+                file_name=file_name,
             )
-            for image_id, coords in zip(ids, projected, strict=True)
+            for image_id, file_name, coords in zip(ids, file_names, projected, strict=True)
         ],
     )

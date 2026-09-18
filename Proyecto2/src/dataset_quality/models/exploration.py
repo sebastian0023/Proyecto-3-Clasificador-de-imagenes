@@ -35,6 +35,11 @@ class ExplorationPoint(StrictModel):
     y: float
     # Clase dominante de la imagen; `None` si no tiene ninguna caja.
     category_id: int | None = None
+    # Nombre del archivo, para que la pantalla pueda pedir su miniatura sin
+    # cargar antes el COCO entero solo para traducir `image_id` a ruta. Es un
+    # anadido opcional: un `exploration.json` anterior sigue validando, por eso
+    # `schema_version` sigue en 1.
+    file_name: str = ""
 
 
 class ExplorationManifest(StrictModel):

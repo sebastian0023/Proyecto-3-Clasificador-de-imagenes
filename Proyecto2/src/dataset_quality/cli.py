@@ -132,6 +132,20 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         )
         print(f"Escrito {destino}")
 
+    if not args.sin_exploracion:
+        from dataset_quality.analyzers import exploration as exploration_module
+
+        heading("Exploracion 2D")
+        manifiesto = exploration_module.build(dataset, RAW_IMAGES)
+        destino = Path(args.exploration)
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_text(manifiesto.model_dump_json(indent=2), encoding="utf-8")
+        print(
+            f"  {len(manifiesto.points)} puntos por {manifiesto.method.upper()}, "
+            f"{manifiesto.variance_explained:.1%} de varianza explicada"
+        )
+        print(f"Escrito {destino}")
+
     return 0
 
 
@@ -462,6 +476,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     analyze.add_argument("--config", default="quality.yaml", help="Ruta de quality.yaml.")
     analyze.add_argument("--json", default=None, help="Escribe el resultado en este JSON.")
+    analyze.add_argument(
+        "--exploration",
+        default="reports/exploration.json",
+        help="Donde escribir la proyeccion 2D que consume la pantalla de exploracion.",
+    )
+    analyze.add_argument(
+        "--sin-exploracion",
+        action="store_true",
+        help="Salta la proyeccion 2D, que vuelve a abrir todas las imagenes.",
+    )
     analyze.set_defaults(handler=cmd_analyze)
 
     gate = subcommands.add_parser(

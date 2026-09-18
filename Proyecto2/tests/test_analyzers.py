@@ -808,3 +808,50 @@ def test_cada_resultado_cumple_el_contrato_congelado(photos) -> None:
         assert result.message, "cada check debe explicarse en una linea"
         assert all(isinstance(offender, int) for offender in result.offenders)
 
+
+# --------------------------------------------------------------------------
+# Proyeccion 2D — cada punto sabe de que archivo salio
+# --------------------------------------------------------------------------
+def test_cada_punto_lleva_el_nombre_de_su_archivo(photos) -> None:
+    """Sin `file_name`, servir la miniatura obligaba a cargar el COCO entero
+    solo para traducir `image_id` a ruta."""
+    from dataset_quality.analyzers import exploration
+
+    images_dir = photos(uno=1, dos=2, tres=3)
+    dataset = coco(
+        images=[(1, "uno.jpg", 256, 192), (2, "dos.jpg", 256, 192), (3, "tres.jpg", 256, 192)],
+        boxes=[(1, 1, 1, 0, 0, 60, 60)],
+        categories=[(1, "car")],
+    )
+
+    manifiesto = exploration.build(dataset, images_dir)
+    por_id = {punto.image_id: punto.file_name for punto in manifiesto.points}
+
+    assert por_id == {1: "uno.jpg", 2: "dos.jpg", 3: "tres.jpg"}
+
+
+def test_una_imagen_que_no_esta_en_disco_no_produce_punto(photos) -> None:
+    """El `file_name` de cada punto corresponde a un archivo que existe.
+
+    Si la lista de nombres y la de ids se desalinearan, un punto acabaria
+    apuntando a la foto de otro.
+    """
+    from dataset_quality.analyzers import exploration
+
+    images_dir = photos(existe=1, tambien=2)
+    dataset = coco(
+        images=[
+            (1, "existe.jpg", 256, 192),
+            (2, "fantasma.jpg", 256, 192),
+            (3, "tambien.jpg", 256, 192),
+        ],
+        boxes=[(1, 1, 1, 0, 0, 60, 60)],
+        categories=[(1, "car")],
+    )
+
+    manifiesto = exploration.build(dataset, images_dir)
+
+    assert [(p.image_id, p.file_name) for p in manifiesto.points] == [
+        (1, "existe.jpg"),
+        (3, "tambien.jpg"),
+    ]
