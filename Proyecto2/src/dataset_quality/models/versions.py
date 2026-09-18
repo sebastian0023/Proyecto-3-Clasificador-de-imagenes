@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator, model_validator
 
@@ -26,6 +26,13 @@ class DatasetCounts(StrictModel):
     images: int = Field(ge=0)
     annotations: int = Field(ge=0)
     categories: int = Field(ge=0)
+
+
+class VersionQualitySummary(StrictModel):
+    """Metricas de esta version; nunca se toman de los reportes vigentes."""
+
+    distinct_images_per_class: dict[str, Annotated[int, Field(ge=0)]]
+    small_objects_ratio: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class RemotePublication(StrictModel):
@@ -62,6 +69,8 @@ class DatasetVersion(StrictModel):
     quality_status: Literal["pass", "fail"]
     counts: DatasetCounts
     notes: str | None = None
+    quality_summary: VersionQualitySummary | None = None
+    archive_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     # En que remotes esta publicada esta version. Anadido opcional: un
     # `versions.json` escrito antes de que existiera sigue validando, por eso
     # `schema_version` sigue en 1.

@@ -447,7 +447,51 @@ se suba: el archivo se arma con metadata deterministica (mtime fijo a epoca
 0, miembros en orden fijo), asi que el contenido —no el destino— es lo unico
 que determina el hash.
 
-### Auto-incremento de version
+### Comparar y promover releases
+
+Cada release nuevo conserva `quality_summary`: imagenes distintas por clase
+tras colapsar duplicados y proporcion de objetos pequenos. La pantalla Versions
+compara las dos ultimas versiones contra el mismo requisito de 300 imagenes,
+lista las clases que cruzan el minimo y muestra el cambio de objetos pequenos
+en puntos porcentuales. No consulta los reportes vigentes para describir una
+version antigua.
+
+Para recuperar el resumen de `0.1.1`, que esta contenido en la exportacion
+actual, el siguiente comando verifica primero que el dataset historico tenga
+exactamente la huella registrada. Recalcula objetos pequenos con la politica
+vigente, usando la misma definicion en ambas versiones:
+
+```bash
+python scripts/backfill_version_quality.py 0.1.1
+```
+
+La promocion conserva version, fecha y huellas, y copia el archivo de DEV al
+bucket `dataset-quality-releases-prod`. Usa credenciales AWS independientes de
+MinIO: un perfil explicito en el host o el rol OIDC del repositorio en Actions.
+
+```bash
+dq promote 0.1.3 --remote prod --profile <perfil-autorizado>
+# Validar una copia local sin acceder a AWS ni modificar el manifiesto:
+dq promote 0.1.3 --archive reports/releases/0.1.3/dataset.tar.zst --dry-run
+# Registrar en DVC la metadata de promocion despues de verificar PROD:
+dvc commit --force release
+dvc status
+```
+
+`--archive` acepta una copia local cuyo contenido y SHA-256 coinciden con la
+version publicada. La promocion exige calidad en `pass`, al menos dos clases
+con 300 imagenes distintas y el check del minimo activo con severidad `error`.
+No sobrescribe archivos distintos bajo la misma version; repetir una
+promocion identica verifica la copia y no duplica `published_in`.
+
+El workflow `promote-dataset.yml` ejecuta este cierre solo desde la rama
+`codex/dataset-release-fixes`, mediante `vars.AWS_ROLE_ARN`. Recupera el puntero
+anterior del dataset desde PROD, normaliza el COCO y verifica que tanto el
+puntero nuevo como el archivo sean identicos a los validados localmente antes
+de subirlos. Si PROD no contiene ese dataset, aborta sin publicar otro.
+Guarda el resultado y el enlace de ejecucion en `reports/prod-promotion.json`.
+
+### Numeracion de versiones
 
 `dq release` sube el patch de la ultima version publicada (`0.1.0 -> 0.1.1`);
 `--minor`/`--major` suben esa parte, y `--version X.Y.Z` fuerza un valor.

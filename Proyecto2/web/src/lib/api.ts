@@ -100,7 +100,14 @@ export interface DatasetVersion {
   quality_status: 'pass' | 'fail';
   counts: { images: number; annotations: number; categories: number };
   notes: string | null;
+  quality_summary?: VersionQualitySummary | null;
+  archive_sha256?: string | null;
   published_in: RemotePublication[];
+}
+
+export interface VersionQualitySummary {
+  distinct_images_per_class: Record<string, number>;
+  small_objects_ratio: number | null;
 }
 
 /** Un remote donde está publicada una versión. */

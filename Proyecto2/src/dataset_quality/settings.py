@@ -64,6 +64,11 @@ class Settings(BaseSettings):
     # JPEGs: los bytes van al almacen de objetos y en MariaDB queda la llave.
     minio_bucket_images: str = Field(min_length=1)
 
+    # AWS usa su cadena de credenciales (perfil explicito u OIDC en CI).
+    # Las credenciales de MinIO nunca se reutilizan para PROD.
+    prod_bucket_releases: str = Field(default="dataset-quality-releases-prod", min_length=1)
+    prod_region: str = Field(default="us-east-1", min_length=1)
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def database_url(self) -> str:
