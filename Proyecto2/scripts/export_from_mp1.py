@@ -296,7 +296,7 @@ def main() -> None:
 
     if not args.check_only:
         RAW_DIR.mkdir(parents=True, exist_ok=True)
-        ANNOTATIONS_PATH.write_text(json.dumps(dataset, indent=1), encoding="utf-8")
+        ANNOTATIONS_PATH.write_text(json.dumps(dataset, indent=1), encoding="utf-8", newline="\n")
         print(f"COCO guardado en {ANNOTATIONS_PATH.relative_to(REPO_ROOT)}")
 
         log("Descargando imagenes...")

@@ -82,9 +82,27 @@ def evaluate(
 
 
 def write_report(report: QualityReport, path: Path = DEFAULT_REPORT_PATH) -> Path:
-    """Escribe `quality.json`. El archivo se puede releer con su propio modelo."""
+    r"""Escribe `quality.json`. El archivo se puede releer con su propio modelo.
+
+    El `newline="\n"` no es cosmetico, y esta por la misma razon en todos los
+    escritores de artefactos del pipeline: `splits.write_manifest`,
+    `release.write_manifest`, `pipeline.write_analysis`, `dedupe` y las dos
+    salidas de `cli.cmd_analyze`.
+
+    Sin el, `write_text` usa el separador de linea de la plataforma: el mismo
+    reporte sale con `\n` en Linux y con `\r\n` en Windows. El contenido es
+    identico y cualquier lector JSON lo interpreta igual — pero DVC no lee, HASHEA
+    BYTES. Dos finales de linea distintos son dos md5 distintos, y ahi `dvc.lock`
+    deja de ser portable: regenerado en Windows hace que en CI (Linux) las cuatro
+    etapas aparezcan como modificadas y `dvc repro` reejecute el pipeline entero,
+    que es justo lo contrario de lo que el lock existe para garantizar.
+
+    La otra mitad del arreglo vive en `.gitattributes`: estos reportes van a Git
+    (`cache: false` en `dvc.yaml`), y sin `eol=lf` el checkout volveria a
+    escribirlos con CRLF en Windows por mucho que el pipeline los produzca con LF.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+    path.write_text(report.model_dump_json(indent=2), encoding="utf-8", newline="\n")
     return path
 
 

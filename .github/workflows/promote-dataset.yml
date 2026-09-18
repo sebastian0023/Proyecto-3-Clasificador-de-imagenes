@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   promote:
-    if: github.repository == 'stephy0410/ruta-al-dataset-v1' && github.ref == 'refs/heads/dvc_fix'
+    if: github.repository == 'stephy0410/ruta-al-dataset-v1' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

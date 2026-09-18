@@ -424,6 +424,41 @@ razon: ocurre una vez, no en cada corrida del pipeline.
 | `.dvc/config` (URLs de los remotes, sin credenciales) | — |
 | `.dvc/config.local` **nunca** — esta en `.dvc/.gitignore` | credenciales de `dev`/`prod` |
 
+### Recuperar el dataset evaluado en un clon limpio
+
+El dataset **no está en Git** a propósito: son 634 MB de imágenes. Lo que Git
+versiona es el puntero `data/raw.dvc` (112 bytes) con el hash del directorio
+completo. Un clon recién hecho tiene el puntero y no las imágenes, y este es el
+comando que las trae:
+
+```bash
+# --- Opción A: desde el remote DEV (MinIO local) ---
+python scripts/up.py              # levanta MinIO
+python scripts/dvc_remote.py      # escribe .dvc/config.local desde .env
+dvc pull -r dev data/raw.dvc
+
+# --- Opción B: desde el remote PROD (S3 real) ---
+# Necesita un perfil AWS autorizado; el nombre del perfil es lo ÚNICO que se
+# guarda en local, nunca las llaves.
+dvc remote modify --local prod profile <perfil>
+dvc pull -r prod data/raw.dvc
+
+# Verificar que lo que bajó es exactamente lo evaluado:
+dvc status                        # "Data and pipelines are up to date."
+```
+
+No hay que confiar en que la descarga sea la correcta: DVC compara el hash de
+lo que baja contra `data/raw.dvc` y **falla** si no coincide, en vez de
+continuar con un dataset distinto. El `dataset_fingerprint` que aparece en
+`reports/quality.json` y en cada versión de `reports/versions.json` es la otra
+mitad de la misma garantía.
+
+En el repositorio no hay ninguna credencial pegada para esto: la opción A las
+lee de `.env` (que está en `.gitignore`) y la B, de un perfil de `~/.aws`.
+`scripts/recalculo_independiente.py` imprime estos mismos comandos si no
+encuentra `data/raw/`, para que el error diga qué hacer en vez de reventar con
+un rastro de Python.
+
 ### Remotes DEV/PROD
 
 `dev` (MinIO local) es el remote por defecto; `prod` (S3 real) esta declarado
@@ -485,7 +520,7 @@ No sobrescribe archivos distintos bajo la misma version; repetir una
 promocion identica verifica la copia y no duplica `published_in`.
 
 CI llama al workflow reutilizable `promote-dataset.yml` solo desde la rama
-`dvc_fix`, mediante `vars.AWS_ROLE_ARN`, despues de validar Python, web y
+`main`, mediante `vars.AWS_ROLE_ARN`, despues de validar Python, web y
 Terraform. Primero intenta recuperar el puntero vigente de PROD; si su cache
 aun no esta publicado, recupera el puntero anterior. Normaliza el COCO y
 verifica que tanto el puntero nuevo como el archivo sean identicos a los
@@ -534,6 +569,105 @@ dq release --dry-run
 | `curl localhost:8000/api/policy` | Los umbrales vigentes de `quality.yaml`, tal como los lee la compuerta. |
 | `pytest` | Suite completa (configuración y health). |
 | `ruff check . && ruff format --check .` | Lint y formato en cero. |
+| `python scripts/evidencia_dvc.py` | **Reproducibilidad**: dos `dvc repro` seguidos sin que la segunda rehaga nada, y el cache en sincronía con DEV y PROD. Con `--etapas analyze gate split` se limita a las etapas deterministas (lo que usa CI, que no tiene credenciales para `release`). |
+| `python scripts/recalculo_independiente.py` | **Que los números son ciertos**: recalcula las métricas desde el COCO crudo sin usar `dataset_quality`, y las contrasta con `reports/*.json`. |
+| `pytest tests/test_mutaciones.py` | **Que los analizadores detectan**: cuatro defectos inyectados a propósito, cada uno con su código de salida. |
+| `python scripts/lock_requirements.py --check` | El lockfile de Python corresponde a `pyproject.toml`. |
+| `cd web && npx playwright test` | Las siete pantallas, el hover/filtro de la PCA y la persistencia de Settings, contra la app levantada. |
+
+### Finales de línea: por qué `dvc.lock` dejó de ser portable
+
+Merece su propia sección porque es un fallo invisible y costó un CI en rojo.
+
+Los `reports/*.json` son salidas de etapa declaradas con `cache: false`, así que
+viajan por Git. Con `core.autocrlf=true` —el valor por defecto de Git para
+Windows— el checkout los escribe con **CRLF**, y en Linux quedan con **LF**.
+Hasta ahí, inofensivo: el JSON es el mismo y cualquier lector lo interpreta
+igual. Pero **DVC no lee, hashea bytes**. Dos finales de línea distintos son dos
+md5 distintos.
+
+La consecuencia: un `dvc repro` corrido en Windows grababa en `dvc.lock` los
+hashes de la versión CRLF. En CI, que es Linux, esos mismos archivos tenían LF,
+ningún hash coincidía, las cuatro etapas salían como `modified` y `dvc repro`
+reejecutaba el pipeline entero — justo lo contrario de lo que el lock existe
+para garantizar.
+
+El arreglo tiene dos mitades, y hacen falta las dos:
+
+| Mitad | Dónde | Qué evita |
+| --- | --- | --- |
+| `newline="\n"` en cada escritor de artefactos | `tiers/gate.py`, `splits.py`, `release.py`, `pipeline.py`, `dedupe.py`, `cli.py` | Que el **pipeline** produzca CRLF al correr en Windows |
+| `eol=lf` | `.gitattributes` (raíz del repo) | Que el **checkout de Git** reintroduzca CRLF |
+
+`tests/test_finales_de_linea.py` lo vigila por los dos lados: que cada escritor
+emita LF, y que los `reports/*.json` del repositorio no tengan ni un CRLF.
+
+Tras clonar o cambiar `.gitattributes`, renormaliza una vez:
+
+```bash
+git add --renormalize .
+```
+
+Nota: `data/raw/annotations.coco.json` **no** entra aquí. No está en Git — lo
+gestiona DVC — y los bytes que hay en el cache de `dev`/`prod` son los
+canónicos, sean los que sean. Tocarlo cambiaría `data/raw.dvc` y obligaría a
+volver a subir 634 MB a los dos remotes sin ganar nada.
+
+### Evidencia de reproducibilidad
+
+`dvc.lock` puede estar versionado y ser mentira: basta con que alguien regenere
+un reporte a mano después de la última corrida. Lo único que lo demuestra es
+correr el pipeline dos veces y exigir que la segunda no ejecute ninguna etapa.
+
+```bash
+python scripts/evidencia_dvc.py
+# -> reports/evaluation/dvc-reproducibilidad.{md,json}
+```
+
+Sale con código `!= 0` si la segunda corrida rehace algo, si los hashes de
+`dvc.lock` se mueven entre corridas, o si el cache local no coincide con alguno
+de los dos remotes. Con `--sin-remotes` se salta `dvc status -r dev/prod`
+(necesitan MinIO levantado y un perfil AWS).
+
+### Recálculo independiente de las métricas
+
+`reports/quality.json` lo escribe el mismo código que decide si el dataset está
+bien, así que por sí solo no prueba nada: un error en un analizador se hereda al
+reporte y nada lo delata. `scripts/recalculo_independiente.py` es un segundo
+programa que parte del dato crudo y **no importa `dataset_quality`** — ni
+siquiera `imagehash`: el pHash está reimplementado sobre numpy, porque usar la
+misma librería reproduciría un mal uso en vez de detectarlo.
+
+```bash
+python scripts/recalculo_independiente.py
+# -> reports/evaluation/recalculo.{md,json}, tabla reportado contra recalculado
+python scripts/recalculo_independiente.py --sin-imagenes   # salta el pHash de las 2045
+```
+
+Compara cajas por clase, imágenes por clase, objetos pequeños (ratio, conteo,
+ids y desglose), duplicados (pares y copias), sesgo espacial, cajas degeneradas
+y desbalance. Sale con código `!= 0` si cualquiera diverge. De paso comprueba
+algo que el pipeline no mira: si el campo `area` de cada anotación COCO coincide
+con el `ancho*alto` de su `bbox`.
+
+### Pruebas de mutación
+
+El recálculo confirma que los números coinciden, pero en este dataset varios
+checks dan cero — y coincidir en un cero no prueba que el detector funcione.
+`tests/test_mutaciones.py` cubre esa otra mitad: parte de un dataset que la
+compuerta aprueba e inyecta **un** defecto cada vez.
+
+| Mutación | Qué tiene que pasar |
+| --- | --- |
+| Copia recomprimida de una foto (otro md5, misma imagen) | `duplicates` la marca como copia y la compuerta sale con `!= 0` |
+| `bbox` con coordenada negativa | El COCO se rechaza al leerlo, nombrando la anotación; no se escribe `quality.json` |
+| `bbox` que se sale del borde de su imagen | `degenerate_boxes` la reporta y la compuerta sale con `!= 0` |
+| `min_images_per_class` inalcanzable | La compuerta bloquea contra el umbral configurado |
+
+La política de las pruebas es la **real**: se lee `quality.yaml` y solo se baja
+`min_images`, porque exigir 300 imágenes haría fallar a las cuatro por un motivo
+que no es el suyo. Si alguien afloja `phash_hamming_distance` en el archivo del
+proyecto, la primera mutación deja de detectarse y la suite se pone en rojo.
 
 ### Comprobar que la validación de secretos funciona
 
@@ -551,7 +685,10 @@ Para ejecutar pruebas y linter fuera de Docker:
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 source .venv/bin/activate       # Linux / macOS
-pip install -e ".[dev]"
+
+# Desde el lockfile: las versiones EXACTAS que usan CI y la imagen.
+pip install -r requirements.lock.txt
+pip install --no-deps -e .
 
 pytest
 ruff check . && ruff format .
@@ -560,18 +697,110 @@ ruff check . && ruff format .
 Las pruebas no tocan Docker ni la red: `tests/conftest.py` inyecta un entorno
 completo y `/health` se prueba con dobles de las dependencias.
 
-Para usar `dvc` (correr el pipeline, `dvc push`/`pull`), instala tambien el
-extra `pipeline`: `pip install -e ".[dev,pipeline]"`. No hace falta para
-`pytest`/`ruff`, solo para orquestar el grafo de `dvc.yaml`.
+### Por qué hay lockfile además de `pyproject.toml`
+
+`pyproject.toml` declara **rangos** (`fastapi>=0.115`), que es lo correcto para
+una librería y lo peor posible para reproducir un entorno: `pip install -e .`
+hoy y dentro de un mes traen árboles distintos sin que nadie haya tocado el
+repositorio, y un build que se rompe así parece un fallo del código.
+`requirements.lock.txt` congela las 153 dependencias — directas y transitivas —
+con su versión exacta.
+
+El `--no-deps` del segundo comando no es adorno: sin él, `pip` vuelve a resolver
+los rangos de `pyproject.toml` y deshace los pines que acaba de instalar.
+
+Se regenera con un solo comando, y **siempre dentro de `python:3.12-slim`** — la
+misma imagen del `Dockerfile` y del runner de CI. Un `pip freeze` desde un venv
+de Windows no sirve: la resolución depende de la plataforma, arrastraría
+paquetes que en Linux no existen y omitiría los que solo existen allí.
+
+```bash
+python scripts/lock_requirements.py            # regenera (necesita Docker)
+python scripts/lock_requirements.py --check    # falla si está desactualizado; lo corre CI
+```
+
+`dvc` entra por el extra `pipeline` y ya está dentro del lockfile, así que tanto
+el host como la imagen lo tienen: eso es lo que permite verificar la
+reproducibilidad del pipeline en el mismo entorno que se evalúa.
+
+## Pruebas de navegador (Frente 7)
+
+`web/tests/e2e/` corre con Playwright **contra la app levantada**, no contra
+mocks. Tiene un coste — hay que levantar el entorno primero — y a cambio lo que
+se comprueba es lo que se entrega: que las siete pantallas piden sus artefactos
+al backend y los reciben con `200`, que la proyección responde al ratón y que
+guardar la política la escribe de verdad en `quality.yaml`.
+
+```bash
+python scripts/up.py                  # la app tiene que estar arriba
+cd web
+npm ci
+npx playwright install --with-deps chromium
+npx playwright test                   # -> reports/evaluation/playwright/
+npm run test:e2e:report               # abre el reporte con las capturas
+```
+
+Sin el dataset en disco —un clon sin acceso al remote de DVC, o CI— falta una
+pieza: el hover de la PCA pide `GET /api/exploration/thumbnail/{id}`, que abre
+la imagen real de `data/raw/images/`, y sin ella el endpoint responde `404` con
+toda la razón. Para ese caso:
+
+```bash
+python scripts/imagenes_de_prueba.py  # un JPEG diminuto por cada file_name
+```
+
+Escribe un archivo por cada `file_name` del manifiesto versionado y **nunca
+sobrescribe** uno que ya esté, así que correrlo sobre el dataset real no toca
+ninguna foto. El endpoint sigue haciendo su trabajo entero —resolver el id
+contra el manifiesto, abrir, redimensionar y codificar— solo que sobre imágenes
+de relleno: lo único que deja de probarse es qué se ve en la miniatura.
+
+Cubre las siete pantallas (una por una, con captura adjunta y la verificación de
+que ninguna respuesta de `/api/` salió distinta de `200`), el hover de la PCA
+—que aparezca la miniatura y que el backend la sirva— el filtro de la leyenda
+—que aísle una clase y que «todas» lo deshaga— y la persistencia de Settings.
+
+Un aviso sobre esa última: **la suite de Settings escribe en `quality.yaml`**,
+que es el archivo que lee `dq gate`. Guarda la política original antes de tocar
+nada y la repone en un `afterAll` incondicional; CI comprueba además que el
+árbol quedó limpio. Es la única forma de probar persistencia de verdad: que el
+valor siga ahí después de recargar el navegador, no que el estado de React
+cambió.
 
 ## Integración continua
 
 `.github/workflows/ci.yml` corre en cada push y **falla el build** si algo no
-cumple. Dos jobs:
+cumple. Ningún job lleva `continue-on-error`.
 
-- **Ruff + pytest** — lint, formato y suite de pruebas.
-- **Arranque desde cero** — clona y ejecuta `python scripts/up.py` en un runner
-  limpio. Es la misma comprobación que hace el evaluador al clonar el repo.
+| Job | Qué comprueba |
+| --- | --- |
+| **Ruff + pytest** | Lint, formato y la suite completa, instalando desde el lockfile. Vuelve a invocar las mutaciones y las pruebas del Copilot por su nombre, para que borrarlas rompa el build en vez de reducir la suite en silencio. |
+| **El lockfile está al día** | Reresuelve `pyproject.toml` desde cero y exige que dé byte a byte el `requirements.lock.txt` commiteado. |
+| **Arranque desde cero + navegador** | `python scripts/up.py` en un runner limpio (la comprobación que hace el evaluador al clonar) y, encima, las pruebas de Playwright contra esa app. Publica el reporte con capturas como artefacto y verifica que `quality.yaml` quedó intacto. |
+| **La compuerta bloquea el build** | Prepara un dataset que no llega al mínimo y exige que `dq gate` salga con `!= 0` y nombre la regla. Sin esto, el `exit 1` de la compuerta solo existiría en la terminal de quien lo corre a mano. |
+| **Terraform Validate** | `fmt -check`, `init -backend=false` y `validate`. |
+| **El dataset sigue versionado** | Con el rol OIDC: `dvc pull -r prod`, la compuerta sobre esa descarga limpia, el recálculo independiente y las dos corridas de `dvc repro`. Publica `reports/evaluation/` como artefacto. |
+
+### Conectar el rol OIDC (paso manual, una vez)
+
+Terraform ya crea el rol y la confianza con GitHub
+(`terraform/modules/oidc_github`). Lo que falta es decirle al repositorio cuál
+es, y eso no se puede versionar: es una variable de GitHub.
+
+```bash
+gh variable set AWS_ROLE_ARN \
+  --body "$(terraform -chdir=Proyecto2/terraform output -raw github_actions_role_arn)"
+```
+
+Va en `vars` y no en `secrets` a propósito: un ARN no es material sensible, y la
+compuerta M2 exige cero llaves de larga vida en el repositorio. La trust policy
+del rol solo acepta `repo:<owner>/<repo>:*`, así que un fork no puede asumirlo
+aunque conozca el ARN.
+
+**Mientras la variable no exista, el job `versionado` falla en `main`** en vez
+de saltarse los pasos en silencio — que era el modo de fallo peligroso: un job
+en verde que no verificó nada contra PROD porque le faltaba una variable que
+nadie miró. En forks y en ramas de trabajo sigue siendo un salto legítimo.
 
 ---
 
@@ -586,10 +815,14 @@ cumple. Dos jobs:
 ├── dvc.yaml                     # pipeline por etapas (Frente 6): analyze, gate, split, release
 ├── dvc.lock                      # hashes de deps/outs de cada etapa — se versiona en Git
 ├── .dvc/config                   # URLs de los remotes dev (MinIO) y prod (S3); sin credenciales
+├── requirements.lock.txt         # las 153 dependencias con su version exacta (resuelto en Linux)
 ├── scripts/
 │   ├── up.py                   # el comando: levanta y verifica todo
 │   ├── down.py                  # apaga el entorno
-│   └── dvc_remote.py             # escribe .dvc/config.local (credenciales) desde .env
+│   ├── dvc_remote.py             # escribe .dvc/config.local (credenciales) desde .env
+│   ├── lock_requirements.py      # regenera el lockfile dentro de python:3.12-slim
+│   ├── evidencia_dvc.py          # dos `dvc repro` + estado de los remotes -> reports/evaluation/
+│   └── recalculo_independiente.py # recalcula las metricas SIN importar dataset_quality
 ├── quality.yaml                 # umbrales de calidad (Frente 4) y parametros de splits (Frente 5)
 ├── src/dataset_quality/
 │   ├── settings.py             # pydantic-settings: la frontera con el entorno
@@ -613,8 +846,14 @@ cumple. Dos jobs:
 │   │   ├── versions.py         # versions.json (salida, contrato congelado)
 │   │   └── errors.py           # ValidationError -> mensaje que nombra el campo
 │   └── static/index.html       # landing con el estado de la infraestructura
-└── tests/                      # pytest
-    └── fixtures/                # ejemplos COCO y los 3 golden files congelados
+├── tests/                      # pytest
+│   ├── test_mutaciones.py        # inyecta 4 defectos y exige que la compuerta los vea
+│   ├── test_copilot_resiliencia.py # fuente modificada, pregunta no respondible, proveedor caido
+│   └── fixtures/                # ejemplos COCO y los 3 golden files congelados
+├── web/
+│   ├── playwright.config.ts      # pruebas de navegador contra la app levantada
+│   └── tests/e2e/                # las 7 pantallas, hover/filtro de la PCA, Settings
+└── reports/evaluation/           # evidencia generada por comando (ver su README)
 ```
 
 ## Contratos de datos (Frente 2)

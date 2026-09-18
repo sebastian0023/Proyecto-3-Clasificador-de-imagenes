@@ -60,6 +60,7 @@ def write_stats(dataset, checks: list[CheckResult], destino: Path) -> Path:
             ensure_ascii=False,
         ),
         encoding="utf-8",
+        newline="\n",
     )
     return destino
 

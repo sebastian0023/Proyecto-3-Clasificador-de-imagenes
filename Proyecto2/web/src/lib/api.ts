@@ -274,17 +274,48 @@ export class ApiError extends Error {
   }
 }
 
+/** Error de validación de FastAPI: `{loc: [...], msg: "..."}`. */
+type ErrorDeValidacion = { loc?: (string | number)[]; msg?: string };
+
+/**
+ * Convierte el `detail` de la API en una línea legible.
+ *
+ * `detail` no siempre es texto. Cuando FastAPI rechaza el cuerpo por el
+ * esquema — un `max_cell_share` de 7 cuando es una fracción — devuelve un 422
+ * con una LISTA de errores, cada uno con la ruta del campo y su motivo.
+ * Tratarlo como cadena daba literalmente `[object Object]` en el banner: el
+ * peor mensaje posible, porque el usuario ve que falló y no qué campo. Aquí se
+ * aplana a `spatial_bias.max_cell_share: Input should be less than 1`.
+ *
+ * Se descarta el primer elemento de `loc` (`body`), que nunca aporta nada:
+ * todos los campos del PUT vienen del cuerpo.
+ */
+function mensajeDeError(detail: unknown, status: number): string {
+  if (typeof detail === 'string' && detail) return detail;
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    const lineas = (detail as ErrorDeValidacion[])
+      .map(({ loc, msg }) => {
+        const campo = (loc ?? []).filter((parte) => parte !== 'body').join('.');
+        return campo && msg ? `${campo}: ${msg}` : (msg ?? '');
+      })
+      .filter(Boolean);
+    if (lineas.length > 0) return lineas.join(' · ');
+  }
+
+  return `HTTP ${status}`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
   if (!response.ok) {
-    let detail = `HTTP ${response.status}`;
+    let detail: unknown;
     try {
-      const body = (await response.json()) as { detail?: string };
-      if (body.detail) detail = body.detail;
+      detail = ((await response.json()) as { detail?: unknown }).detail;
     } catch {
       // La respuesta no era JSON: nos quedamos con el codigo de estado.
     }
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, mensajeDeError(detail, response.status));
   }
   return (await response.json()) as T;
 }

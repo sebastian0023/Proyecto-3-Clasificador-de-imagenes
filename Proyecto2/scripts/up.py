@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -61,6 +62,27 @@ def read_env() -> dict[str, str]:
         key, _, value = line.partition("=")
         values[key.strip()] = value.strip().strip('"').strip("'")
     return values
+
+
+def export_host_identity() -> None:
+    """Le pasa a compose el uid/gid del host, para que la app pueda escribir.
+
+    El contenedor monta el repositorio en `/app` y guarda ahi `quality.yaml` y
+    los `reports/*.json`. En un bind mount los permisos se resuelven por UID
+    numerico, asi que un contenedor que corre como uid 10001 no puede escribir
+    en un arbol que en el host es de otro usuario: en Linux el guardado de la
+    politica falla con EACCES.
+
+    `os.getuid` no existe en Windows, y ahi tampoco hace falta: Docker Desktop
+    no traslada los permisos POSIX al montaje. Sin estas variables,
+    `docker-compose.yml` se queda con el `appuser` de la imagen.
+    """
+    getuid = getattr(os, "getuid", None)
+    getgid = getattr(os, "getgid", None)
+    if getuid is None or getgid is None:
+        return
+    os.environ.setdefault("DQ_UID", str(getuid()))
+    os.environ.setdefault("DQ_GID", str(getgid()))
 
 
 def require_docker() -> None:
@@ -126,6 +148,7 @@ def main() -> None:
     args = parser.parse_args()
 
     require_docker()
+    export_host_identity()
     ensure_env_file()
     env = read_env()
     app_port = env.get("APP_PORT", "8000")
