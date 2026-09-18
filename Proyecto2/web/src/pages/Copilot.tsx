@@ -208,6 +208,7 @@ function Citation({ citation }: { citation: CopilotCitation }) {
       <span className="mono">{citation.artifact}</span> · rev. {revision}
       {citation.generated_at && ` · ${new Date(citation.generated_at).toLocaleString()}`}
       {citation.dataset_fingerprint && ` · dataset ${citation.dataset_fingerprint.slice(0, 12)}`}
+      {citation.dataset_version && ` · v${citation.dataset_version}`}
     </div>
   );
 }

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from fastapi import HTTPException
 from pydantic import Field
 
 from dataset_quality.api import artifacts
@@ -30,6 +31,7 @@ class SourceCitation(StrictModel):
     artifact_revision: str
     generated_at: str | None = None
     dataset_fingerprint: str | None = None
+    dataset_version: str | None = None
 
 
 class ToolResult(StrictModel):
@@ -47,8 +49,30 @@ class VersionsArguments(StrictModel):
     limit: int = Field(default=10, ge=1, le=50)
 
 
+def _dataset_version(dataset_fingerprint: str | None) -> str | None:
+    """Resuelve una huella a la version publicada mas reciente, si existe."""
+    if dataset_fingerprint is None:
+        return None
+
+    try:
+        versions = artifacts.read(artifacts.ARTIFACTS["versions"]).data.versions
+    except HTTPException:
+        # La evidencia del reporte sigue siendo valida aunque el registro de
+        # releases aun no exista o ya no cumpla su contrato.
+        return None
+
+    for version in reversed(versions):
+        if version.dataset_fingerprint == dataset_fingerprint:
+            return version.version
+    return None
+
+
 def _result(loaded: LoadedArtifact, data: dict[str, Any]) -> ToolResult:
-    return ToolResult(source=SourceCitation.model_validate(loaded.source()), data=data)
+    source = SourceCitation.model_validate(loaded.source())
+    source = source.model_copy(
+        update={"dataset_version": _dataset_version(source.dataset_fingerprint)}
+    )
+    return ToolResult(source=source, data=data)
 
 
 def get_quality_report() -> ToolResult:

@@ -41,6 +41,7 @@ class FakeMcp:
                 artifact_revision="a" * 64,
                 generated_at="2026-09-16T00:00:00+00:00",
                 dataset_fingerprint="b" * 64,
+                dataset_version="0.1.1",
             ),
             data={"status": "fail"},
         )
@@ -93,11 +94,17 @@ def test_consulta_exige_herramienta_y_devuelve_cita(env, monkeypatch: pytest.Mon
     assert result.answer == "La compuerta esta en fail."
     assert result.tool_calls[0].status == "success"
     assert result.citations[0].artifact_revision == "a" * 64
+    assert result.tool_calls[0].citation is not None
+    assert result.tool_calls[0].citation.dataset_version == "0.1.1"
+    assert result.citations[0].dataset_version == "0.1.1"
     assert len(audits) == 1
     config = interactions.calls[0]["generation_config"]
     assert config["tool_choice"] == "any"
     assert interactions.calls[0]["response_format"]["mime_type"] == "application/json"
     assert interactions.calls[0]["store"] is False
+    assert "source.dataset_version" in service.SYSTEM_INSTRUCTIONS
+    tool_result = interactions.calls[1]["input"][-1]["result"][0]["text"]
+    assert '"dataset_version": "0.1.1"' in tool_result
 
 
 def test_sin_evidencia_no_devuelve_cifras(env, monkeypatch: pytest.MonkeyPatch) -> None:

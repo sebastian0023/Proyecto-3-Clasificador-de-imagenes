@@ -159,7 +159,11 @@ Al arrancar con Compose, el servidor MCP vive en un contenedor interno sin
 puerto publicado. Solo la API puede usar sus cinco herramientas de lectura:
 calidad, checks fallidos, distribución de clases, splits y versiones. Cada
 respuesta muestra las llamadas ejecutadas y cita el artefacto con su revisión
-SHA-256; MariaDB guarda una auditoría de las llamadas, no de las conversaciones.
+SHA-256. Cuando la huella del dataset de ese reporte coincide exactamente con
+una entrada de `versions.json`, la cita también muestra la versión publicada
+(`vX.Y.Z`); si no hay coincidencia o el registro de versiones no está disponible,
+la cita conserva la huella y deja la versión vacía. MariaDB guarda una auditoría
+de las llamadas, no de las conversaciones.
 
 Si la clave no está configurada, el resto de la plataforma sigue disponible y
 el endpoint del Copilot devuelve `503` con la instrucción de configuración.

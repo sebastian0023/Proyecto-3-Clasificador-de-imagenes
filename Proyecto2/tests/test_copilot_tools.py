@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
+import json
 import shutil
 from pathlib import Path
 
@@ -55,6 +57,50 @@ def test_las_herramientas_son_cinco_y_solo_lectura(reports: Path) -> None:
     assert {path.name: path.read_bytes() for path in reports.iterdir()} == before
 
 
+def test_las_citas_resuelven_la_version_publicada_mas_reciente(reports: Path) -> None:
+    versions_path = reports / "versions.json"
+    manifest = json.loads(versions_path.read_text(encoding="utf-8"))
+    version_mas_reciente = {
+        **manifest["versions"][-1],
+        "version": "0.1.2",
+        "created_at": "2026-09-18T00:00:00Z",
+    }
+    manifest["versions"].append(version_mas_reciente)
+    versions_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    citation = tools.get_quality_report().source
+
+    assert citation.dataset_fingerprint == version_mas_reciente["dataset_fingerprint"]
+    assert citation.dataset_version == "0.1.2"
+
+
+def test_las_citas_sin_version_no_inventan_un_release(reports: Path) -> None:
+    quality_path = reports / "quality.json"
+    quality = json.loads(quality_path.read_text(encoding="utf-8"))
+    quality["dataset_fingerprint"] = "c" * 64
+    quality_path.write_text(json.dumps(quality), encoding="utf-8")
+
+    assert tools.get_quality_report().source.dataset_version is None
+
+    (reports / "versions.json").unlink()
+    assert tools.get_quality_report().source.dataset_version is None
+
+    (reports / "versions.json").write_text("{roto", encoding="utf-8")
+    assert tools.get_quality_report().source.dataset_version is None
+
+
+def test_una_cita_legacy_sigue_siendo_valida() -> None:
+    citation = tools.SourceCitation.model_validate(
+        {
+            "artifact": "quality.json",
+            "artifact_revision": "a" * 64,
+            "dataset_fingerprint": "b" * 64,
+        }
+    )
+
+    assert citation.dataset_version is None
+
+
 def test_las_herramientas_devuelven_resumenes_citables(reports: Path) -> None:
     failed = tools.get_failed_checks(severity="error")
     distribution = tools.get_class_distribution()
@@ -86,14 +132,21 @@ def test_el_despachador_rechaza_herramientas_y_argumentos_no_permitidos(reports:
 def test_el_servidor_mcp_descubre_y_ejecuta_las_cinco_herramientas() -> None:
     from mcp import Client
 
-    async def discover() -> tuple[list[str], object]:
+    async def discover() -> tuple[list[str], dict[str, str | None], object]:
         async with Client(create_server()) as client:
             listed = await client.list_tools()
             result = await client.call_tool("get_quality_report", {})
-            return [tool.name for tool in listed.tools], result
+            return (
+                [tool.name for tool in listed.tools],
+                {tool.name: tool.description for tool in listed.tools},
+                result,
+            )
 
-    names, result = asyncio.run(discover())
+    names, descriptions, result = asyncio.run(discover())
 
     assert names == list(tools.ALLOWED_TOOL_NAMES)
+    assert descriptions == {
+        name: inspect.getdoc(getattr(tools, name)) for name in tools.ALLOWED_TOOL_NAMES
+    }
     assert result.is_error is False
     assert result.content[0].text.startswith("{")

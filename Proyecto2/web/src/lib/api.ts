@@ -218,6 +218,7 @@ export interface CopilotCitation {
   artifact_revision: string;
   generated_at: string | null;
   dataset_fingerprint: string | null;
+  dataset_version: string | null;
 }
 
 export interface CopilotToolCall {
