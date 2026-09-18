@@ -159,5 +159,5 @@ stages:
     outs:
     - path: reports/versions.json
       hash: md5
-      md5: 5de96ac967dc7969ea50c98b8d687238
-      size: 4539
+      md5: ab8e53455364de930e7c9e8227c4ee57
+      size: 4729

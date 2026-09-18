@@ -125,6 +125,11 @@
           "remote": "dev",
           "storage_uri": "s3://dataset-releases/0.1.3/dataset.tar.zst",
           "published_at": "2026-09-18T04:17:14.004218Z"
+        },
+        {
+          "remote": "prod",
+          "storage_uri": "s3://dataset-quality-releases-prod/0.1.3/dataset.tar.zst",
+          "published_at": "2026-09-18T04:31:46.137017Z"
         }
       ]
     }
