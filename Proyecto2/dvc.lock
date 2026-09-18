@@ -5,107 +5,159 @@ stages:
     deps:
     - path: data/raw/annotations.coco.json
       hash: md5
-      md5: 094bca6be45401ec7730aaf3d05138a4
-      size: 231874
+      md5: 87ef439aec59e9550a5d31721ed20b78
+      size: 569188
     - path: data/raw/images
       hash: md5
-      md5: 6f21d9cce4a2d2b41dd538b22c1a2dca.dir
-      size: 258680413
-      nfiles: 838
+      md5: 495349f67d2720d340584c2745e309af.dir
+      size: 633921688
+      nfiles: 2045
     - path: quality.yaml
       hash: md5
-      md5: 2516db3a92f6651f4e1b4af4a53ebd7d
-      size: 4123
+      md5: 2d2529516119575ec8cdb3e12e90583c
+      size: 3981
     - path: src/dataset_quality/analyzers
       hash: md5
-      md5: 5afa7e0c57734e02cab6ba0b7aecc675.dir
-      size: 52321
+      md5: a9eda4026b955572047b77b817823be6.dir
+      size: 29555
+      nfiles: 5
+    - path: src/dataset_quality/cli.py
+      hash: md5
+      md5: 6a0f8838a283b68931627f5b3daf8939
+      size: 24442
+    - path: src/dataset_quality/models
+      hash: md5
+      md5: 9945024e421b4178c0d8ad24d8bc7c84.dir
+      size: 36997
       nfiles: 9
     outs:
+    - path: reports/exploration.json
+      hash: md5
+      md5: 4ef97e623d76dd9d73a01d27f99db4d1
+      size: 321541
     - path: reports/stats.json
       hash: md5
-      md5: e26704ba5068cd525472704dd1b79316
-      size: 2508
+      md5: 5cf7c4517ea6476f89b518c6c6facabb
+      size: 6443
   gate:
     cmd: dq gate
     deps:
     - path: data/raw/annotations.coco.json
       hash: md5
-      md5: 094bca6be45401ec7730aaf3d05138a4
-      size: 231874
+      md5: 87ef439aec59e9550a5d31721ed20b78
+      size: 569188
     - path: data/raw/images
       hash: md5
-      md5: 6f21d9cce4a2d2b41dd538b22c1a2dca.dir
-      size: 258680413
-      nfiles: 838
+      md5: 495349f67d2720d340584c2745e309af.dir
+      size: 633921688
+      nfiles: 2045
     - path: quality.yaml
       hash: md5
-      md5: 2516db3a92f6651f4e1b4af4a53ebd7d
-      size: 4123
+      md5: 2d2529516119575ec8cdb3e12e90583c
+      size: 3981
     - path: src/dataset_quality/analyzers
       hash: md5
-      md5: 5afa7e0c57734e02cab6ba0b7aecc675.dir
-      size: 52321
+      md5: a9eda4026b955572047b77b817823be6.dir
+      size: 29555
+      nfiles: 5
+    - path: src/dataset_quality/cli.py
+      hash: md5
+      md5: 6a0f8838a283b68931627f5b3daf8939
+      size: 24442
+    - path: src/dataset_quality/models
+      hash: md5
+      md5: 9945024e421b4178c0d8ad24d8bc7c84.dir
+      size: 36997
       nfiles: 9
     - path: src/dataset_quality/tiers/gate.py
       hash: md5
-      md5: 787a932d092eca84df9fccb86beae420
-      size: 3919
+      md5: ec72ed2270f27bb6a5e507e84deaa9d1
+      size: 3807
     outs:
     - path: reports/quality.json
       hash: md5
-      md5: ec46e5815d9b1990c43b052a0ca999e6
-      size: 2307
+      md5: 2557da04b2c1e3cbb6a5c2bc96a84018
+      size: 6154
   split:
     cmd: dq split
     deps:
     - path: data/raw/annotations.coco.json
       hash: md5
-      md5: 094bca6be45401ec7730aaf3d05138a4
-      size: 231874
+      md5: 87ef439aec59e9550a5d31721ed20b78
+      size: 569188
     - path: data/raw/images
       hash: md5
-      md5: 6f21d9cce4a2d2b41dd538b22c1a2dca.dir
-      size: 258680413
-      nfiles: 838
+      md5: 495349f67d2720d340584c2745e309af.dir
+      size: 633921688
+      nfiles: 2045
     - path: quality.yaml
       hash: md5
-      md5: 2516db3a92f6651f4e1b4af4a53ebd7d
-      size: 4123
+      md5: 2d2529516119575ec8cdb3e12e90583c
+      size: 3981
     - path: reports/quality.json
       hash: md5
-      md5: ec46e5815d9b1990c43b052a0ca999e6
-      size: 2307
+      md5: 2557da04b2c1e3cbb6a5c2bc96a84018
+      size: 6154
+    - path: src/dataset_quality/cli.py
+      hash: md5
+      md5: 6a0f8838a283b68931627f5b3daf8939
+      size: 24442
+    - path: src/dataset_quality/models
+      hash: md5
+      md5: 9945024e421b4178c0d8ad24d8bc7c84.dir
+      size: 36997
+      nfiles: 9
     - path: src/dataset_quality/tiers/splits.py
       hash: md5
-      md5: d10f3f2091a42d1a346e966781131d2a
-      size: 10885
+      md5: da124487bc5889120322252f111f58e5
+      size: 11717
     outs:
     - path: reports/splits.json
       hash: md5
-      md5: 24c2b888f544bff48f64bf177c506629
-      size: 52648
+      md5: 2fd6a9968779295b02d24bc20bcc4ae3
+      size: 121727
   release:
     cmd: dq release
     deps:
     - path: data/raw/annotations.coco.json
       hash: md5
-      md5: 094bca6be45401ec7730aaf3d05138a4
-      size: 231874
+      md5: 87ef439aec59e9550a5d31721ed20b78
+      size: 569188
     - path: reports/quality.json
       hash: md5
-      md5: ec46e5815d9b1990c43b052a0ca999e6
-      size: 2307
+      md5: 2557da04b2c1e3cbb6a5c2bc96a84018
+      size: 6154
     - path: reports/splits.json
       hash: md5
-      md5: 24c2b888f544bff48f64bf177c506629
-      size: 52648
+      md5: 2fd6a9968779295b02d24bc20bcc4ae3
+      size: 121727
+    - path: src/dataset_quality/analyzers/structural.py
+      hash: md5
+      md5: 9a4b6408901f44efbfb5a2a31ce4805c
+      size: 12315
+    - path: src/dataset_quality/cli.py
+      hash: md5
+      md5: 6a0f8838a283b68931627f5b3daf8939
+      size: 24442
+    - path: src/dataset_quality/models
+      hash: md5
+      md5: 9945024e421b4178c0d8ad24d8bc7c84.dir
+      size: 36997
+      nfiles: 9
+    - path: src/dataset_quality/storage.py
+      hash: md5
+      md5: 8cac7687e310e4cef38c967b92276c20
+      size: 3671
+    - path: src/dataset_quality/tiers/gate.py
+      hash: md5
+      md5: ec72ed2270f27bb6a5e507e84deaa9d1
+      size: 3807
     - path: src/dataset_quality/tiers/release.py
       hash: md5
-      md5: 138e3d9e8614f7aa2b69363f42e31cd4
-      size: 8109
+      md5: e4352dec8cee76c9075fda84a2565174
+      size: 13874
     outs:
     - path: reports/versions.json
       hash: md5
-      md5: d66eb709f2f47a5753f0f43aeee8b6a5
-      size: 701
+      md5: ab8e53455364de930e7c9e8227c4ee57
+      size: 4729

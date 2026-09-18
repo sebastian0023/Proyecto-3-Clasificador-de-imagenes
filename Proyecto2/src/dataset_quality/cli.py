@@ -11,6 +11,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from botocore.exceptions import BotoCoreError, ClientError
+
 from dataset_quality import __version__
 from dataset_quality.models.errors import DatasetValidationError
 
@@ -353,20 +355,27 @@ def cmd_release(args: argparse.Namespace) -> int:
         return 1
 
     heading("Release")
-    bucket = get_settings().minio_bucket_releases
-    result = release_module.run(
-        coco_path=RAW_ANNOTATIONS,
-        quality_report_path=Path(args.quality_report),
-        splits_path=Path(args.splits),
-        dataset_fingerprint=dataset_fingerprint(dataset),
-        bucket=bucket,
-        bump=args.bump,
-        version=args.version,
-        notes=args.notes,
-        remote=args.remote or release_module.DEFAULT_REMOTE,
-        out=Path(args.out),
-        upload=not args.dry_run,
-    )
+    remote = args.remote or release_module.DEFAULT_REMOTE
+    settings = get_settings()
+    bucket = settings.prod_bucket_releases if remote == "prod" else settings.minio_bucket_releases
+    try:
+        result = release_module.run(
+            coco_path=RAW_ANNOTATIONS,
+            quality_report_path=Path(args.quality_report),
+            splits_path=Path(args.splits),
+            dataset_fingerprint=dataset_fingerprint(dataset),
+            bucket=bucket,
+            bump=args.bump,
+            version=args.version,
+            notes=args.notes,
+            remote=remote,
+            profile=args.profile,
+            out=Path(args.out),
+            upload=not args.dry_run,
+        )
+    except (ValueError, OSError, BotoCoreError, ClientError) as error:
+        print(f"{RED}{error}{RESET}", file=sys.stderr)
+        return 1
 
     entry = result.entry
     print(f"  version         {entry.version}")
@@ -384,6 +393,30 @@ def cmd_release(args: argparse.Namespace) -> int:
     else:
         print(f"\n{GREEN}Release publicado.{RESET} reporte: {args.out}")
 
+    return 0
+
+
+def cmd_promote(args: argparse.Namespace) -> int:
+    """Copia un release existente a PROD y registra el resultado verificado."""
+    from dataset_quality.tiers import promote
+
+    try:
+        entry = promote.run(
+            args.version,
+            out=Path(args.out),
+            profile=args.profile,
+            archive_path=Path(args.archive) if args.archive else None,
+            dry_run=args.dry_run,
+        )
+    except (ValueError, OSError, BotoCoreError, ClientError) as error:
+        print(f"{RED}{error}{RESET}", file=sys.stderr)
+        return 1
+    heading("Promocion a PROD")
+    print(f"  version {entry.version}")
+    if args.dry_run:
+        print("  Archivo validado; no se subio nada ni se modifico el registro.")
+    else:
+        print(next(p.storage_uri for p in entry.published_in if p.remote == "prod"))
     return 0
 
 
@@ -541,9 +574,11 @@ def build_parser() -> argparse.ArgumentParser:
     release.add_argument("--notes", default=None, help="Nota libre para esta version.")
     release.add_argument(
         "--remote",
+        choices=("dev", "prod"),
         default=None,
-        help="Remote donde queda publicada la version, para el registro (default: dev).",
+        help="Destino real de publicacion: MinIO dev o AWS prod (default: dev).",
     )
+    release.add_argument("--profile", default=None, help="Perfil AWS para PROD; en CI se usa OIDC.")
     release.add_argument(
         "--dry-run",
         action="store_true",
@@ -555,6 +590,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Publica aunque la compuerta de calidad este en fail o no exista.",
     )
     release.set_defaults(handler=cmd_release)
+
+    promote = subcommands.add_parser(
+        "promote", help="Promueve una version existente de DEV a PROD."
+    )
+    promote.add_argument("version", help="Semver del release existente.")
+    promote.add_argument("--remote", choices=("prod",), default="prod", help="Destino: AWS PROD.")
+    promote.add_argument("--profile", default=None, help="Perfil AWS; omitir para OIDC en CI.")
+    promote.add_argument("--out", default="reports/versions.json", help="Registro de versiones.")
+    promote.add_argument(
+        "--archive", default=None, help="Copia local del archivo publicado en DEV."
+    )
+    promote.add_argument(
+        "--dry-run", action="store_true", help="Valida sin subir ni registrar PROD."
+    )
+    promote.set_defaults(handler=cmd_promote)
 
     dedupe = subcommands.add_parser(
         "dedupe", help="Mueve a cuarentena las copias que marco el analizador."

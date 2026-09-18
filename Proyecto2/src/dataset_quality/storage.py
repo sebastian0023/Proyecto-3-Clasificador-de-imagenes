@@ -34,6 +34,15 @@ def get_s3_client() -> S3Client:
     )
 
 
+def get_prod_s3_client(profile: str | None = None) -> S3Client:
+    """S3 real, con credenciales AWS independientes del MinIO local."""
+    return boto3.Session(profile_name=profile).client(
+        "s3",
+        region_name=get_settings().prod_region,
+        config=Config(signature_version="s3v4", retries={"max_attempts": 2}),
+    )
+
+
 def check_object_storage(settings: Settings | None = None) -> None:
     """Lanza una excepcion si falta algun bucket o MinIO no responde."""
     settings = settings or get_settings()

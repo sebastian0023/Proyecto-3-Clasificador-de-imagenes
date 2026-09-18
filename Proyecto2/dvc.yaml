@@ -13,8 +13,12 @@ stages:
       - data/raw/images
       - quality.yaml
       - src/dataset_quality/analyzers
+      - src/dataset_quality/cli.py
+      - src/dataset_quality/models
     outs:
       - reports/stats.json:
+          cache: false
+      - reports/exploration.json:
           cache: false
 
   gate:
@@ -25,6 +29,8 @@ stages:
       - quality.yaml
       - src/dataset_quality/analyzers
       - src/dataset_quality/tiers/gate.py
+      - src/dataset_quality/cli.py
+      - src/dataset_quality/models
     outs:
       - reports/quality.json:
           cache: false
@@ -37,6 +43,8 @@ stages:
       - data/raw/images
       - quality.yaml
       - src/dataset_quality/tiers/splits.py
+      - src/dataset_quality/cli.py
+      - src/dataset_quality/models
     outs:
       - reports/splits.json:
           cache: false
@@ -48,6 +56,11 @@ stages:
       - reports/splits.json
       - data/raw/annotations.coco.json
       - src/dataset_quality/tiers/release.py
+      - src/dataset_quality/tiers/gate.py
+      - src/dataset_quality/analyzers/structural.py
+      - src/dataset_quality/cli.py
+      - src/dataset_quality/models
+      - src/dataset_quality/storage.py
     outs:
       # `persist: true` es obligatorio aqui y en ningun otro `outs` de este
       # archivo: `versions.json` es un REGISTRO acumulado entre releases

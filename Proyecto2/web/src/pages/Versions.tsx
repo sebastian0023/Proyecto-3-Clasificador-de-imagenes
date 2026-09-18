@@ -2,6 +2,7 @@
 
 import { Card, Pill, Resolve, useApi } from '../components/ui';
 import { api, type RemotePublication } from '../lib/api';
+import { MIN_IMAGES, qualityDiff } from '../lib/version-diff';
 
 /** Los remotes conocidos, en el orden en que un release los recorre. */
 const REMOTES = ['dev', 'prod'] as const;
@@ -55,6 +56,7 @@ export default function Versions() {
         const versions = [...envelope.data.versions].reverse();
         const ultima = versions[0];
         const previa = versions[1];
+        const diff = ultima && previa ? qualityDiff(previa, ultima) : null;
 
         return (
           <>
@@ -121,6 +123,38 @@ export default function Versions() {
                       <span>Categorías</span>
                       <Delta actual={ultima.counts.categories} previo={previa.counts.categories} />
                     </div>
+                    <div className="row">
+                      <span>Clases que cruzan {MIN_IMAGES} imágenes</span>
+                      <span>{diff ? diff.crossed.length : 'Sin datos históricos'}</span>
+                    </div>
+                    {diff?.crossed.map((crossing) => (
+                      <div className="row" key={crossing.name}>
+                        <span>{crossing.name}</span>
+                        <Pill kind={crossing.gained ? 'pass' : 'fail'}>
+                          {crossing.previousCount} → {crossing.currentCount}
+                        </Pill>
+                      </div>
+                    ))}
+                    {diff && diff.crossed.length === 0 && (
+                      <p className="state">Ninguna clase cruzó el mínimo.</p>
+                    )}
+                    <div className="row">
+                      <span>Objetos pequeños</span>
+                      {diff?.smallObjects ? (
+                        <span className="mono">
+                          {diff.smallObjects.before.toFixed(2)}% → {diff.smallObjects.after.toFixed(2)}%
+                        </span>
+                      ) : <span>Sin datos históricos</span>}
+                    </div>
+                    {diff?.smallObjects && (
+                      <div className="row">
+                        <span>Cambio en puntos porcentuales</span>
+                        <span className="mono" style={{ color: diff.smallObjects.delta < 0
+                          ? 'var(--pass)' : diff.smallObjects.delta > 0 ? 'var(--fail)' : 'var(--muted)' }}>
+                          {diff.smallObjects.delta > 0 ? '+' : ''}{diff.smallObjects.delta.toFixed(2)} pp
+                        </span>
+                      </div>
+                    )}
                   </Card>
                 )}
 

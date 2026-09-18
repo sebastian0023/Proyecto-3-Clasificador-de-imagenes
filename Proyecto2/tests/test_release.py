@@ -14,9 +14,11 @@ from pathlib import Path
 
 import pytest
 
+from dataset_quality.models.coco import load_coco
 from dataset_quality.models.versions import VersionsManifest
 from dataset_quality.storage import file_sha256
 from dataset_quality.tiers import release as release_module
+from dataset_quality.tiers.gate import dataset_fingerprint
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -41,7 +43,7 @@ def _write_inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
             {
                 "schema_version": 1,
                 "generated_at": "2026-09-16T00:00:00Z",
-                "dataset_fingerprint": "a" * 64,
+                "dataset_fingerprint": dataset_fingerprint(load_coco(coco_path)),
                 "config_version": 1,
                 "status": "pass",
                 "exit_code": 0,
@@ -112,6 +114,66 @@ def test_el_mismo_contenido_da_el_mismo_archivo(tmp_path: Path) -> None:
     assert file_sha256(a) == file_sha256(b)
 
 
+def test_los_permisos_locales_no_cambian_el_archivo(tmp_path: Path) -> None:
+    coco_path, quality_path, splits_path = _write_inputs(tmp_path)
+    a = release_module.build_archive(
+        coco_path=coco_path,
+        quality_path=quality_path,
+        splits_path=splits_path,
+        dest=tmp_path / "a.tar.zst",
+    )
+    coco_path.chmod(0o600)
+    quality_path.chmod(0o600)
+    b = release_module.build_archive(
+        coco_path=coco_path,
+        quality_path=quality_path,
+        splits_path=splits_path,
+        dest=tmp_path / "b.tar.zst",
+    )
+    assert file_sha256(a) == file_sha256(b)
+
+
+def test_reportes_obsoletos_no_publican_otra_version(tmp_path: Path, monkeypatch) -> None:
+    coco_path, quality_path, splits_path = _write_inputs(tmp_path)
+    report = json.loads(quality_path.read_text())
+    report["dataset_fingerprint"] = "0" * 64
+    quality_path.write_text(json.dumps(report))
+    monkeypatch.setattr(
+        release_module, "upload_archive", lambda *a, **k: pytest.fail("no debe subir")
+    )
+    with pytest.raises(ValueError, match="no corresponden"):
+        release_module.run(
+            coco_path=coco_path,
+            quality_report_path=quality_path,
+            splits_path=splits_path,
+            dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
+            bucket="dataset-releases",
+            out=tmp_path / "versions.json",
+            archive_dir=tmp_path / "releases",
+        )
+    assert not (tmp_path / "versions.json").exists()
+
+
+def test_splits_de_otras_imagenes_no_publican_otra_version(tmp_path: Path, monkeypatch) -> None:
+    coco_path, quality_path, splits_path = _write_inputs(tmp_path)
+    splits = json.loads(splits_path.read_text())
+    splits["assignments"][0]["image_id"] = 999
+    splits_path.write_text(json.dumps(splits))
+    monkeypatch.setattr(
+        release_module, "upload_archive", lambda *a, **k: pytest.fail("no debe subir")
+    )
+    with pytest.raises(ValueError, match="splits no corresponden"):
+        release_module.run(
+            coco_path=coco_path,
+            quality_report_path=quality_path,
+            splits_path=splits_path,
+            dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
+            bucket="dataset-releases",
+            out=tmp_path / "versions.json",
+            archive_dir=tmp_path / "releases",
+        )
+
+
 def test_contenido_distinto_da_huella_distinta(tmp_path: Path) -> None:
     coco_path, quality_path, splits_path = _write_inputs(tmp_path)
     a = release_module.build_archive(
@@ -153,7 +215,7 @@ def test_run_produce_una_entrada_valida(tmp_path: Path, monkeypatch: pytest.Monk
         coco_path=coco_path,
         quality_report_path=quality_path,
         splits_path=splits_path,
-        dataset_fingerprint="b" * 64,
+        dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
         bucket="dataset-releases",
         out=tmp_path / "versions.json",
         archive_dir=tmp_path / "releases",
@@ -165,6 +227,8 @@ def test_run_produce_una_entrada_valida(tmp_path: Path, monkeypatch: pytest.Monk
     assert len(result.entry.dataset_fingerprint) == 64
     assert len(result.entry.quality_report_fingerprint) == 64
     assert len(result.entry.splits_fingerprint) == 64
+    assert result.entry.archive_sha256 == file_sha256(result.archive_path)
+    assert result.entry.quality_summary.distinct_images_per_class == {"car": 0}
     assert subidas == [(result.archive_path, "dataset-releases", "0.1.0")]
 
     # El archivo escrito valida contra su propio contrato congelado.
@@ -190,7 +254,7 @@ def test_publicar_registra_el_remote(tmp_path: Path, monkeypatch: pytest.MonkeyP
         coco_path=coco_path,
         quality_report_path=quality_path,
         splits_path=splits_path,
-        dataset_fingerprint="d" * 64,
+        dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
         bucket="dataset-releases",
         out=tmp_path / "versions.json",
         archive_dir=tmp_path / "releases",
@@ -208,7 +272,7 @@ def test_el_remote_se_puede_elegir(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         coco_path=coco_path,
         quality_report_path=quality_path,
         splits_path=splits_path,
-        dataset_fingerprint="e" * 64,
+        dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
         bucket="dataset-releases-prod",
         remote="prod",
         out=tmp_path / "versions.json",
@@ -235,7 +299,7 @@ def test_si_la_subida_falla_no_queda_registrada_como_publicada(
             coco_path=coco_path,
             quality_report_path=quality_path,
             splits_path=splits_path,
-            dataset_fingerprint="f" * 64,
+            dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
             bucket="dataset-releases",
             out=out,
             archive_dir=tmp_path / "releases",
@@ -321,7 +385,7 @@ def test_dry_run_no_sube_ni_escribe(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         coco_path=coco_path,
         quality_report_path=quality_path,
         splits_path=splits_path,
-        dataset_fingerprint="c" * 64,
+        dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
         bucket="dataset-releases",
         out=out,
         archive_dir=tmp_path / "releases",
@@ -345,7 +409,7 @@ def test_segunda_publicacion_incrementa_sobre_el_registro_existente(
         coco_path=coco_path,
         quality_report_path=quality_path,
         splits_path=splits_path,
-        dataset_fingerprint="d" * 64,
+        dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
         bucket="dataset-releases",
         out=out,
         archive_dir=tmp_path / "releases",
@@ -354,7 +418,7 @@ def test_segunda_publicacion_incrementa_sobre_el_registro_existente(
         coco_path=coco_path,
         quality_report_path=quality_path,
         splits_path=splits_path,
-        dataset_fingerprint="d" * 64,
+        dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
         bucket="dataset-releases",
         out=out,
         archive_dir=tmp_path / "releases",
@@ -377,7 +441,7 @@ def test_version_explicita_anula_el_auto_incremento(
         coco_path=coco_path,
         quality_report_path=quality_path,
         splits_path=splits_path,
-        dataset_fingerprint="e" * 64,
+        dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
         bucket="dataset-releases",
         version="9.9.9",
         out=tmp_path / "versions.json",
@@ -398,7 +462,7 @@ def test_version_duplicada_se_rechaza_al_escribir(
         coco_path=coco_path,
         quality_report_path=quality_path,
         splits_path=splits_path,
-        dataset_fingerprint="f" * 64,
+        dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
         bucket="dataset-releases",
         version="1.0.0",
         out=out,
@@ -410,7 +474,7 @@ def test_version_duplicada_se_rechaza_al_escribir(
             coco_path=coco_path,
             quality_report_path=quality_path,
             splits_path=splits_path,
-            dataset_fingerprint="f" * 64,
+            dataset_fingerprint=dataset_fingerprint(load_coco(coco_path)),
             bucket="dataset-releases",
             version="1.0.0",
             out=out,

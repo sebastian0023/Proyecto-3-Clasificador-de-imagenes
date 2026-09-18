@@ -23,13 +23,17 @@ Salida: `reports/versions.json` + `s3://<bucket-releases>/<version>/dataset.tar.
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import tarfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 import zstandard
+from botocore.exceptions import ClientError
 
+from dataset_quality.models.coco import CocoDataset, load_coco
 from dataset_quality.models.quality import QualityReport
 from dataset_quality.models.splits import SplitsManifest
 from dataset_quality.models.versions import (
@@ -37,10 +41,17 @@ from dataset_quality.models.versions import (
     DatasetCounts,
     DatasetVersion,
     RemotePublication,
+    VersionQualitySummary,
     VersionsManifest,
     backfill_remotes,
 )
-from dataset_quality.storage import ensure_bucket, file_sha256, get_s3_client
+from dataset_quality.storage import (
+    ensure_bucket,
+    file_sha256,
+    get_prod_s3_client,
+    get_s3_client,
+)
+from dataset_quality.tiers.gate import dataset_fingerprint as fingerprint_dataset
 
 DEFAULT_VERSIONS_PATH = Path("reports") / "versions.json"
 ARCHIVE_NAME = "dataset.tar.zst"
@@ -126,6 +137,7 @@ def build_archive(
         for source, arcname in members:
             info = archive.gettarinfo(source, arcname=arcname)
             info.mtime = 0
+            info.mode = 0o644
             info.uid = info.gid = 0
             info.uname = info.gname = ""
             with source.open("rb") as handle:
@@ -148,6 +160,8 @@ def build_entry(
     bucket: str,
     notes: str | None,
     published_in: list[RemotePublication] | None = None,
+    quality_summary: VersionQualitySummary | None = None,
+    archive_sha256: str | None = None,
 ) -> DatasetVersion:
     """Ensambla la entrada de `versions.json`. Funcion pura: sin disco ni red.
 
@@ -171,6 +185,26 @@ def build_entry(
             categories=quality_report.totals.categories,
         ),
         notes=notes,
+        quality_summary=quality_summary,
+        archive_sha256=archive_sha256,
+    )
+
+
+def summarize_quality(dataset: CocoDataset, report: QualityReport) -> VersionQualitySummary:
+    """Imagenes por clase tras colapsar las copias identificadas en el reporte."""
+    from dataset_quality.analyzers.structural import images_per_class
+
+    duplicates = next((c for c in report.checks if c.name == "duplicates"), None)
+    removed = set(duplicates.offenders) if duplicates and duplicates.status != "skipped" else set()
+    distinct = dataset.model_copy(
+        update={
+            "annotations": [a for a in dataset.annotations if a.image_id not in removed],
+        }
+    )
+    small = next((c for c in report.checks if c.name == "small_objects"), None)
+    return VersionQualitySummary(
+        distinct_images_per_class=images_per_class(distinct),
+        small_objects_ratio=small.observed if small and small.status != "skipped" else None,
     )
 
 
@@ -186,11 +220,57 @@ def write_manifest(manifest: VersionsManifest, path: Path = DEFAULT_VERSIONS_PAT
     return path
 
 
-def upload_archive(archive_path: Path, bucket: str, version: str) -> None:
-    """Sube el `.tar.zst` al bucket de releases."""
-    ensure_bucket(bucket)
+def upload_archive(
+    archive_path: Path,
+    bucket: str,
+    version: str,
+    *,
+    remote: str = DEFAULT_REMOTE,
+    profile: str | None = None,
+) -> None:
+    """Publica los mismos bytes sin sobrescribir un release distinto."""
+    if remote == "dev":
+        ensure_bucket(bucket)
+        client = get_s3_client()
+    elif remote == "prod":
+        client = get_prod_s3_client(profile)
+    else:
+        raise ValueError(f"Remote desconocido: {remote}")
     key = f"{version}/{ARCHIVE_NAME}"
-    get_s3_client().upload_file(str(archive_path), bucket, key)
+    expected = file_sha256(archive_path)
+
+    def verify_existing() -> bool:
+        try:
+            response = client.get_object(Bucket=bucket, Key=key)
+        except ClientError as error:
+            if error.response["Error"]["Code"] in {"404", "NoSuchKey"}:
+                return False
+            raise
+        with response["Body"] as body:
+            digest = hashlib.sha256()
+            while chunk := body.read(1024 * 1024):
+                digest.update(chunk)
+        if digest.hexdigest() != expected:
+            raise ValueError(f"La version {version} ya existe en {remote} con otro contenido")
+        return True
+
+    if verify_existing():
+        return
+    try:
+        with archive_path.open("rb") as body:
+            client.put_object(
+                Bucket=bucket,
+                Key=key,
+                Body=body,
+                IfNoneMatch="*",
+                ChecksumSHA256=base64.b64encode(bytes.fromhex(expected)).decode("ascii"),
+                Metadata={"sha256": expected},
+            )
+    except ClientError as error:
+        if error.response["Error"]["Code"] not in {"412", "PreconditionFailed"}:
+            raise
+    if not verify_existing():
+        raise ValueError(f"No se pudo verificar la copia de {version} en {remote}")
 
 
 def publication(remote: str, bucket: str, version: str) -> RemotePublication:
@@ -223,6 +303,7 @@ def run(
     out: Path = DEFAULT_VERSIONS_PATH,
     archive_dir: Path = Path("reports") / "releases",
     upload: bool = True,
+    profile: str | None = None,
 ) -> ReleaseResult:
     """Empaqueta, sube y registra una version. `upload=False` es `--dry-run`."""
     quality_report = QualityReport.model_validate_json(
@@ -230,10 +311,24 @@ def run(
     )
     # Solo se valida la forma antes de empaquetar: un splits.json corrupto no
     # debe terminar dentro de un release inmutable.
-    SplitsManifest.model_validate_json(splits_path.read_text(encoding="utf-8"))
+    splits = SplitsManifest.model_validate_json(splits_path.read_text(encoding="utf-8"))
+    dataset = load_coco(coco_path)
+    actual = fingerprint_dataset(dataset)
+    if actual != dataset_fingerprint or actual != quality_report.dataset_fingerprint:
+        raise ValueError("El reporte de calidad o la huella no corresponden al dataset actual")
+    if quality_report.totals.model_dump() != {
+        "images": len(dataset.images),
+        "annotations": len(dataset.annotations),
+        "categories": len(dataset.categories),
+    }:
+        raise ValueError("Los conteos de calidad no corresponden al dataset actual")
+    if {a.image_id for a in splits.assignments} != {i.id for i in dataset.images}:
+        raise ValueError("Los splits no corresponden a las imagenes del dataset actual")
 
     manifest = load_manifest(out)
     resolved_version = version or next_version(manifest, bump)
+    if any(entry.version == resolved_version for entry in manifest.versions):
+        raise ValueError(f"Version duplicada: {resolved_version}")
 
     archive_path = build_archive(
         coco_path=coco_path,
@@ -250,10 +345,15 @@ def run(
         splits_fingerprint=file_sha256(splits_path),
         bucket=bucket,
         notes=notes,
+        quality_summary=summarize_quality(dataset, quality_report),
+        archive_sha256=file_sha256(archive_path),
     )
 
     if upload:
-        upload_archive(archive_path, bucket, resolved_version)
+        if remote == DEFAULT_REMOTE and profile is None:
+            upload_archive(archive_path, bucket, resolved_version)
+        else:
+            upload_archive(archive_path, bucket, resolved_version, remote=remote, profile=profile)
         # El remote se registra DESPUES del upload: si la subida falla, la
         # excepcion sube y no queda escrito que la version esta publicada.
         entry = entry.model_copy(

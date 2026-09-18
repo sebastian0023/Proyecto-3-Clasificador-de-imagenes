@@ -20,7 +20,12 @@ from dataset_quality.mcp_server import create_server
 def reports(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     original = artifacts.REPORTS
     for name in ("quality.json", "stats.json", "splits.json", "versions.json"):
-        shutil.copy(original / name, tmp_path / name)
+        source = (
+            Path(__file__).parent / "fixtures" / name
+            if name == "versions.json"
+            else original / name
+        )
+        shutil.copy(source, tmp_path / name)
     monkeypatch.setattr(artifacts, "REPORTS", tmp_path)
     monkeypatch.setattr(
         artifacts,

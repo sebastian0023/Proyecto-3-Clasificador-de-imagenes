@@ -6,6 +6,23 @@ on:
   pull_request:
 
 jobs:
+  web:
+    name: Web tests + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto2/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Proyecto2/web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
   quality:
     name: Ruff + pytest
     runs-on: ubuntu-latest
@@ -144,8 +161,21 @@ jobs:
           print("Bloquean:", ", ".join(bloquean))
           PY
 
+  promote:
+    name: Publicar el dataset validado en PROD
+    needs: [quality, web, terraform]
+    if: github.repository == 'stephy0410/ruta-al-dataset-v1' && github.ref == 'refs/heads/dvc_fix'
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/promote-dataset.yml
+
   versionado:
     name: El dataset sigue versionado
+    needs: [promote]
+    # En dvc_fix se verifica el remote despues de publicar el nuevo cache.
+    # Las demas ramas conservan su validacion, aunque no promuevan releases.
+    if: ${{ !cancelled() && (needs.promote.result == 'success' || needs.promote.result == 'skipped') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -216,4 +246,4 @@ jobs:
         if: env.HAY_ROL == 'true'
         run: |
           dvc pull -r prod data/raw.dvc
-          dq gate || echo "La compuerta bloqueo el dataset real (esperado hoy)."
+          dq gate

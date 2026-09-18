@@ -27,7 +27,9 @@
           "storage_uri": "s3://dataset-quality-releases-prod-dataset-releases/0.1.0/dataset.tar.zst",
           "published_at": "2026-09-11T10:10:00Z"
         }
-      ]
+      ],
+      "quality_summary": null,
+      "archive_sha256": null
     }
   ]
 }
