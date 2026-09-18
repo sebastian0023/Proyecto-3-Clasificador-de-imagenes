@@ -115,13 +115,23 @@ jobs:
           cache: npm
           cache-dependency-path: Proyecto2/web/package-lock.json
 
-      # Reproduce la compuerta M1 de la rubrica: un clon limpio tiene que
-      # levantar app + MariaDB + MinIO con un solo comando, sin pasos extra.
-      # `up.py` falla con codigo != 0 si /health no queda en OK.
-      - name: python scripts/up.py
-        run: python scripts/up.py
-
-      # Las pruebas de navegador van AQUI y no en el job `web` porque corren
+      # ESTE PASO VA ANTES DE `up.py`, y el orden no es estetico.
+      #
+      # `docker-compose.yml` monta el repositorio entero en `/app` y encima le
+      # pone un volumen anonimo en `/app/web/node_modules` (para que el venv y
+      # los binarios nativos del host no entren al contenedor). Cuando ese
+      # directorio NO existe en el host — y en un runner recien clonado no
+      # existe, `node_modules/` esta en .gitignore — el daemon de Docker lo
+      # crea el mismo para poder montar ahi: como el daemon corre como root, el
+      # directorio queda `root:root` dentro del arbol de trabajo. A partir de
+      # ese momento `npm ci`, que corre como `runner`, no puede escribir dentro
+      # y muere con `EACCES: permission denied, mkdir '.../node_modules/@babel'`.
+      #
+      # Instalando primero, el directorio ya existe y es del usuario `runner`
+      # cuando compose monta encima: Docker no toca el dueno de un directorio
+      # que ya estaba.
+      #
+      # Las pruebas de navegador van en este job y no en `web` porque corren
       # contra la app de verdad — las siete pantallas pidiendo sus artefactos al
       # backend y recibiendolos con 200 — y eso exige el entorno levantado. En
       # el job `web` solo se podria probar contra mocks, que es probar el mock.
@@ -130,6 +140,12 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+
+      # Reproduce la compuerta M1 de la rubrica: un clon limpio tiene que
+      # levantar app + MariaDB + MinIO con un solo comando, sin pasos extra.
+      # `up.py` falla con codigo != 0 si /health no queda en OK.
+      - name: python scripts/up.py
+        run: python scripts/up.py
 
       - name: Pruebas de navegador
         working-directory: Proyecto2/web
@@ -375,9 +391,20 @@ jobs:
 
       # Y esta responde a "el pipeline es reproducible": dos `dvc repro`
       # seguidos, y la segunda corrida no puede rehacer ni una etapa.
+      #
+      # Solo las tres etapas deterministas. `release` queda fuera a proposito y
+      # no por comodidad: `dq release` empaqueta y SUBE el artefacto, asi que
+      # exige `.env` con credenciales de MinIO/S3 y los buckets creados. Aqui
+      # no hay nada de eso — este job solo hace `dvc pull` — y la etapa muere
+      # construyendo `Settings()`. Es la misma razon por la que `dq ingest`
+      # nunca fue una etapa del grafo: escribe en servicios externos.
+      #
+      # `--sin-remotes` porque el `dvc status -r dev` apunta al MinIO local,
+      # que en este job no existe; PROD ya se verifico con el `dvc pull` de
+      # arriba, que falla si el cache remoto no tiene el dataset del puntero.
       - name: El pipeline es reproducible
         if: env.HAY_ROL == 'true'
-        run: python scripts/evidencia_dvc.py
+        run: python scripts/evidencia_dvc.py --etapas analyze gate split --sin-remotes
 
       - name: Publicar la evidencia
         if: always() && env.HAY_ROL == 'true'

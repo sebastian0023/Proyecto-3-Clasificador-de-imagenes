@@ -276,7 +276,7 @@ def _manifest_from_units(
 def write_manifest(manifest: SplitsManifest, path: Path = DEFAULT_SPLITS_PATH) -> Path:
     """Escribe `splits.json`. El archivo se puede releer con su propio modelo."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8", newline="\n")
     return path
 
 

@@ -539,7 +539,7 @@ def main() -> int:
     filas = comparar(recalculado, duplicados, quality, stats)
 
     args.md.parent.mkdir(parents=True, exist_ok=True)
-    args.md.write_text(markdown(filas, recalculado, duplicados), encoding="utf-8")
+    args.md.write_text(markdown(filas, recalculado, duplicados), encoding="utf-8", newline="\n")
     args.json_destino.write_text(
         json.dumps(
             {
@@ -559,6 +559,7 @@ def main() -> int:
         )
         + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
     ancho = max(len(fila.metrica) for fila in filas)

@@ -173,6 +173,7 @@ def apply(
     coco_path.write_text(
         json.dumps(json.loads(depurado.model_dump_json(exclude_none=True)), indent=1),
         encoding="utf-8",
+        newline="\n",
     )
 
     return DedupeResult(

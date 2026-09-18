@@ -103,6 +103,8 @@ def markdown(informe: dict[str, Any]) -> str:
         "",
         f"Generado por `python scripts/evidencia_dvc.py` el {informe['generado_en']}.",
         "",
+        f"Alcance: **{informe['alcance']}**.",
+        "",
         "## Veredicto",
         "",
     ]
@@ -168,22 +170,49 @@ def main() -> int:
         action="store_true",
         help="Salta `dvc status -r dev/prod` (necesitan MinIO levantado y perfil AWS).",
     )
+    parser.add_argument(
+        "--etapas",
+        nargs="+",
+        metavar="ETAPA",
+        default=None,
+        help=(
+            "Limita `dvc repro` a estas etapas. Sin esto se reproduce el grafo entero, "
+            "que solo es posible donde haya credenciales (ver la nota de `release`)."
+        ),
+    )
     args = parser.parse_args()
 
     dvc = [sys.executable, "-m", "dvc"]
+    # `release` no es reproducible en cualquier entorno, y no por un defecto:
+    # `dq release` empaqueta y SUBE el artefacto, asi que necesita `.env` con
+    # las credenciales de MinIO/S3 y los buckets creados. En un job de
+    # validacion que solo hace `dvc pull` no hay nada de eso, y la etapa muere
+    # al construir `Settings()`. Es la misma razon por la que `dq ingest` nunca
+    # fue una etapa del grafo: escribe en servicios externos, no es una funcion
+    # pura de archivos a archivos.
+    #
+    # Por eso CI pasa `--etapas analyze gate split`: las tres deterministas. La
+    # reproducibilidad que se puede afirmar en un runner sin llaves es la de
+    # esas tres, y afirmar mas seria afirmar algo que no se comprobo.
+    objetivo = list(args.etapas) if args.etapas else []
+    alcance = f" ({', '.join(objetivo)})" if objetivo else " (grafo completo)"
     pasos: list[dict[str, Any]] = []
 
-    primera = correr("Primera corrida", [*dvc, "repro"])
+    primera = correr(f"Primera corrida{alcance}", [*dvc, "repro", *objetivo])
     pasos.append(primera)
 
     hashes_antes = hashes_del_lock()
 
-    segunda = correr("Segunda corrida", [*dvc, "repro"])
+    segunda = correr(f"Segunda corrida{alcance}", [*dvc, "repro", *objetivo])
     pasos.append(segunda)
 
     hashes_despues = hashes_del_lock()
 
-    estado = correr("Estado del grafo", [*dvc, "status"])
+    # El estado se consulta con el mismo alcance: preguntar por el grafo entero
+    # cuando solo se reprodujo una parte reportaria como "cambiada" una etapa
+    # que a proposito no se ejecuto, y el informe diria que algo va mal cuando
+    # lo que pasa es que no se miro.
+    estado = correr(f"Estado del grafo{alcance}", [*dvc, "status", *objetivo])
     pasos.append(estado)
 
     remotes: dict[str, str] = {}
@@ -211,6 +240,7 @@ def main() -> int:
 
     informe = {
         "generado_en": datetime.now(UTC).isoformat(timespec="seconds"),
+        "alcance": objetivo or "grafo completo",
         "reproducible": reproducible,
         "etapas_primera": etapas_ejecutadas(primera["salida"]),
         "etapas_segunda": etapas_segunda,
@@ -221,9 +251,13 @@ def main() -> int:
     }
 
     DESTINO.mkdir(parents=True, exist_ok=True)
-    (DESTINO / "dvc-reproducibilidad.md").write_text(markdown(informe), encoding="utf-8")
+    (DESTINO / "dvc-reproducibilidad.md").write_text(
+        markdown(informe), encoding="utf-8", newline="\n"
+    )
     (DESTINO / "dvc-reproducibilidad.json").write_text(
-        json.dumps(informe, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        json.dumps(informe, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
 
     print(f"\nEvidencia escrita en {DESTINO}")

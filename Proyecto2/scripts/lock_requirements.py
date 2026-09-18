@@ -143,7 +143,7 @@ def main() -> int:
         print("requirements.lock.txt esta al dia.")
         return 0
 
-    LOCKFILE.write_text(nuevo, encoding="utf-8")
+    LOCKFILE.write_text(nuevo, encoding="utf-8", newline="\n")
     pines = sum(1 for linea in nuevo.splitlines() if "==" in linea and not linea.startswith("#"))
     print(f"requirements.lock.txt regenerado: {pines} paquetes fijados.")
     return 0

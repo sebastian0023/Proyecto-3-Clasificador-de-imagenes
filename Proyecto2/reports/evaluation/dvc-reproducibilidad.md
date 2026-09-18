@@ -1,6 +1,8 @@
 # Reproducibilidad del pipeline DVC
 
-Generado por `python scripts/evidencia_dvc.py` el 2026-09-18T18:57:51+00:00.
+Generado por `python scripts/evidencia_dvc.py` el 2026-09-18T19:24:38+00:00.
+
+Alcance: **grafo completo**.
 
 ## Veredicto
 
@@ -23,15 +25,15 @@ local contra cada remote.
 
 | Etapa | Salida | md5 |
 | --- | --- | --- |
-| analyze | `reports/exploration.json` | `61f80004ca24fd9dfcfd11c04fac1c97` |
-| analyze | `reports/stats.json` | `d5adc82578f9c784eef32285e146bbd3` |
-| gate | `reports/quality.json` | `bb1dd8230b2b80fcd35171befdda3aef` |
-| split | `reports/splits.json` | `f124b71ee47cc553f5d295ad38aeafa8` |
-| release | `reports/versions.json` | `29f0f61b40bdf750215ba764c99720c9` |
+| analyze | `reports/exploration.json` | `b92a0527a081cdc041235621e3726552` |
+| analyze | `reports/stats.json` | `5cf7c4517ea6476f89b518c6c6facabb` |
+| gate | `reports/quality.json` | `2426fc8a8fe438edbd080cf49a4bc118` |
+| split | `reports/splits.json` | `4c78ae41d5381a252741726e64fbf072` |
+| release | `reports/versions.json` | `9ac0de9cd34491abf5e05ff33eb72ebd` |
 
 ## Salida cruda de cada comando
 
-### Primera corrida
+### Primera corrida (grafo completo)
 
 `$ C:\Users\angel\OneDrive\Documentos\semestre 9 intercambio\mlops\proyecto 2\ruta-al-dataset-v1\Proyecto2\.venv\Scripts\python.exe -m dvc repro` (exit 0)
 
@@ -43,7 +45,7 @@ Stage 'release' didn't change, skipping
 Data and pipelines are up to date.
 ```
 
-### Segunda corrida
+### Segunda corrida (grafo completo)
 
 `$ C:\Users\angel\OneDrive\Documentos\semestre 9 intercambio\mlops\proyecto 2\ruta-al-dataset-v1\Proyecto2\.venv\Scripts\python.exe -m dvc repro` (exit 0)
 
@@ -55,7 +57,7 @@ Stage 'release' didn't change, skipping
 Data and pipelines are up to date.
 ```
 
-### Estado del grafo
+### Estado del grafo (grafo completo)
 
 `$ C:\Users\angel\OneDrive\Documentos\semestre 9 intercambio\mlops\proyecto 2\ruta-al-dataset-v1\Proyecto2\.venv\Scripts\python.exe -m dvc status` (exit 0)
 

@@ -569,11 +569,49 @@ dq release --dry-run
 | `curl localhost:8000/api/policy` | Los umbrales vigentes de `quality.yaml`, tal como los lee la compuerta. |
 | `pytest` | Suite completa (configuración y health). |
 | `ruff check . && ruff format --check .` | Lint y formato en cero. |
-| `python scripts/evidencia_dvc.py` | **Reproducibilidad**: dos `dvc repro` seguidos sin que la segunda rehaga nada, y el cache en sincronía con DEV y PROD. |
+| `python scripts/evidencia_dvc.py` | **Reproducibilidad**: dos `dvc repro` seguidos sin que la segunda rehaga nada, y el cache en sincronía con DEV y PROD. Con `--etapas analyze gate split` se limita a las etapas deterministas (lo que usa CI, que no tiene credenciales para `release`). |
 | `python scripts/recalculo_independiente.py` | **Que los números son ciertos**: recalcula las métricas desde el COCO crudo sin usar `dataset_quality`, y las contrasta con `reports/*.json`. |
 | `pytest tests/test_mutaciones.py` | **Que los analizadores detectan**: cuatro defectos inyectados a propósito, cada uno con su código de salida. |
 | `python scripts/lock_requirements.py --check` | El lockfile de Python corresponde a `pyproject.toml`. |
 | `cd web && npx playwright test` | Las siete pantallas, el hover/filtro de la PCA y la persistencia de Settings, contra la app levantada. |
+
+### Finales de línea: por qué `dvc.lock` dejó de ser portable
+
+Merece su propia sección porque es un fallo invisible y costó un CI en rojo.
+
+Los `reports/*.json` son salidas de etapa declaradas con `cache: false`, así que
+viajan por Git. Con `core.autocrlf=true` —el valor por defecto de Git para
+Windows— el checkout los escribe con **CRLF**, y en Linux quedan con **LF**.
+Hasta ahí, inofensivo: el JSON es el mismo y cualquier lector lo interpreta
+igual. Pero **DVC no lee, hashea bytes**. Dos finales de línea distintos son dos
+md5 distintos.
+
+La consecuencia: un `dvc repro` corrido en Windows grababa en `dvc.lock` los
+hashes de la versión CRLF. En CI, que es Linux, esos mismos archivos tenían LF,
+ningún hash coincidía, las cuatro etapas salían como `modified` y `dvc repro`
+reejecutaba el pipeline entero — justo lo contrario de lo que el lock existe
+para garantizar.
+
+El arreglo tiene dos mitades, y hacen falta las dos:
+
+| Mitad | Dónde | Qué evita |
+| --- | --- | --- |
+| `newline="\n"` en cada escritor de artefactos | `tiers/gate.py`, `splits.py`, `release.py`, `pipeline.py`, `dedupe.py`, `cli.py` | Que el **pipeline** produzca CRLF al correr en Windows |
+| `eol=lf` | `.gitattributes` (raíz del repo) | Que el **checkout de Git** reintroduzca CRLF |
+
+`tests/test_finales_de_linea.py` lo vigila por los dos lados: que cada escritor
+emita LF, y que los `reports/*.json` del repositorio no tengan ni un CRLF.
+
+Tras clonar o cambiar `.gitattributes`, renormaliza una vez:
+
+```bash
+git add --renormalize .
+```
+
+Nota: `data/raw/annotations.coco.json` **no** entra aquí. No está en Git — lo
+gestiona DVC — y los bytes que hay en el cache de `dev`/`prod` son los
+canónicos, sean los que sean. Tocarlo cambiaría `data/raw.dvc` y obligaría a
+volver a subir 634 MB a los dos remotes sin ganar nada.
 
 ### Evidencia de reproducibilidad
 

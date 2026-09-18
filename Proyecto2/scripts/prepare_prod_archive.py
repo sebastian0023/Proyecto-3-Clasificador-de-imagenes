@@ -29,6 +29,7 @@ def prepare(version: str) -> Path:
     coco.write_text(
         json.dumps(json.loads(dataset.model_dump_json(exclude_none=True)), indent=1),
         encoding="utf-8",
+        newline="\n",
     )
     archive = release.build_archive(
         coco_path=coco,

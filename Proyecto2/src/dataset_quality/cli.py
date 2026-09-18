@@ -131,6 +131,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
                 ensure_ascii=False,
             ),
             encoding="utf-8",
+            newline="\n",
         )
         print(f"Escrito {destino}")
 
@@ -141,7 +142,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         manifiesto = exploration_module.build(dataset, RAW_IMAGES)
         destino = Path(args.exploration)
         destino.parent.mkdir(parents=True, exist_ok=True)
-        destino.write_text(manifiesto.model_dump_json(indent=2), encoding="utf-8")
+        destino.write_text(manifiesto.model_dump_json(indent=2), encoding="utf-8", newline="\n")
         print(
             f"  {len(manifiesto.points)} puntos por {manifiesto.method.upper()}, "
             f"{manifiesto.variance_explained:.1%} de varianza explicada"
