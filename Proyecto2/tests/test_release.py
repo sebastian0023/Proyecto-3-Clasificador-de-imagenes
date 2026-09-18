@@ -174,6 +174,140 @@ def test_run_produce_una_entrada_valida(tmp_path: Path, monkeypatch: pytest.Monk
     assert [entry.version for entry in on_disk.versions] == ["0.1.0"]
 
 
+# --------------------------------------------------------------------------
+# En que remotes esta publicada cada version
+# --------------------------------------------------------------------------
+def test_publicar_registra_el_remote(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`storage_uri` decia a que URI, pero no a que remote.
+
+    Sin el nombre del remote la pantalla no puede distinguir una version que
+    solo existe en el MinIO local de una promovida a S3.
+    """
+    coco_path, quality_path, splits_path = _write_inputs(tmp_path)
+    monkeypatch.setattr(release_module, "upload_archive", lambda *a, **k: None)
+
+    result = release_module.run(
+        coco_path=coco_path,
+        quality_report_path=quality_path,
+        splits_path=splits_path,
+        dataset_fingerprint="d" * 64,
+        bucket="dataset-releases",
+        out=tmp_path / "versions.json",
+        archive_dir=tmp_path / "releases",
+    )
+
+    assert [p.remote for p in result.entry.published_in] == ["dev"]
+    assert result.entry.published_in[0].storage_uri == result.entry.storage_uri
+
+
+def test_el_remote_se_puede_elegir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    coco_path, quality_path, splits_path = _write_inputs(tmp_path)
+    monkeypatch.setattr(release_module, "upload_archive", lambda *a, **k: None)
+
+    result = release_module.run(
+        coco_path=coco_path,
+        quality_report_path=quality_path,
+        splits_path=splits_path,
+        dataset_fingerprint="e" * 64,
+        bucket="dataset-releases-prod",
+        remote="prod",
+        out=tmp_path / "versions.json",
+        archive_dir=tmp_path / "releases",
+    )
+
+    assert [p.remote for p in result.entry.published_in] == ["prod"]
+
+
+def test_si_la_subida_falla_no_queda_registrada_como_publicada(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """El registro del remote va DESPUES del upload, no antes."""
+    coco_path, quality_path, splits_path = _write_inputs(tmp_path)
+
+    def explota(*a: object, **k: object) -> None:
+        raise OSError("el bucket no responde")
+
+    monkeypatch.setattr(release_module, "upload_archive", explota)
+    out = tmp_path / "versions.json"
+
+    with pytest.raises(OSError, match="el bucket no responde"):
+        release_module.run(
+            coco_path=coco_path,
+            quality_report_path=quality_path,
+            splits_path=splits_path,
+            dataset_fingerprint="f" * 64,
+            bucket="dataset-releases",
+            out=out,
+            archive_dir=tmp_path / "releases",
+        )
+
+    assert not out.exists()
+
+
+def test_una_version_no_se_registra_dos_veces_en_el_mismo_remote() -> None:
+    from dataset_quality.models.versions import DatasetVersion
+
+    with pytest.raises(ValueError, match="dos veces en el mismo remote"):
+        DatasetVersion.model_validate(
+            {
+                "version": "0.1.0",
+                "created_at": "2026-09-16T00:00:00Z",
+                "dataset_fingerprint": "a" * 64,
+                "quality_report_fingerprint": "b" * 64,
+                "splits_fingerprint": "c" * 64,
+                "storage_uri": "s3://bucket/0.1.0/dataset.tar.zst",
+                "quality_status": "pass",
+                "counts": {"images": 1, "annotations": 1, "categories": 1},
+                "published_in": [
+                    {
+                        "remote": "dev",
+                        "storage_uri": "s3://bucket/0.1.0/dataset.tar.zst",
+                        "published_at": "2026-09-16T00:00:00Z",
+                    },
+                    {
+                        "remote": "dev",
+                        "storage_uri": "s3://otro/0.1.0/dataset.tar.zst",
+                        "published_at": "2026-09-17T00:00:00Z",
+                    },
+                ],
+            }
+        )
+
+
+def test_las_entradas_viejas_se_leen_como_publicadas_en_dev(tmp_path: Path) -> None:
+    """Retrocompatibilidad: un `versions.json` anterior a `published_in`.
+
+    Hasta que existio el campo, `dq release` subia a un unico destino. Leerlas
+    como "sin publicar" enseñaria en la pantalla que no estan en ningun lado,
+    que es falso.
+    """
+    antiguo = {
+        "schema_version": 1,
+        "versions": [
+            {
+                "schema_version": 1,
+                "version": "0.1.0",
+                "created_at": "2026-09-16T00:00:00Z",
+                "dataset_fingerprint": "a" * 64,
+                "quality_report_fingerprint": "b" * 64,
+                "splits_fingerprint": "c" * 64,
+                "storage_uri": "s3://dataset-releases/0.1.0/dataset.tar.zst",
+                "quality_status": "pass",
+                "counts": {"images": 10, "annotations": 20, "categories": 2},
+                "notes": None,
+            }
+        ],
+    }
+    path = tmp_path / "versions.json"
+    path.write_text(json.dumps(antiguo), encoding="utf-8")
+
+    manifest = release_module.load_manifest(path)
+    publicada = manifest.versions[0].published_in
+
+    assert [p.remote for p in publicada] == ["dev"]
+    assert publicada[0].storage_uri == "s3://dataset-releases/0.1.0/dataset.tar.zst"
+
+
 def test_dry_run_no_sube_ni_escribe(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     coco_path, quality_path, splits_path = _write_inputs(tmp_path)
     monkeypatch.setattr(
@@ -196,6 +330,8 @@ def test_dry_run_no_sube_ni_escribe(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
     assert result.entry.version == "0.1.0"
     assert not out.exists()
+    # No se subio nada, asi que no hay ningun remote que registrar.
+    assert result.entry.published_in == []
 
 
 def test_segunda_publicacion_incrementa_sobre_el_registro_existente(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +19,17 @@ from dataset_quality.api.policy import router as policy_router
 from dataset_quality.db import check_database
 from dataset_quality.storage import check_object_storage
 
-STATIC_DIR = Path(__file__).parent / "static"
+# Donde vive el build de Vite. Por defecto, dentro del paquete: es donde lo
+# deja `npm run build` en el host y donde lo espera una instalacion normal.
+#
+# `DQ_STATIC_DIR` existe por el contenedor, y no es un lujo de configuracion:
+# compose monta `./src` en vivo para recargar uvicorn al editar, y ese montaje
+# TAPA cualquier cosa que la imagen haya dejado bajo `src/`. Como el build esta
+# en `.gitignore`, quien clona el repositorio no lo tiene en el host, y la
+# carpeta que el montaje pone encima del build de la imagen esta vacia: la
+# imagen trae la web compilada y aun asi el contenedor sirve un 404. Sacando el
+# build fuera de `src/` los dos montajes dejan de estorbarse.
+STATIC_DIR = Path(os.environ.get("DQ_STATIC_DIR") or Path(__file__).parent / "static")
 
 
 def _run_check(name: str, check: Any) -> dict[str, str]:

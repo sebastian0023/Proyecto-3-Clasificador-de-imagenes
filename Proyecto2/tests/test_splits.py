@@ -25,7 +25,7 @@ from dataset_quality.models.quality import (
     SpatialBiasCheck,
     SplitsConfig,
 )
-from dataset_quality.models.splits import SplitRatios, SplitsManifest
+from dataset_quality.models.splits import SplitAssignment, SplitRatios, SplitsManifest
 from dataset_quality.tiers import splits as splits_module
 from dataset_quality.tiers.splits import Unit, assign, build_units, deviation, stratum_labels
 
@@ -246,6 +246,95 @@ def test_desviacion_se_mide_por_clase_no_globalmente(tmp_path: Path) -> None:
     result = deviation(dataset, manifest.assignments)
     assert set(result) == {"car", "dog"}
     assert all(value <= 0.10 for value in result.values())
+
+
+# --------------------------------------------------------------------------
+# El desglose por clase viaja DENTRO del manifiesto
+# --------------------------------------------------------------------------
+def test_el_manifiesto_trae_el_reparto_de_cada_clase(tmp_path: Path) -> None:
+    """Sin esto, `splits.json` dice cuantas imagenes hay pero no de que clases.
+
+    La pantalla tendria que cruzarlo con `stats.json`, y nada garantiza que los
+    dos archivos describan el mismo dataset.
+    """
+    dataset = dataset_con_clases({"car": 60, "dog": 40})
+    manifest = splits_module.build_manifest(dataset, quality_config(), tmp_path)
+
+    assert set(manifest.per_class) == {"car", "dog"}
+    assert manifest.per_class["car"].total == 60
+    assert manifest.per_class["dog"].total == 40
+
+
+def test_el_reparto_de_cada_clase_suma_su_total(tmp_path: Path) -> None:
+    dataset = dataset_con_clases({"car": 60, "dog": 40})
+    manifest = splits_module.build_manifest(dataset, quality_config(), tmp_path)
+
+    for counts in manifest.per_class.values():
+        assert counts.train + counts.val + counts.test == counts.total
+
+
+def test_la_suma_de_las_clases_cuadra_con_los_conteos_del_split() -> None:
+    """Una imagen con cajas de dos clases suma en las dos: los totales por
+    clase pueden superar el numero de imagenes, pero por particion tienen que
+    cuadrar cuando cada imagen tiene una sola clase."""
+    dataset = coco(
+        images=[(i, f"{i}.jpg", 100, 100) for i in range(1, 5)],
+        boxes=[(i, i, 1 if i < 3 else 2, 0, 0, 30, 30) for i in range(1, 5)],
+        categories=[(1, "car"), (2, "dog")],
+    )
+    assignments = [
+        SplitAssignment(image_id=1, split="train"),
+        SplitAssignment(image_id=2, split="train"),
+        SplitAssignment(image_id=3, split="val"),
+        SplitAssignment(image_id=4, split="test"),
+    ]
+    desglose = splits_module.class_breakdown(dataset, assignments)
+
+    assert desglose["car"].train == 2
+    assert desglose["car"].val == 0
+    assert desglose["dog"].val == 1
+    assert desglose["dog"].test == 1
+
+
+def test_una_imagen_con_dos_clases_suma_en_las_dos() -> None:
+    dataset = coco(
+        images=[(1, "a.jpg", 100, 100)],
+        boxes=[(1, 1, 1, 0, 0, 30, 30), (2, 1, 2, 40, 40, 30, 30)],
+        categories=[(1, "car"), (2, "dog")],
+    )
+    assignments = [SplitAssignment(image_id=1, split="train")]
+    desglose = splits_module.class_breakdown(dataset, assignments)
+
+    assert desglose["car"].total == 1
+    assert desglose["dog"].total == 1
+
+
+def test_el_manifiesto_cuenta_los_grupos_de_casi_duplicados(tmp_path: Path) -> None:
+    """La cifra que demuestra que ninguna copia cruzo de particion.
+
+    Se calculaba al repartir y se perdia al escribir el archivo, asi que la
+    pantalla no tenia con que dibujar mas que un punto verde fijo.
+    """
+    draw(tmp_path / "gemela_a.jpg", seed=3)
+    (tmp_path / "gemela_b.jpg").write_bytes((tmp_path / "gemela_a.jpg").read_bytes())
+    draw(tmp_path / "distinta.jpg", seed=11)
+    draw(tmp_path / "otra.jpg", seed=19)
+    dataset = coco(
+        images=[
+            (1, "gemela_a.jpg", 256, 192),
+            (2, "gemela_b.jpg", 256, 192),
+            (3, "distinta.jpg", 256, 192),
+            (4, "otra.jpg", 256, 192),
+        ],
+        boxes=[(i, i, 1, 0, 0, 60, 60) for i in range(1, 5)],
+        categories=[(1, "car")],
+    )
+    manifest = splits_module.build_manifest(dataset, quality_config(), tmp_path)
+
+    assert manifest.grouped_near_duplicates == 1
+    # Y las gemelas cayeron en la misma particion.
+    split_de = {a.image_id: a.split for a in manifest.assignments}
+    assert split_de[1] == split_de[2]
 
 
 # --------------------------------------------------------------------------

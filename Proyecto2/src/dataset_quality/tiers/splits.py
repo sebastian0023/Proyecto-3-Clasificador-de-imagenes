@@ -29,7 +29,13 @@ from dataset_quality.analyzers.duplicates import compute_hashes, duplicate_group
 from dataset_quality.analyzers.structural import images_per_class
 from dataset_quality.models.coco import CocoDataset
 from dataset_quality.models.quality import QualityConfig, SplitsConfig
-from dataset_quality.models.splits import SplitAssignment, SplitName, SplitRatios, SplitsManifest
+from dataset_quality.models.splits import (
+    ClassSplitCounts,
+    SplitAssignment,
+    SplitName,
+    SplitRatios,
+    SplitsManifest,
+)
 
 DEFAULT_SPLITS_PATH = Path("reports") / "splits.json"
 
@@ -175,11 +181,17 @@ def _largest_remainder(total: int, target: dict[SplitName, float]) -> list[Split
     return sequence
 
 
-def deviation(dataset: CocoDataset, assignments: list[SplitAssignment]) -> dict[str, float]:
-    """Desviacion maxima, por clase, entre su proporcion en un split y la global.
+def class_breakdown(
+    dataset: CocoDataset, assignments: list[SplitAssignment]
+) -> dict[str, ClassSplitCounts]:
+    """Como quedo cada clase repartida entre las tres particiones.
 
     Recorre las imagenes (no las cajas): la metrica de estratificacion es
     sobre imagenes por clase, igual que `images_per_class`.
+
+    Devuelve conteos y desviacion en una sola pasada porque salen del mismo
+    recorrido; separarlos obligaria a recorrer el dataset dos veces para
+    responder dos mitades de la misma pregunta.
     """
     category_names = {category.id: category.name for category in dataset.categories}
     classes_by_image: dict[int, set[str]] = {}
@@ -204,18 +216,33 @@ def deviation(dataset: CocoDataset, assignments: list[SplitAssignment]) -> dict[
             per_split_class[key] = per_split_class.get(key, 0) + 1
 
     total_images = sum(total_by_class.values()) or 1
-    result: dict[str, float] = {}
-    for name, global_count in total_by_class.items():
+    result: dict[str, ClassSplitCounts] = {}
+    for name, global_count in sorted(total_by_class.items()):
         global_share = global_count / total_images
         worst = 0.0
+        conteos: dict[SplitName, int] = {}
         for split in _SPLIT_ORDER:
+            conteos[split] = per_split_class.get((split, name), 0)
             denom = split_totals[split]
             if denom == 0:
                 continue
-            share = per_split_class.get((split, name), 0) / denom
-            worst = max(worst, abs(share - global_share))
-        result[name] = worst
+            worst = max(worst, abs(conteos[split] / denom - global_share))
+
+        result[name] = ClassSplitCounts(
+            train=conteos["train"],
+            val=conteos["val"],
+            test=conteos["test"],
+            total=global_count,
+            max_deviation=round(worst, 5),
+        )
     return result
+
+
+def deviation(dataset: CocoDataset, assignments: list[SplitAssignment]) -> dict[str, float]:
+    """Desviacion maxima por clase. Lo mismo que `class_breakdown`, sin conteos."""
+    return {
+        name: counts.max_deviation for name, counts in class_breakdown(dataset, assignments).items()
+    }
 
 
 def build_manifest(dataset: CocoDataset, config: QualityConfig, images_dir: Path) -> SplitsManifest:
@@ -223,10 +250,12 @@ def build_manifest(dataset: CocoDataset, config: QualityConfig, images_dir: Path
     units = build_units(
         dataset, config.splits, images_dir, config.duplicates.phash_hamming_distance
     )
-    return _manifest_from_units(units, config.splits)
+    return _manifest_from_units(units, config.splits, dataset)
 
 
-def _manifest_from_units(units: list[Unit], config: SplitsConfig) -> SplitsManifest:
+def _manifest_from_units(
+    units: list[Unit], config: SplitsConfig, dataset: CocoDataset
+) -> SplitsManifest:
     assignments = assign(units, config.ratios, config.seed)
 
     counts: dict[SplitName, int] = {name: 0 for name in _SPLIT_ORDER}
@@ -239,6 +268,8 @@ def _manifest_from_units(units: list[Unit], config: SplitsConfig) -> SplitsManif
         ratios=config.ratios,
         counts=counts,
         assignments=assignments,
+        per_class=class_breakdown(dataset, assignments),
+        grouped_near_duplicates=sum(1 for unit in units if len(unit.image_ids) > 1),
     )
 
 
@@ -266,11 +297,12 @@ def run(
     units = build_units(
         dataset, config.splits, images_dir, config.duplicates.phash_hamming_distance
     )
-    manifest = _manifest_from_units(units, config.splits)
+    manifest = _manifest_from_units(units, config.splits, dataset)
     write_manifest(manifest, out)
 
+    # Ya no se recalcula nada: el manifiesto lleva las dos metricas dentro.
     return SplitRunResult(
         manifest=manifest,
-        deviations=deviation(dataset, manifest.assignments),
-        duplicate_group_count=sum(1 for unit in units if len(unit.image_ids) > 1),
+        deviations={name: counts.max_deviation for name, counts in manifest.per_class.items()},
+        duplicate_group_count=manifest.grouped_near_duplicates,
     )

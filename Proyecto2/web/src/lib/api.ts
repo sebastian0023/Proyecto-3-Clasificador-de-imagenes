@@ -74,6 +74,18 @@ export interface SplitsManifest {
   counts: Record<SplitName, number>;
   stratified_by: string;
   assignments: { image_id: number; split: SplitName }[];
+  per_class: Record<string, ClassSplitCounts>;
+  grouped_near_duplicates: number;
+}
+
+/** Cómo quedó repartida una clase entre las tres particiones. */
+export interface ClassSplitCounts {
+  train: number;
+  val: number;
+  test: number;
+  total: number;
+  /** Peor diferencia entre la proporción de la clase en una partición y la global. */
+  max_deviation: number;
 }
 
 // --- versions.json ----------------------------------------------------------
@@ -88,6 +100,14 @@ export interface DatasetVersion {
   quality_status: 'pass' | 'fail';
   counts: { images: number; annotations: number; categories: number };
   notes: string | null;
+  published_in: RemotePublication[];
+}
+
+/** Un remote donde está publicada una versión. */
+export interface RemotePublication {
+  remote: string;
+  storage_uri: string;
+  published_at: string;
 }
 
 export interface VersionsManifest {
@@ -104,7 +124,13 @@ export interface ExplorationManifest {
   dimensions: 2;
   variance_explained: number;
   method_detail: string;
-  points: { image_id: number; x: number; y: number; category_id: number | null }[];
+  points: {
+    image_id: number;
+    x: number;
+    y: number;
+    category_id: number | null;
+    file_name: string;
+  }[];
 }
 
 // --- descriptiva ------------------------------------------------------------
@@ -263,6 +289,8 @@ export const api = {
   splits: () => request<Envelope<SplitsManifest>>('/api/splits'),
   versions: () => request<Envelope<VersionsManifest>>('/api/versions'),
   exploration: () => request<Envelope<ExplorationManifest>>('/api/exploration'),
+  /** URL de la miniatura de una imagen. No es una petición: la resuelve el <image> del SVG. */
+  thumbnailUrl: (imageId: number) => `/api/exploration/thumbnail/${imageId}`,
   stats: () => request<Envelope<AnalysisArtifact>>('/api/stats'),
   config: () => request<Config>('/api/config'),
   policy: () => request<PolicyEnvelope>('/api/policy'),

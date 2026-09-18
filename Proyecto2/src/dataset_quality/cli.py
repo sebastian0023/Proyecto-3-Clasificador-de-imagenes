@@ -132,6 +132,20 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         )
         print(f"Escrito {destino}")
 
+    if not args.sin_exploracion:
+        from dataset_quality.analyzers import exploration as exploration_module
+
+        heading("Exploracion 2D")
+        manifiesto = exploration_module.build(dataset, RAW_IMAGES)
+        destino = Path(args.exploration)
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_text(manifiesto.model_dump_json(indent=2), encoding="utf-8")
+        print(
+            f"  {len(manifiesto.points)} puntos por {manifiesto.method.upper()}, "
+            f"{manifiesto.variance_explained:.1%} de varianza explicada"
+        )
+        print(f"Escrito {destino}")
+
     return 0
 
 
@@ -349,6 +363,7 @@ def cmd_release(args: argparse.Namespace) -> int:
         bump=args.bump,
         version=args.version,
         notes=args.notes,
+        remote=args.remote or release_module.DEFAULT_REMOTE,
         out=Path(args.out),
         upload=not args.dry_run,
     )
@@ -361,6 +376,8 @@ def cmd_release(args: argparse.Namespace) -> int:
     print(f"  quality.json    {entry.quality_report_fingerprint[:16]}...")
     print(f"  splits.json     {entry.splits_fingerprint[:16]}...")
     print(f"  archivo         {result.archive_path}")
+    publicado = ", ".join(p.remote for p in entry.published_in) or f"{DIM}ninguno{RESET}"
+    print(f"  remotes         {publicado}")
 
     if args.dry_run:
         print(f"\n{YELLOW}--dry-run:{RESET} no se subio nada ni se escribio {args.out}.")
@@ -459,6 +476,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     analyze.add_argument("--config", default="quality.yaml", help="Ruta de quality.yaml.")
     analyze.add_argument("--json", default=None, help="Escribe el resultado en este JSON.")
+    analyze.add_argument(
+        "--exploration",
+        default="reports/exploration.json",
+        help="Donde escribir la proyeccion 2D que consume la pantalla de exploracion.",
+    )
+    analyze.add_argument(
+        "--sin-exploracion",
+        action="store_true",
+        help="Salta la proyeccion 2D, que vuelve a abrir todas las imagenes.",
+    )
     analyze.set_defaults(handler=cmd_analyze)
 
     gate = subcommands.add_parser(
@@ -512,6 +539,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Que parte del semver subir si no se pasa --version (default: patch).",
     )
     release.add_argument("--notes", default=None, help="Nota libre para esta version.")
+    release.add_argument(
+        "--remote",
+        default=None,
+        help="Remote donde queda publicada la version, para el registro (default: dev).",
+    )
     release.add_argument(
         "--dry-run",
         action="store_true",

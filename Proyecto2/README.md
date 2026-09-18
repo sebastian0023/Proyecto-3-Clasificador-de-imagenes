@@ -27,7 +27,7 @@ Desde un clon limpio, estos son **todos** los comandos necesarios:
 
 ```bash
 git clone <url-del-repo>
-cd dataset-quality
+cd ruta-al-dataset-v1/Proyecto2
 python scripts/up.py
 ```
 

@@ -21,25 +21,24 @@ version: 1
 min_images_per_class:
   enabled: true
   severity: error
-  # !!! TEMPORAL -- REVERTIR A 300 !!!
-  # Bajado a 100 el 2026-09-16 solo para poder correr el pipeline completo
-  # mientras termina la anotacion. Con este valor:
-  #   - `tests/test_min_images.py::test_el_quality_yaml_del_repo_exige_300...`
-  #     AVISA en vez de fallar (UserWarning en el resumen de pytest): el CI
-  #     queda en verde, pero el aviso sale en cada corrida hasta revertirlo.
-  #   - El criterio 4.1 de la rubrica da como maximo 1.5 de 3 puntos y se
-  #     anota como incoherencia entre la politica y el requisito del curso.
-  # Faltan 20 imagenes en `person` y 94 en `dog` para volver a 300.
-  min_images: 100
+  min_images: 300
   min_classes: 2
 
-# Objetos pequenos: anotaciones cuya area es una fraccion diminuta de su
-# imagen suelen ser ruido de anotacion o casos que el modelo no podra
-# aprender bien.
+# Objetos pequenos: anotaciones diminutas suelen ser ruido de anotacion o
+# casos que el modelo no podra aprender bien. Se miden por dos criterios y
+# basta incumplir uno para quedar marcada.
+#
+# El reporte trae el desglose por clase (`small_objects.boxes_by_class`), que
+# es lo que distingue un problema de anotacion en una clase concreta de un
+# dataset entero de baja resolucion.
 small_objects:
   enabled: true
   severity: warning
-  area_ratio_threshold: 0.02 # area/annotation < 2% del area de la imagen
+  area_ratio_threshold: 0.02 # relativo: area/annotation < 2% del area de su imagen
+  # Absoluto: la convencion de COCO, 32x32 px. Atrapa lo que el relativo deja
+  # pasar — una caja de 20x20 en una foto de 200x200 es el 1% del area, suena
+  # tolerable, y son 400 px de objeto. `0` apaga este criterio.
+  min_area_px: 1024
   max_ratio: 0.10 # tolera hasta 10% de las anotaciones marcadas
 
 # Desbalance de clases: relacion entre la clase mas frecuente y la menos

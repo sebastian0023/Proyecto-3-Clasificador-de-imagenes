@@ -108,16 +108,26 @@ services:
     ports:
       - "${APP_PORT:?falta APP_PORT en .env}:8000"
     volumes:
-      # Codigo montado en vivo: editar en el host recarga uvicorn.
-      - ./src:/app/src:ro
-      # La politica de calidad, en solo lectura: cambiar un umbral en el host
-      # surte efecto sin reconstruir la imagen. Sin esto el contenedor puede
-      # servir reportes pero no volver a medir el dataset.
-      - ./quality.yaml:/app/quality.yaml:ro
-      # El dataset y los reportes se comparten con el host, para que dé igual
+      # El repositorio entero, no archivos sueltos. Montar `./quality.yaml`
+      # solo parecia mas prolijo y rompia la pantalla de Settings: `policy.save()`
+      # guarda con un rename atomico (escribe `quality.yaml.tmp` al lado y hace
+      # `os.replace`), y un archivo bind-montado es un punto de montaje, no una
+      # entrada normal del directorio -- el rename falla con `EBUSY` aunque el
+      # montaje sea de escritura. El rename necesita que el DIRECTORIO sea el
+      # montado, y el directorio que contiene `quality.yaml` es la raiz.
+      #
+      # De paso entran `data/` y `reports/` sin declararlos, asi que da igual
       # correr `dq` dentro del contenedor o fuera: ambos ven los mismos datos.
-      - ./data:/app/data
-      - ./reports:/app/reports
+      - ./:/app
+      # El codigo, otra vez y en solo lectura: montado encima del anterior por
+      # ser mas profundo. Editar en el host recarga uvicorn, pero el contenedor
+      # no reescribe sus propias fuentes. Ya no tapa el build de la web: vive
+      # en `/opt/dq/static` (ver `DQ_STATIC_DIR` en docker/Dockerfile).
+      - ./src:/app/src:ro
+      # Volumenes anonimos que tapan artefactos del host sin sentido aqui
+      # dentro: un venv de Windows y binarios nativos compilados para el host.
+      - /app/.venv
+      - /app/web/node_modules
     command:
       - uvicorn
       - dataset_quality.main:app

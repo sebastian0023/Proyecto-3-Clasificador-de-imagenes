@@ -46,12 +46,27 @@ class MinImagesPerClassCheck(StrictModel):
 
 
 class SmallObjectsCheck(StrictModel):
-    """Marca anotaciones cuya area relativa a la imagen es demasiado chica."""
+    """Marca anotaciones demasiado chicas, por proporcion o por pixeles.
+
+    Los dos criterios responden preguntas distintas y ninguno sustituye al
+    otro. `area_ratio_threshold` pregunta si el objeto es chico DENTRO DE SU
+    IMAGEN, que es lo que determina cuantos pixeles le quedan despues de que el
+    detector reescale la foto. `min_area_px` pregunta si es chico en terminos
+    absolutos: es el criterio de COCO (32x32 = 1024 px de area) y atrapa el
+    caso que el relativo deja pasar — una caja de 20x20 en una foto de 200 px
+    es el 1% del area y suena aceptable, pero son 400 pixeles de objeto y ahi
+    no hay nada que aprender.
+
+    Una caja es infractora si incumple CUALQUIERA de los dos. `min_area_px: 0`
+    apaga el criterio absoluto y deja el comportamiento relativo puro.
+    """
 
     enabled: bool = True
     severity: Severity = "warning"
     area_ratio_threshold: float = Field(ge=0.0, le=1.0)
     max_ratio: float = Field(ge=0.0, le=1.0)
+    # 32x32 px, la convencion de COCO para "objeto pequeno".
+    min_area_px: int = Field(default=1024, ge=0)
 
 
 class ClassImbalanceCheck(StrictModel):
@@ -201,6 +216,32 @@ class DuplicatesDetail(StrictModel):
     images_without_class: int = Field(default=0, ge=0)
 
 
+class SmallObjectsDetail(StrictModel):
+    """A que clases afecta el recorte de objetos pequenos, no solo cuantos hay.
+
+    Mismo problema que tenia `duplicates` antes de `DuplicatesDetail`: la lista
+    de ids infractores no responde "y esto a que clase me lo esta rompiendo".
+    Con el desglose, un `small_objects` en fail se lee de un vistazo: si las
+    cajas diminutas se concentran en una clase, el problema es como se anoto
+    esa clase; si estan repartidas, es la resolucion del dataset.
+
+    `boxes_by_class` cuenta CAJAS infractoras e `images_by_class` las imagenes
+    DISTINTAS que contienen al menos una; ambos van de mayor a menor, asi que
+    la primera clave es la clase mas afectada.
+
+    `below_ratio` y `below_min_area` dicen que criterio marco cada caja. Se
+    solapan a proposito — una caja puede incumplir los dos — y por eso su suma
+    puede superar el total de infractoras.
+    """
+
+    area_ratio_threshold: float = Field(ge=0.0, le=1.0)
+    min_area_px: int = Field(ge=0)
+    boxes_by_class: dict[str, int] = Field(default_factory=dict)
+    images_by_class: dict[str, int] = Field(default_factory=dict)
+    below_ratio: int = Field(default=0, ge=0)
+    below_min_area: int = Field(default=0, ge=0)
+
+
 class CheckResult(StrictModel):
     """Resultado de un analizador individual."""
 
@@ -211,10 +252,11 @@ class CheckResult(StrictModel):
     threshold: float
     message: str
     offenders: list[int] = Field(default_factory=list)
-    # Detalle especifico del check `duplicates`; `None` en todos los demas.
-    # Es un anadido opcional al contrato: un `quality.json` escrito antes de
-    # que existiera sigue validando, por eso `schema_version` sigue en 1.
+    # Detalle especifico de un check; `None` en los demas. Son anadidos
+    # opcionales al contrato: un `quality.json` escrito antes de que
+    # existieran sigue validando, por eso `schema_version` sigue en 1.
     duplicates: DuplicatesDetail | None = None
+    small_objects: SmallObjectsDetail | None = None
 
 
 class QualityReport(StrictModel):

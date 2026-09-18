@@ -19,6 +19,7 @@ from dataset_quality.models.quality import (
     DegenerateBoxesCheck,
     MinImagesPerClassCheck,
     SmallObjectsCheck,
+    SmallObjectsDetail,
     SpatialBiasCheck,
 )
 
@@ -39,6 +40,13 @@ def _verdict(observed: float, max_allowed: float) -> str:
     return "fail" if observed > max_allowed else "pass"
 
 
+def por_impacto(conteos: dict[str, int]) -> dict[str, int]:
+    """De mayor a menor. La primera clave es la clase mas afectada, que es lo
+    primero que se pregunta; los empates se desempatan por nombre para que el
+    reporte sea reproducible."""
+    return dict(sorted(conteos.items(), key=lambda item: (-item[1], item[0])))
+
+
 def images_per_class(dataset: CocoDataset) -> dict[str, int]:
     """Imagenes DISTINTAS que contienen al menos una caja de cada clase.
 
@@ -55,26 +63,49 @@ def images_per_class(dataset: CocoDataset) -> dict[str, int]:
 
 
 def analyze_small_objects(dataset: CocoDataset, config: SmallObjectsCheck) -> Result:
-    """Proporcion de cajas demasiado pequenas en relacion con SU imagen.
+    """Proporcion de cajas demasiado pequenas, por area relativa o absoluta.
 
-    El umbral es relativo, no los 32x32 px absolutos de COCO: una caja de 20x20
-    es diminuta en una foto de 4000 px y perfectamente normal en una de 200. Lo
-    que importa es cuantos pixeles le quedan al objeto despues de que el
-    detector reduzca la imagen, y eso depende de la proporcion.
+    El criterio principal es relativo: una caja de 20x20 es diminuta en una
+    foto de 4000 px y normal en una de 200, y lo que decide si el objeto
+    sobrevive es cuantos pixeles le quedan despues de que el detector reescale
+    la imagen. Pero el relativo solo tiene un punto ciego — en imagenes ya
+    pequenas, un objeto absolutamente minusculo pasa como una fraccion
+    razonable — y ahi entra `min_area_px`, los 32x32 de COCO. Una caja
+    infractora incumple cualquiera de los dos.
+
+    El desglose por clase viaja en el resultado: saber que las cajas diminutas
+    se concentran en una clase es lo que distingue "asi se anoto esa clase" de
+    "asi es la resolucion del dataset".
     """
     if not config.enabled:
         return _skipped("small_objects", config.severity, config.max_ratio)
 
     sizes = {image.id: image.width * image.height for image in dataset.images}
-    offenders = [
-        annotation.id
-        for annotation in dataset.annotations
-        # El umbral es inclusivo: exactamente en el limite esta permitido.
-        if annotation.area / sizes[annotation.image_id] < config.area_ratio_threshold
-    ]
+    names = {category.id: category.name for category in dataset.categories}
+
+    offenders: list[int] = []
+    below_ratio = below_min_area = 0
+    cajas_por_clase: dict[str, int] = defaultdict(int)
+    imagenes_por_clase: dict[str, set[int]] = defaultdict(set)
+
+    for annotation in dataset.annotations:
+        # Ambos umbrales son inclusivos: exactamente en el limite esta permitido.
+        chica_relativa = annotation.area / sizes[annotation.image_id] < config.area_ratio_threshold
+        chica_absoluta = annotation.area < config.min_area_px
+        if not (chica_relativa or chica_absoluta):
+            continue
+
+        offenders.append(annotation.id)
+        below_ratio += chica_relativa
+        below_min_area += chica_absoluta
+
+        clase = names[annotation.category_id]
+        cajas_por_clase[clase] += 1
+        imagenes_por_clase[clase].add(annotation.image_id)
 
     total = len(dataset.annotations)
     observed = len(offenders) / total if total else 0.0
+    por_clase = por_impacto(dict(cajas_por_clase))
 
     return Result(
         name="small_objects",
@@ -83,11 +114,23 @@ def analyze_small_objects(dataset: CocoDataset, config: SmallObjectsCheck) -> Re
         observed=observed,
         threshold=config.max_ratio,
         message=(
-            f"{len(offenders)} de {total} cajas ocupan menos del "
-            f"{config.area_ratio_threshold:.2%} de su imagen "
+            f"{len(offenders)} de {total} cajas son diminutas "
+            f"(menos del {config.area_ratio_threshold:.2%} de su imagen "
+            f"o menos de {config.min_area_px} px de area) "
             f"({observed:.1%}; maximo permitido {config.max_ratio:.1%})"
+            + (f"; la clase mas afectada es {next(iter(por_clase))}" if por_clase else "")
         ),
         offenders=sorted(offenders),
+        small_objects=SmallObjectsDetail(
+            area_ratio_threshold=config.area_ratio_threshold,
+            min_area_px=config.min_area_px,
+            boxes_by_class=por_clase,
+            images_by_class=por_impacto(
+                {clase: len(ids) for clase, ids in imagenes_por_clase.items()}
+            ),
+            below_ratio=below_ratio,
+            below_min_area=below_min_area,
+        ),
     )
 
 
