@@ -22,6 +22,7 @@ from pathlib import Path
 import imagehash
 from PIL import Image, UnidentifiedImageError
 
+from dataset_quality.analyzers.structural import por_impacto
 from dataset_quality.models.coco import CocoDataset
 from dataset_quality.models.quality import (
     PHASH_BITS,
@@ -99,13 +100,6 @@ def duplicate_groups(hashes: dict[int, int], max_distance: int) -> list[set[int]
     return list(groups.values())
 
 
-def _por_impacto(conteos: dict[str, int]) -> dict[str, int]:
-    """De mayor a menor. La primera clave es la clase mas afectada, que es lo
-    primero que se pregunta; los empates se desempatan por nombre para que el
-    reporte sea reproducible."""
-    return dict(sorted(conteos.items(), key=lambda item: (-item[1], item[0])))
-
-
 def classes_of_image(dataset: CocoDataset) -> dict[int, list[str]]:
     """Clases con al menos una caja en cada imagen, en el orden del COCO."""
     names = {category.id: category.name for category in dataset.categories}
@@ -144,7 +138,7 @@ def affected_classes(
 
     sin_clase = sum(1 for image_id in sobrantes if not por_imagen.get(image_id))
 
-    return _por_impacto(imagenes), _por_impacto(cajas), sin_clase
+    return por_impacto(imagenes), por_impacto(cajas), sin_clase
 
 
 def analyze_duplicates(dataset: CocoDataset, config: DuplicatesCheck, images_dir: Path) -> Result:

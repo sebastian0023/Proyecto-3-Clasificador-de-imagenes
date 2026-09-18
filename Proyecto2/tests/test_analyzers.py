@@ -99,9 +99,15 @@ def photos(tmp_path):
 
 
 # --------------------------------------------------------------------------
-# Objetos pequenos — area RELATIVA a la imagen, no 32x32 absolutos
+# Objetos pequenos — dos criterios: area RELATIVA a la imagen y 32x32 absolutos
 # --------------------------------------------------------------------------
-SMALL = SmallObjectsCheck(area_ratio_threshold=0.01, max_ratio=0.30)
+# `min_area_px=0` apaga el criterio absoluto: este bloque prueba el relativo
+# aislado, y sin apagarlo las cajas de los ejemplos (100 px2, 400 px2) caerian
+# marcadas por el absoluto y las pruebas dejarian de medir lo que dicen medir.
+SMALL = SmallObjectsCheck(area_ratio_threshold=0.01, max_ratio=0.30, min_area_px=0)
+
+# El mismo check con el criterio absoluto en su valor por defecto (32x32).
+SMALL_ABS = SmallObjectsCheck(area_ratio_threshold=0.01, max_ratio=0.30)
 
 
 def test_objeto_bajo_el_umbral_relativo_se_marca() -> None:
@@ -169,6 +175,113 @@ def test_el_umbral_es_relativo_al_tamano_de_cada_imagen() -> None:
     )
     # 400/1.000.000 = 0.0004 (pequena) vs 400/10.000 = 0.04 (normal)
     assert analyze_small_objects(dataset, SMALL).offenders == [1]
+
+
+def test_una_caja_diminuta_en_px_se_marca_aunque_la_proporcion_sea_buena() -> None:
+    """El punto ciego del criterio relativo: imagen chica, objeto minusculo.
+
+    20x20 = 400 px2 sobre una foto de 200x200 es el 1% del area — por encima
+    del umbral relativo de 0.01 — pero son 400 pixeles de objeto, por debajo
+    de los 1024 (32x32) de COCO.
+    """
+    dataset = coco(
+        images=[(1, "chica.jpg", 200, 200)],
+        boxes=[(1, 1, 1, 0, 0, 20, 20)],
+        categories=[(1, "car")],
+    )
+    result = analyze_small_objects(dataset, SMALL_ABS)
+
+    assert result.offenders == [1]
+    assert result.small_objects is not None
+    assert result.small_objects.below_min_area == 1
+    # El relativo no la habria marcado: 400/40.000 = 0.01, justo en el limite.
+    assert result.small_objects.below_ratio == 0
+
+
+def test_una_caja_grande_en_px_pero_diminuta_en_proporcion_se_marca() -> None:
+    """El caso simetrico: 2.500 px2 pasa el absoluto y el relativo la marca."""
+    dataset = coco(
+        images=[(1, "enorme.jpg", 4000, 4000)],
+        boxes=[(1, 1, 1, 0, 0, 50, 50)],
+        categories=[(1, "car")],
+    )
+    result = analyze_small_objects(dataset, SMALL_ABS)
+
+    assert result.offenders == [1]
+    assert result.small_objects is not None
+    assert result.small_objects.below_ratio == 1
+    assert result.small_objects.below_min_area == 0
+
+
+def test_los_dos_criterios_se_solapan_sin_contar_la_caja_dos_veces() -> None:
+    """Una caja que incumple ambos es UNA infractora, pero suma en los dos."""
+    dataset = coco(
+        images=[(1, "a.jpg", 1000, 1000)],
+        boxes=[(1, 1, 1, 0, 0, 10, 10)],
+        categories=[(1, "car")],
+    )
+    result = analyze_small_objects(dataset, SMALL_ABS)
+
+    assert result.offenders == [1]
+    assert result.small_objects is not None
+    assert result.small_objects.below_ratio == 1
+    assert result.small_objects.below_min_area == 1
+
+
+def test_el_desglose_ordena_por_clase_mas_afectada() -> None:
+    dataset = coco(
+        images=[(1, "a.jpg", 100, 100), (2, "b.jpg", 100, 100)],
+        boxes=[
+            (1, 1, 1, 0, 0, 2, 2),
+            (2, 1, 1, 10, 10, 2, 2),
+            (3, 2, 1, 20, 20, 2, 2),
+            (4, 1, 2, 30, 30, 2, 2),
+            (5, 1, 3, 40, 40, 90, 90),
+        ],
+        categories=[(1, "car"), (2, "dog"), (3, "person")],
+    )
+    result = analyze_small_objects(dataset, SMALL)
+    detalle = result.small_objects
+
+    assert detalle is not None
+    # `car` primero por tener mas cajas marcadas; `person` no aparece.
+    assert list(detalle.boxes_by_class) == ["car", "dog"]
+    assert detalle.boxes_by_class == {"car": 3, "dog": 1}
+    # Tres cajas de `car` pero repartidas en dos imagenes distintas.
+    assert detalle.images_by_class == {"car": 2, "dog": 1}
+    assert "la clase mas afectada es car" in result.message
+
+
+def test_el_desglose_desempata_por_nombre_para_ser_reproducible() -> None:
+    dataset = coco(
+        images=[(1, "a.jpg", 100, 100)],
+        boxes=[(1, 1, 2, 0, 0, 2, 2), (2, 1, 1, 10, 10, 2, 2)],
+        categories=[(1, "car"), (2, "dog")],
+    )
+    detalle = analyze_small_objects(dataset, SMALL).small_objects
+
+    assert detalle is not None
+    assert list(detalle.boxes_by_class) == ["car", "dog"]
+
+
+def test_min_area_px_en_cero_deja_el_criterio_relativo_puro() -> None:
+    """Apagar el absoluto devuelve exactamente el comportamiento anterior."""
+    dataset = coco(
+        images=[(1, "chica.jpg", 200, 200)],
+        boxes=[(1, 1, 1, 0, 0, 20, 20)],
+        categories=[(1, "car")],
+    )
+    assert analyze_small_objects(dataset, SMALL).offenders == []
+
+
+def test_el_detalle_repite_los_umbrales_que_se_aplicaron() -> None:
+    """La pantalla dibuja el corte sin tener que releer quality.yaml."""
+    dataset = coco([(1, "a.jpg", 100, 100)], [(1, 1, 1, 0, 0, 5, 5)], [(1, "car")])
+    detalle = analyze_small_objects(dataset, SMALL_ABS).small_objects
+
+    assert detalle is not None
+    assert detalle.area_ratio_threshold == pytest.approx(0.01)
+    assert detalle.min_area_px == 1024
 
 
 def test_analizador_desactivado_se_salta() -> None:
@@ -694,3 +807,4 @@ def test_cada_resultado_cumple_el_contrato_congelado(photos) -> None:
         assert isinstance(result.threshold, float)
         assert result.message, "cada check debe explicarse en una linea"
         assert all(isinstance(offender, int) for offender in result.offenders)
+
