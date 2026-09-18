@@ -26,7 +26,33 @@ export default function Splits() {
           const real = total ? (manifest.counts[name] ?? 0) / total : 0;
           return { name, real, objetivo, delta: real - objetivo };
         });
-        const peor = Math.max(...desviaciones.map((d) => Math.abs(d.delta)));
+
+        const clases = Object.entries(manifest.per_class ?? {}).sort(
+          (a, b) => b[1].total - a[1].total,
+        );
+
+        // La desviación que importa es la de ESTRATIFICACIÓN: cuánto se aleja
+        // cada CLASE de su proporción global, que es contra lo que se compara
+        // `splits.tolerance`. La de tamaño de partición — qué tan lejos quedó
+        // train del 70% — es otra cosa, y mucho más benigna; antes esta
+        // pantalla enseñaba esa y la llamaba igual.
+        const peor = clases.length
+          ? Math.max(...clases.map(([, c]) => c.max_deviation))
+          : Math.max(...desviaciones.map((d) => Math.abs(d.delta)));
+
+        // Fuga real, contada aquí y no asumida: un image_id en dos particiones.
+        const vistos = new Set<number>();
+        const repetidos = new Set<number>();
+        for (const a of manifest.assignments) {
+          if (vistos.has(a.image_id)) repetidos.add(a.image_id);
+          vistos.add(a.image_id);
+        }
+        const sinFuga = repetidos.size === 0;
+        const cuadranConteos = ORDEN.every(
+          (name) =>
+            manifest.assignments.filter((a) => a.split === name).length ===
+            (manifest.counts[name] ?? 0),
+        );
 
         return (
           <>
@@ -56,7 +82,7 @@ export default function Splits() {
               ))}
               <Tile
                 value={`${(peor * 100).toFixed(1)}%`}
-                label="Desviación máxima"
+                label="Desviación máxima por clase"
                 tone={peor > 0.05 ? 'fail' : 'a'}
               />
             </div>
@@ -74,6 +100,59 @@ export default function Splits() {
               />
               <Legend items={ORDEN.map((name) => ({ label: name, color: COLOR[name] }))} />
             </Card>
+
+            {clases.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <Card
+                  title="Distribución por clase"
+                  hint="Estratificar significa que cada clase conserva su proporción dentro de cada partición. Δ es la peor diferencia entre la proporción de la clase en una partición y su proporción global."
+                >
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Clase</th>
+                        <th className="num">Total</th>
+                        {ORDEN.map((name) => (
+                          <th key={name} className="num">
+                            {name}
+                          </th>
+                        ))}
+                        <th className="num">Δ máx</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clases.map(([nombre, c]) => (
+                        <tr key={nombre}>
+                          <td>{nombre}</td>
+                          <td className="num mono">{c.total.toLocaleString('es')}</td>
+                          {ORDEN.map((name) => (
+                            <td key={name} className="num mono">
+                              {c[name].toLocaleString('es')}
+                              <span className="hint" style={{ marginLeft: 6 }}>
+                                {c.total ? `${((c[name] / c.total) * 100).toFixed(0)}%` : '—'}
+                              </span>
+                            </td>
+                          ))}
+                          <td
+                            className="num mono"
+                            style={{
+                              color: c.max_deviation > 0.05 ? 'var(--fail)' : 'var(--muted)',
+                            }}
+                          >
+                            {(c.max_deviation * 100).toFixed(1)}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="hint" style={{ marginTop: 12, marginBottom: 0 }}>
+                    Se cuentan imágenes distintas, no cajas. Una imagen con cajas de dos clases
+                    suma en las dos, así que los totales por clase pueden superar las{' '}
+                    {total.toLocaleString('es')} imágenes del reparto.
+                  </p>
+                </Card>
+              </div>
+            )}
 
             <div className="cols-2" style={{ marginTop: 14 }}>
               <Card
@@ -115,14 +194,32 @@ export default function Splits() {
               <Card title="Integridad del reparto">
                 <div className="row">
                   <div className="row-main">
-                    <span className="dot pass" />
-                    Ninguna imagen en dos particiones
+                    <span className={`dot ${sinFuga ? 'pass' : 'fail'}`} />
+                    {sinFuga
+                      ? `Ninguna de las ${vistos.size.toLocaleString('es')} imágenes está en dos particiones`
+                      : `${repetidos.size} imagen(es) aparecen en más de una partición`}
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="row-main">
+                    <span className={`dot ${cuadranConteos ? 'pass' : 'fail'}`} />
+                    {cuadranConteos
+                      ? 'Los conteos cuadran con las asignaciones'
+                      : 'Los conteos no cuadran con las asignaciones'}
                   </div>
                 </div>
                 <div className="row">
                   <div className="row-main">
                     <span className={`dot ${peor > 0.05 ? 'fail' : 'pass'}`} />
-                    Desviación máxima del {(peor * 100).toFixed(1)}%
+                    Desviación máxima por clase del {(peor * 100).toFixed(1)}%
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="row-main">
+                    <span className="dot pass" />
+                    {manifest.grouped_near_duplicates === 0
+                      ? 'Sin grupos de casi-duplicados que repartir'
+                      : `${manifest.grouped_near_duplicates} grupo(s) de casi-duplicados, cada uno entero en una sola partición`}
                   </div>
                 </div>
                 <div className="row">
@@ -132,10 +229,11 @@ export default function Splits() {
                   </div>
                 </div>
                 <p className="hint" style={{ marginTop: 14, marginBottom: 0 }}>
-                  La primera no se comprueba en esta pantalla: el contrato{' '}
-                  <span className="mono">SplitsManifest</span> rechaza un manifiesto donde una
-                  imagen aparezca dos veces, o donde los conteos no cuadren con las asignaciones.
-                  Si llegó hasta aquí, es que ya los cumple.
+                  Las dos primeras se cuentan aquí, sobre las{' '}
+                  <span className="mono">assignments</span> del manifiesto. El contrato{' '}
+                  <span className="mono">SplitsManifest</span> ya las rechaza al cargar, así que en
+                  la práctica no deberían ponerse en rojo nunca — pero un punto verde que nadie
+                  calcula no es una comprobación, es una promesa.
                 </p>
               </Card>
             </div>

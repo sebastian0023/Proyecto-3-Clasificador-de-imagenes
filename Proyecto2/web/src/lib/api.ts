@@ -74,6 +74,18 @@ export interface SplitsManifest {
   counts: Record<SplitName, number>;
   stratified_by: string;
   assignments: { image_id: number; split: SplitName }[];
+  per_class: Record<string, ClassSplitCounts>;
+  grouped_near_duplicates: number;
+}
+
+/** Cómo quedó repartida una clase entre las tres particiones. */
+export interface ClassSplitCounts {
+  train: number;
+  val: number;
+  test: number;
+  total: number;
+  /** Peor diferencia entre la proporción de la clase en una partición y la global. */
+  max_deviation: number;
 }
 
 // --- versions.json ----------------------------------------------------------
@@ -104,7 +116,12 @@ export interface ExplorationManifest {
   dimensions: 2;
   variance_explained: number;
   method_detail: string;
-  points: { image_id: number; x: number; y: number; category_id: number | null }[];
+  points: {
+    image_id: number;
+    x: number;
+    y: number;
+    category_id: number | null;
+  }[];
 }
 
 // --- descriptiva ------------------------------------------------------------
