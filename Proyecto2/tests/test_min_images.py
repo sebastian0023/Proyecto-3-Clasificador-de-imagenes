@@ -8,14 +8,12 @@ algo; dejarlo en un valor de ejemplo bajo hace que la compuerta pase cuando no
 deberia, que es peor que no tenerla.
 
 Hay una prueba que lee el `quality.yaml` real del repositorio y comprueba que
-el umbral sea 300 con severidad `error`. Desde el 2026-09-16 un umbral por
-debajo de 300 avisa con un `UserWarning` en vez de poner la suite en rojo; la
-severidad `error` y el minimo de 2 clases si se siguen exigiendo.
+el umbral sea 300 con severidad `error`: un umbral por debajo pone la suite en
+rojo.
 """
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
 
 import pytest
@@ -128,25 +126,14 @@ def test_la_severidad_por_defecto_bloquea() -> None:
 # El quality.yaml que se entrega
 # --------------------------------------------------------------------------
 def test_el_quality_yaml_del_repo_exige_300_con_severidad_error() -> None:
-    """Guarda contra el atajo de bajar el umbral para que la compuerta pase.
-
-    El umbral por debajo de 300 ya no pone la suite en rojo: se reporta como
-    `UserWarning` (decision del 2026-09-16, mientras termina la anotacion) para
-    no bloquear el CI. El aviso sigue saliendo en el resumen de pytest en cada
-    corrida, asi que la rebaja no queda invisible. Lo demas se sigue exigiendo.
-    """
+    """Guarda contra el atajo de bajar el umbral para que la compuerta pase."""
     check = QualityConfig.from_yaml(REPO_ROOT / "quality.yaml").min_images_per_class
 
-    if check.min_images < REQUISITO_MIN_IMAGES:
-        warnings.warn(
-            f"quality.yaml exige {check.min_images} imagenes por clase, no "
-            f"{REQUISITO_MIN_IMAGES}: la compuerta M3 pasa con menos volumen "
-            f"del que pide el curso (criterio 4.1, maximo 1.5 de 3 puntos). "
-            f"Revertir a {REQUISITO_MIN_IMAGES} al terminar la anotacion.",
-            UserWarning,
-            stacklevel=2,
-        )
-
+    assert check.min_images == REQUISITO_MIN_IMAGES, (
+        f"quality.yaml exige {check.min_images} imagenes por clase, no "
+        f"{REQUISITO_MIN_IMAGES}: la compuerta M3 pasaria con menos volumen "
+        f"del que pide el curso (criterio 4.1 de la rubrica)."
+    )
     assert check.enabled is True
     assert check.min_classes >= 2
     assert check.severity == "error"
