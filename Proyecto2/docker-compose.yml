@@ -97,6 +97,22 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    # La app ESCRIBE en el repositorio montado: `PUT /api/policy` reescribe
+    # `quality.yaml` y `POST /api/pipeline/refresh` regenera `reports/*.json`.
+    #
+    # En un bind mount el kernel compara UIDs NUMERICOS, no nombres de usuario.
+    # Da igual que la imagen haya hecho `chown appuser /app` al construirse: el
+    # montaje trae el dueno que el directorio tiene EN EL HOST, y encima de un
+    # arbol de trabajo ajeno el `appuser` de uid 10001 no puede ni crear el
+    # `quality.yaml.tmp` del guardado atomico. El PUT muere con EACCES y la
+    # pantalla de Settings recibe un 500 sin explicacion.
+    #
+    # No es un problema solo de CI (donde el arbol es de `runner`, uid 1001):
+    # le pasa igual a cualquiera que levante esto en Linux. `scripts/up.py`
+    # exporta DQ_UID/DQ_GID con la identidad del host donde existe; en Windows
+    # y macOS no existen — Docker Desktop no traslada permisos POSIX al
+    # montaje — y el valor por defecto deja el `appuser` de la imagen.
+    user: "${DQ_UID:-10001}:${DQ_GID:-10001}"
     environment:
       # Dentro de la red de compose los servicios se llaman por su nombre.
       # Esto es topologia de red, no configuracion secreta.

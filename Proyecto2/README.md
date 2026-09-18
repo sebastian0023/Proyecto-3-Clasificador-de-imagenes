@@ -740,6 +740,21 @@ npx playwright test                   # -> reports/evaluation/playwright/
 npm run test:e2e:report               # abre el reporte con las capturas
 ```
 
+Sin el dataset en disco —un clon sin acceso al remote de DVC, o CI— falta una
+pieza: el hover de la PCA pide `GET /api/exploration/thumbnail/{id}`, que abre
+la imagen real de `data/raw/images/`, y sin ella el endpoint responde `404` con
+toda la razón. Para ese caso:
+
+```bash
+python scripts/imagenes_de_prueba.py  # un JPEG diminuto por cada file_name
+```
+
+Escribe un archivo por cada `file_name` del manifiesto versionado y **nunca
+sobrescribe** uno que ya esté, así que correrlo sobre el dataset real no toca
+ninguna foto. El endpoint sigue haciendo su trabajo entero —resolver el id
+contra el manifiesto, abrir, redimensionar y codificar— solo que sobre imágenes
+de relleno: lo único que deja de probarse es qué se ve en la miniatura.
+
 Cubre las siete pantallas (una por una, con captura adjunta y la verificación de
 que ninguna respuesta de `/api/` salió distinta de `200`), el hover de la PCA
 —que aparezca la miniatura y que el backend la sirva— el filtro de la leyenda

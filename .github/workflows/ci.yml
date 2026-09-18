@@ -141,9 +141,34 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
+      # ESTE PASO TAMBIEN VA ANTES DE `up.py`, y por la misma razon que el
+      # anterior: el directorio tiene que existir y ser de `runner` antes de
+      # que compose monte el repositorio dentro del contenedor.
+      #
+      # El hover de Exploracion pide `GET /api/exploration/thumbnail/{id}`, que
+      # abre el archivo real de `data/raw/images/`. Ese directorio NO esta en
+      # Git — el dataset vive en el remote de DVC y este job no tiene
+      # credenciales para traerlo — asi que sin este paso el endpoint responde
+      # 404 con toda la razon y la prueba falla por falta de dataset, no por un
+      # defecto de la app. El script escribe un JPEG diminuto por cada
+      # `file_name` del manifiesto versionado y nunca sobrescribe uno que ya
+      # este: el endpoint hace su trabajo entero (resolver el id contra el
+      # manifiesto, abrir, redimensionar, codificar) sobre archivos de verdad.
+      #
+      # La version de Pillow sale del lockfile en vez de estar escrita aqui:
+      # una segunda copia del numero se queda atras en cuanto se regenera.
+      - name: Sembrar las imagenes que pide el hover de Exploracion
+        run: |
+          pip install "$(grep -i '^pillow==' requirements.lock.txt)"
+          python scripts/imagenes_de_prueba.py
+
       # Reproduce la compuerta M1 de la rubrica: un clon limpio tiene que
       # levantar app + MariaDB + MinIO con un solo comando, sin pasos extra.
       # `up.py` falla con codigo != 0 si /health no queda en OK.
+      #
+      # `up.py` exporta ademas DQ_UID/DQ_GID: sin eso el contenedor corre como
+      # uid 10001 sobre un arbol que aqui es de `runner` (uid 1001) y el
+      # guardado de la politica —el unico PUT de la app— muere con EACCES.
       - name: python scripts/up.py
         run: python scripts/up.py
 
