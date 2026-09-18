@@ -30,13 +30,16 @@ COPY pyproject.toml README.md quality.yaml ./
 COPY src ./src
 RUN pip install --no-cache-dir -e ".[dev]"
 
-# El build de la web va donde `main.py` lo busca. Compose monta `./src` en
-# vivo, asi que en desarrollo se ve el build del host; en una imagen sin
-# montaje, este.
-COPY --from=web /web/dist ./src/dataset_quality/static
+# El build de la web va FUERA de `src/`, y `DQ_STATIC_DIR` le dice a `main.py`
+# donde buscarlo. Dentro de `src/` no puede vivir: compose monta ahi el codigo
+# del host para recargar uvicorn en caliente, y ese montaje taparia el build
+# que esta imagen acaba de compilar. Como el build esta en `.gitignore`, el
+# host de quien clona el repositorio no tiene nada que poner en su lugar.
+COPY --from=web /web/dist /opt/dq/static
+ENV DQ_STATIC_DIR=/opt/dq/static
 
 # Usuario sin privilegios: el contenedor nunca corre como root.
-RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app
+RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app /opt/dq
 USER appuser
 
 EXPOSE 8000

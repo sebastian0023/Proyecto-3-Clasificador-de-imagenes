@@ -14,5 +14,9 @@ __pycache__
 data
 dist
 node_modules
+# El build de la web que pueda tener el host: la imagen compila el suyo y lo
+# deja en /opt/dq/static (ver DQ_STATIC_DIR). Copiarlo aqui dentro solo mete
+# en la imagen una copia vieja que nadie lee.
+src/dataset_quality/static
 htmlcov
 .coverage
