@@ -1,11 +1,7 @@
 name: Promote validated dataset to PROD
 
 on:
-  push:
-    branches: [dvc_fix]
-    paths:
-      - Proyecto2/reports/versions.json
-      - .github/workflows/promote-dataset.yml
+  workflow_call:
   workflow_dispatch:
 
 concurrency:
@@ -54,12 +50,17 @@ jobs:
           unset-current-credentials: true
           retry-max-attempts: 3
       - id: restore
-        name: Recover the previously versioned dataset from PROD
+        name: Recover the dataset from PROD
         run: |
           aws sts get-caller-identity --output json > "$RUNNER_TEMP/prod-identity.json"
           cp data/raw.dvc "$RUNNER_TEMP/target-raw.dvc"
-          git show 9ffbd9b3f4b2578f7f6376049613d9cb3cd048bc:Proyecto2/data/raw.dvc > data/raw.dvc
-          dvc pull -r prod data/raw.dvc
+          if ! dvc pull -r prod data/raw.dvc; then
+            # El primer cierre puede tener el puntero nuevo en Git antes de
+            # publicar su cache. Recuperamos el anterior y verificamos todos
+            # los bytes contra el release nuevo antes de permitir la subida.
+            git show 9ffbd9b3f4b2578f7f6376049613d9cb3cd048bc:Proyecto2/data/raw.dvc > data/raw.dvc
+            dvc pull -r prod data/raw.dvc
+          fi
       - id: match
         name: Verify dataset and archive against the local release
         run: |

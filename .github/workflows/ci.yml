@@ -161,8 +161,21 @@ jobs:
           print("Bloquean:", ", ".join(bloquean))
           PY
 
+  promote:
+    name: Publicar el dataset validado en PROD
+    needs: [quality, web, terraform]
+    if: github.repository == 'stephy0410/ruta-al-dataset-v1' && github.ref == 'refs/heads/dvc_fix'
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/promote-dataset.yml
+
   versionado:
     name: El dataset sigue versionado
+    needs: [promote]
+    # En dvc_fix se verifica el remote despues de publicar el nuevo cache.
+    # Las demas ramas conservan su validacion, aunque no promuevan releases.
+    if: ${{ !cancelled() && (needs.promote.result == 'success' || needs.promote.result == 'skipped') }}
     runs-on: ubuntu-latest
     defaults:
       run:

@@ -484,11 +484,14 @@ con 300 imagenes distintas y el check del minimo activo con severidad `error`.
 No sobrescribe archivos distintos bajo la misma version; repetir una
 promocion identica verifica la copia y no duplica `published_in`.
 
-El workflow `promote-dataset.yml` ejecuta este cierre solo desde la rama
-`dvc_fix`, mediante `vars.AWS_ROLE_ARN`. Recupera el puntero
-anterior del dataset desde PROD, normaliza el COCO y verifica que tanto el
-puntero nuevo como el archivo sean identicos a los validados localmente antes
-de subirlos. Si PROD no contiene ese dataset, aborta sin publicar otro.
+CI llama al workflow reutilizable `promote-dataset.yml` solo desde la rama
+`dvc_fix`, mediante `vars.AWS_ROLE_ARN`, despues de validar Python, web y
+Terraform. Primero intenta recuperar el puntero vigente de PROD; si su cache
+aun no esta publicado, recupera el puntero anterior. Normaliza el COCO y
+verifica que tanto el puntero nuevo como el archivo sean identicos a los
+validados localmente antes de subirlos. Si PROD no contiene ese dataset,
+aborta sin publicar otro. El job `versionado` espera a la promocion antes de
+ejecutar `dvc pull` y la compuerta sobre una descarga limpia desde PROD.
 Guarda el resultado y el enlace de ejecucion en `reports/prod-promotion.json`.
 
 ### Numeracion de versiones
