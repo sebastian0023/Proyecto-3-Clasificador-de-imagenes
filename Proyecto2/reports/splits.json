@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-18T02:10:16.674502Z",
+  "generated_at": "2026-09-18T02:52:44.509428Z",
   "seed": 42,
   "ratios": {
     "train": 0.7,
@@ -8194,5 +8194,43 @@
       "image_id": 1036,
       "split": "test"
     }
-  ]
+  ],
+  "per_class": {
+    "bicycle": {
+      "train": 168,
+      "val": 36,
+      "test": 36,
+      "total": 240,
+      "max_deviation": 0.014
+    },
+    "car": {
+      "train": 172,
+      "val": 37,
+      "test": 38,
+      "total": 247,
+      "max_deviation": 0.01877
+    },
+    "cat": {
+      "train": 219,
+      "val": 47,
+      "test": 46,
+      "total": 312,
+      "max_deviation": 0.01677
+    },
+    "dog": {
+      "train": 244,
+      "val": 52,
+      "test": 52,
+      "total": 348,
+      "max_deviation": 0.01939
+    },
+    "person": {
+      "train": 312,
+      "val": 67,
+      "test": 62,
+      "total": 441,
+      "max_deviation": 0.02609
+    }
+  },
+  "grouped_near_duplicates": 0
 }
