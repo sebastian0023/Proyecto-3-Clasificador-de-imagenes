@@ -58,20 +58,36 @@ def test_las_herramientas_son_cinco_y_solo_lectura(reports: Path) -> None:
 
 
 def test_las_citas_resuelven_la_version_publicada_mas_reciente(reports: Path) -> None:
+    # La huella sale del propio `quality.json`: que el reporte del repo
+    # coincida con el ultimo release es una casualidad del momento, no un
+    # contrato. El dataset de trabajo puede ir por delante del ultimo
+    # publicado, y entonces la cita no nombra version (el test de abajo).
+    huella = json.loads((reports / "quality.json").read_text(encoding="utf-8"))[
+        "dataset_fingerprint"
+    ]
     versions_path = reports / "versions.json"
     manifest = json.loads(versions_path.read_text(encoding="utf-8"))
-    version_mas_reciente = {
-        **manifest["versions"][-1],
-        "version": "0.1.2",
-        "created_at": "2026-09-18T00:00:00Z",
-    }
-    manifest["versions"].append(version_mas_reciente)
+    # Dos releases publican la misma huella: la cita debe nombrar el reciente.
+    manifest["versions"] += [
+        {
+            **manifest["versions"][-1],
+            "version": "0.1.2",
+            "created_at": "2026-09-18T00:00:00Z",
+            "dataset_fingerprint": huella,
+        },
+        {
+            **manifest["versions"][-1],
+            "version": "0.1.3",
+            "created_at": "2026-09-19T00:00:00Z",
+            "dataset_fingerprint": huella,
+        },
+    ]
     versions_path.write_text(json.dumps(manifest), encoding="utf-8")
 
     citation = tools.get_quality_report().source
 
-    assert citation.dataset_fingerprint == version_mas_reciente["dataset_fingerprint"]
-    assert citation.dataset_version == "0.1.2"
+    assert citation.dataset_fingerprint == huella
+    assert citation.dataset_version == "0.1.3"
 
 
 def test_las_citas_sin_version_no_inventan_un_release(reports: Path) -> None:
