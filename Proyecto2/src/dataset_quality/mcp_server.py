@@ -17,22 +17,27 @@ def create_server():
 
     @server.tool()
     def get_quality_report() -> dict:
+        """Devuelve el veredicto y checks de ``quality.json`` sin recalcularlos."""
         return tools.get_quality_report().model_dump(mode="json")
 
     @server.tool()
     def get_failed_checks(severity: str = "all") -> dict:
+        """Devuelve solo reglas fallidas, opcionalmente filtradas por severidad."""
         return tools.get_failed_checks(severity=severity).model_dump(mode="json")
 
     @server.tool()
     def get_class_distribution() -> dict:
+        """Devuelve imagenes y cajas por clase desde ``stats.json`` validado."""
         return tools.get_class_distribution().model_dump(mode="json")
 
     @server.tool()
     def get_split_report() -> dict:
+        """Devuelve el resumen reproducible de splits, no todas las asignaciones."""
         return tools.get_split_report().model_dump(mode="json")
 
     @server.tool()
     def list_versions(limit: int = 10) -> dict:
+        """Lista las versiones mas recientes del manifiesto inmutable."""
         return tools.list_versions(limit=limit).model_dump(mode="json")
 
     @server.custom_route("/health", methods=["GET"], include_in_schema=False)
