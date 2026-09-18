@@ -485,7 +485,7 @@ No sobrescribe archivos distintos bajo la misma version; repetir una
 promocion identica verifica la copia y no duplica `published_in`.
 
 El workflow `promote-dataset.yml` ejecuta este cierre solo desde la rama
-`codex/dataset-release-fixes`, mediante `vars.AWS_ROLE_ARN`. Recupera el puntero
+`dvc_fix`, mediante `vars.AWS_ROLE_ARN`. Recupera el puntero
 anterior del dataset desde PROD, normaliza el COCO y verifica que tanto el
 puntero nuevo como el archivo sean identicos a los validados localmente antes
 de subirlos. Si PROD no contiene ese dataset, aborta sin publicar otro.

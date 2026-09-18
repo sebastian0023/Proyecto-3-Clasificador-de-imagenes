@@ -2,7 +2,7 @@ name: Promote validated dataset to PROD
 
 on:
   push:
-    branches: [codex/dataset-release-fixes]
+    branches: [dvc_fix]
     paths:
       - Proyecto2/reports/versions.json
       - .github/workflows/promote-dataset.yml
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   promote:
-    if: github.repository == 'stephy0410/ruta-al-dataset-v1' && github.ref == 'refs/heads/codex/dataset-release-fixes'
+    if: github.repository == 'stephy0410/ruta-al-dataset-v1' && github.ref == 'refs/heads/dvc_fix'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
