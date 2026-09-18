@@ -28,7 +28,7 @@ from dataset_quality.models.exploration import ExplorationManifest
 from dataset_quality.models.quality import QualityReport
 from dataset_quality.models.splits import SplitsManifest
 from dataset_quality.models.stats import AnalysisArtifact
-from dataset_quality.models.versions import VersionsManifest
+from dataset_quality.models.versions import VersionsManifest, backfill_remotes
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REPORTS = REPO_ROOT / "reports"
@@ -135,14 +135,26 @@ def splits() -> dict[str, Any]:
 
 @router.get("/versions")
 def versions() -> dict[str, Any]:
-    """Versions: historial de releases con sus tres huellas."""
-    return load(ARTIFACTS["versions"])
+    """Versions: historial de releases, sus tres huellas y donde esta cada una.
+
+    Las entradas anteriores a `published_in` pasan por `backfill_remotes`: sin
+    eso la pantalla mostraria como "sin publicar" versiones que llevan meses en
+    el remote. La migracion se aplica al leer, nunca al escribir.
+    """
+    loaded = read(ARTIFACTS["versions"])
+    migrado = backfill_remotes(loaded.data)
+    return {
+        "source": "pipeline",
+        "produced_by": ARTIFACTS["versions"].produced_by,
+        "data": json.loads(migrado.model_dump_json()),
+    }
 
 
 @router.get("/exploration")
 def exploration() -> dict[str, Any]:
     """Exploracion: la proyeccion 2D precomputada."""
     return load(ARTIFACTS["exploration"])
+
 
 
 @router.get("/stats")

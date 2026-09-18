@@ -28,6 +28,27 @@ class DatasetCounts(StrictModel):
     categories: int = Field(ge=0)
 
 
+class RemotePublication(StrictModel):
+    """Un remote donde esta publicada una version, y cuando se subio ahi.
+
+    `storage_uri` se repite aqui a proposito en vez de derivarlo del bucket de
+    la entrada: el mismo release puede vivir en buckets con nombres distintos
+    segun el remote (`dev` es MinIO local, `prod` es S3 de verdad), y la unica
+    forma honesta de decir donde esta cada copia es guardar su URI.
+    """
+
+    remote: str = Field(min_length=1)
+    storage_uri: str = Field(min_length=1)
+    published_at: datetime
+
+    @field_validator("storage_uri")
+    @classmethod
+    def _storage_uri_es_s3(cls, value: str) -> str:
+        if not value.startswith("s3://"):
+            raise ValueError(f"debe empezar con 's3://' (recibido: {value!r})")
+        return value
+
+
 class DatasetVersion(StrictModel):
     """Una version publicada e inmutable del dataset."""
 
@@ -41,6 +62,15 @@ class DatasetVersion(StrictModel):
     quality_status: Literal["pass", "fail"]
     counts: DatasetCounts
     notes: str | None = None
+    # En que remotes esta publicada esta version. Anadido opcional: un
+    # `versions.json` escrito antes de que existiera sigue validando, por eso
+    # `schema_version` sigue en 1.
+    #
+    # Sin esto, `storage_uri` decia a que URI se subio el archivo pero no a que
+    # remote, y la pantalla no podia distinguir una version que solo existe en
+    # el MinIO local de una promovida a S3 — que es justo la diferencia entre
+    # "lo probe en mi maquina" y "esta publicado".
+    published_in: list[RemotePublication] = Field(default_factory=list)
 
     @field_validator("version")
     @classmethod
@@ -64,6 +94,16 @@ class DatasetVersion(StrictModel):
             raise ValueError(f"debe empezar con 's3://' (recibido: {value!r})")
         return value
 
+    @model_validator(mode="after")
+    def _un_registro_por_remote(self) -> DatasetVersion:
+        nombres = [publicacion.remote for publicacion in self.published_in]
+        if len(nombres) != len(set(nombres)):
+            repetidos = sorted({name for name in nombres if nombres.count(name) > 1})
+            raise ValueError(
+                f"la version esta registrada dos veces en el mismo remote: {repetidos}"
+            )
+        return self
+
 
 class VersionsManifest(StrictModel):
     """Contrato congelado de `versions.json`: el registro completo de versiones."""
@@ -82,3 +122,43 @@ class VersionsManifest(StrictModel):
         if fechas != sorted(fechas):
             raise ValueError("versions debe estar en orden cronologico por created_at")
         return self
+
+
+# Remote al que publicaba `dq release` antes de que existiera `published_in`, y
+# al que sigue publicando si no se le dice otro.
+REMOTE_POR_DEFECTO = "dev"
+
+
+def backfill_remotes(
+    manifest: VersionsManifest, remote: str = REMOTE_POR_DEFECTO
+) -> VersionsManifest:
+    """Rellena `published_in` en las entradas anteriores a ese campo.
+
+    No inventa un dato: hasta que el campo existio, `dq release` subia a un
+    unico destino y `storage_uri` ya guardaba la URI exacta de esa copia; lo
+    unico que faltaba era el nombre del remote. Dejarlas en blanco haria que la
+    pantalla mostrara como "sin publicar" versiones que si lo estan.
+
+    Es una migracion de LECTURA y esta aqui, en una funcion, y no en un
+    validador del modelo: un validador tambien rellenaria las entradas que
+    `dq release --dry-run` construye a proposito sin publicar nada, y entonces
+    un ensayo en seco diria que publico.
+    """
+    return VersionsManifest(
+        versions=[
+            entry
+            if entry.published_in
+            else entry.model_copy(
+                update={
+                    "published_in": [
+                        RemotePublication(
+                            remote=remote,
+                            storage_uri=entry.storage_uri,
+                            published_at=entry.created_at,
+                        )
+                    ]
+                }
+            )
+            for entry in manifest.versions
+        ]
+    )

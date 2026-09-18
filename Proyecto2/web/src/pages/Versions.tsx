@@ -1,7 +1,38 @@
 /** Versions: el historial inmutable de releases. */
 
 import { Card, Pill, Resolve, useApi } from '../components/ui';
-import { api } from '../lib/api';
+import { api, type RemotePublication } from '../lib/api';
+
+/** Los remotes conocidos, en el orden en que un release los recorre. */
+const REMOTES = ['dev', 'prod'] as const;
+
+/** En qué remotes está publicada una versión. Gris = todavía no está ahí. */
+function Remotes({ publicados }: { publicados: RemotePublication[] }) {
+  const porNombre = new Map(publicados.map((p) => [p.remote, p]));
+  // Un remote con nombre propio (ni dev ni prod) se enseña igual: el registro
+  // no impone la lista, solo la ordena.
+  const extra = publicados.filter((p) => !REMOTES.includes(p.remote as (typeof REMOTES)[number]));
+
+  return (
+    <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
+      {REMOTES.map((nombre) => {
+        const publicado = porNombre.get(nombre);
+        return (
+          <Pill key={nombre} kind={publicado ? 'pass' : 'muted'}>
+            <span title={publicado ? publicado.storage_uri : `no publicada en ${nombre}`}>
+              {nombre.toUpperCase()}
+            </span>
+          </Pill>
+        );
+      })}
+      {extra.map((p) => (
+        <Pill key={p.remote} kind="accent">
+          <span title={p.storage_uri}>{p.remote.toUpperCase()}</span>
+        </Pill>
+      ))}
+    </span>
+  );
+}
 
 function Delta({ actual, previo }: { actual: number; previo: number }) {
   const diferencia = actual - previo;
@@ -62,7 +93,8 @@ export default function Versions() {
                         </div>
                       </div>
                       <div style={{ textAlign: 'right', flex: 'none' }}>
-                        <div className="mono" style={{ fontSize: 12 }}>
+                        <Remotes publicados={version.published_in ?? []} />
+                        <div className="mono" style={{ fontSize: 12, marginTop: 4 }}>
                           {version.counts.images} img
                         </div>
                         <div className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
@@ -104,11 +136,19 @@ export default function Versions() {
                       </Pill>
                     </div>
                     <div className="row">
-                      <span>Almacenamiento</span>
-                      <span className="mono" style={{ fontSize: 11, wordBreak: 'break-all' }}>
-                        {ultima.storage_uri}
-                      </span>
+                      <span>Publicada en</span>
+                      <Remotes publicados={ultima.published_in ?? []} />
                     </div>
+                    {(ultima.published_in ?? []).map((publicacion) => (
+                      <div className="row" key={publicacion.remote}>
+                        <span className="mono" style={{ fontSize: 11 }}>
+                          {publicacion.remote}
+                        </span>
+                        <span className="mono" style={{ fontSize: 11, wordBreak: 'break-all' }}>
+                          {publicacion.storage_uri}
+                        </span>
+                      </div>
+                    ))}
                     {(
                       [
                         ['dataset', ultima.dataset_fingerprint],
@@ -123,6 +163,13 @@ export default function Versions() {
                         </span>
                       </div>
                     ))}
+                    {!(ultima.published_in ?? []).some((p) => p.remote === 'prod') && (
+                      <div className="banner warn">
+                        Esta versión no está en <span className="mono">prod</span>: existe solo en
+                        el remote local. Promoverla es un paso aparte, y hasta que ocurra el bucket
+                        de producción no la tiene.
+                      </div>
+                    )}
                     {ultima.quality_status === 'fail' && (
                       <div className="banner warn">
                         Esta versión se publicó con la compuerta en fail (se usó{' '}

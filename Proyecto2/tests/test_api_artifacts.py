@@ -139,6 +139,53 @@ def test_exploracion_ida_y_vuelta(client, reports: Path) -> None:
     assert cuerpo["points"][0]["category_id"] == 3
 
 
+# --------------------------------------------------------------------------
+# En que remotes esta cada version
+# --------------------------------------------------------------------------
+VERSION_SIN_REMOTES = {
+    "schema_version": 1,
+    "versions": [
+        {
+            "schema_version": 1,
+            "version": "0.1.0",
+            "created_at": "2026-09-14T00:00:00Z",
+            "dataset_fingerprint": "a" * 64,
+            "quality_report_fingerprint": "b" * 64,
+            "splits_fingerprint": "c" * 64,
+            "storage_uri": "s3://dataset-releases/0.1.0/dataset.tar.zst",
+            "quality_status": "pass",
+            "counts": {"images": 10, "annotations": 20, "categories": 2},
+            "notes": None,
+        }
+    ],
+}
+
+
+def test_una_version_vieja_se_sirve_como_publicada_en_dev(client, reports: Path) -> None:
+    """La pantalla leia por aqui, no por el tier, y veia `published_in` vacio.
+
+    El resultado era que versiones publicadas desde hacia meses aparecian como
+    si no estuvieran en ningun sitio.
+    """
+    (reports / "versions.json").write_text(json.dumps(VERSION_SIN_REMOTES), encoding="utf-8")
+
+    entrada = client.get("/api/versions").json()["data"]["versions"][0]
+
+    assert [p["remote"] for p in entrada["published_in"]] == ["dev"]
+    assert entrada["published_in"][0]["storage_uri"] == entrada["storage_uri"]
+
+
+def test_la_migracion_no_reescribe_el_archivo(client, reports: Path) -> None:
+    """Es una migracion de LECTURA: el disco se queda como estaba."""
+    destino = reports / "versions.json"
+    original = json.dumps(VERSION_SIN_REMOTES)
+    destino.write_text(original, encoding="utf-8")
+
+    client.get("/api/versions")
+
+    assert destino.read_text(encoding="utf-8") == original
+
+
 def test_un_image_id_repetido_se_rechaza() -> None:
     """Dos puntos para la misma imagen significan que el calculo se corrio dos veces."""
     with pytest.raises(ValueError, match="repetido"):

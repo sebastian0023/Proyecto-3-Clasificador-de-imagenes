@@ -15,7 +15,19 @@
         "annotations": 4,
         "categories": 2
       },
-      "notes": "primera version publicada tras el Frente 2"
+      "notes": "primera version publicada tras el Frente 2",
+      "published_in": [
+        {
+          "remote": "dev",
+          "storage_uri": "s3://dataset-releases/0.1.0/dataset.tar.zst",
+          "published_at": "2026-09-11T10:10:00Z"
+        },
+        {
+          "remote": "prod",
+          "storage_uri": "s3://dataset-quality-releases-prod-dataset-releases/0.1.0/dataset.tar.zst",
+          "published_at": "2026-09-11T10:10:00Z"
+        }
+      ]
     }
   ]
 }

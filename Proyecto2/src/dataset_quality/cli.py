@@ -349,6 +349,7 @@ def cmd_release(args: argparse.Namespace) -> int:
         bump=args.bump,
         version=args.version,
         notes=args.notes,
+        remote=args.remote or release_module.DEFAULT_REMOTE,
         out=Path(args.out),
         upload=not args.dry_run,
     )
@@ -361,6 +362,8 @@ def cmd_release(args: argparse.Namespace) -> int:
     print(f"  quality.json    {entry.quality_report_fingerprint[:16]}...")
     print(f"  splits.json     {entry.splits_fingerprint[:16]}...")
     print(f"  archivo         {result.archive_path}")
+    publicado = ", ".join(p.remote for p in entry.published_in) or f"{DIM}ninguno{RESET}"
+    print(f"  remotes         {publicado}")
 
     if args.dry_run:
         print(f"\n{YELLOW}--dry-run:{RESET} no se subio nada ni se escribio {args.out}.")
@@ -512,6 +515,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Que parte del semver subir si no se pasa --version (default: patch).",
     )
     release.add_argument("--notes", default=None, help="Nota libre para esta version.")
+    release.add_argument(
+        "--remote",
+        default=None,
+        help="Remote donde queda publicada la version, para el registro (default: dev).",
+    )
     release.add_argument(
         "--dry-run",
         action="store_true",

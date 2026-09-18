@@ -32,7 +32,14 @@ import zstandard
 
 from dataset_quality.models.quality import QualityReport
 from dataset_quality.models.splits import SplitsManifest
-from dataset_quality.models.versions import DatasetCounts, DatasetVersion, VersionsManifest
+from dataset_quality.models.versions import (
+    REMOTE_POR_DEFECTO,
+    DatasetCounts,
+    DatasetVersion,
+    RemotePublication,
+    VersionsManifest,
+    backfill_remotes,
+)
 from dataset_quality.storage import ensure_bucket, file_sha256, get_s3_client
 
 DEFAULT_VERSIONS_PATH = Path("reports") / "versions.json"
@@ -41,11 +48,28 @@ ARCHIVE_NAME = "dataset.tar.zst"
 Bump = str  # "patch" | "minor" | "major"
 
 
+# Nombre del remote al que publica `dq release` mientras no se le diga otro.
+# `dev` es el MinIO del compose; `prod` es el bucket de S3 de verdad. Vive en
+# el modulo del contrato porque la migracion de lectura tambien lo necesita.
+DEFAULT_REMOTE = REMOTE_POR_DEFECTO
+
+
 def load_manifest(path: Path = DEFAULT_VERSIONS_PATH) -> VersionsManifest:
-    """Lee `versions.json`, o un registro vacio si nunca se publico nada."""
+    """Lee `versions.json`, o un registro vacio si nunca se publico nada.
+
+    A las entradas anteriores a `published_in` se les rellena el remote `dev`.
+    No es inventar un dato: hasta que existio este campo, `dq release` subia a
+    un unico destino — el bucket de releases de la configuracion, que es el
+    MinIO local — y `storage_uri` ya guardaba la URI exacta de esa copia. Lo
+    unico que faltaba era el nombre del remote. La alternativa, dejarlas en
+    blanco, haria que la pantalla mostrara como "sin publicar" versiones que si
+    lo estan.
+    """
     if not path.is_file():
         return VersionsManifest(versions=[])
-    return VersionsManifest.model_validate_json(path.read_text(encoding="utf-8"))
+
+    manifest = VersionsManifest.model_validate_json(path.read_text(encoding="utf-8"))
+    return backfill_remotes(manifest, DEFAULT_REMOTE)
 
 
 def next_version(manifest: VersionsManifest, bump: Bump = "patch") -> str:
@@ -123,11 +147,19 @@ def build_entry(
     splits_fingerprint: str,
     bucket: str,
     notes: str | None,
+    published_in: list[RemotePublication] | None = None,
 ) -> DatasetVersion:
-    """Ensambla la entrada de `versions.json`. Funcion pura: sin disco ni red."""
+    """Ensambla la entrada de `versions.json`. Funcion pura: sin disco ni red.
+
+    `published_in` llega vacio a proposito cuando la subida todavia no ocurrio:
+    la entrada describe la version, y donde esta publicada es un hecho aparte
+    que solo se registra despues de que el upload haya terminado bien. Un
+    `--dry-run` no publica nada y por eso no registra ningun remote.
+    """
     return DatasetVersion(
         version=version,
         created_at=datetime.now(UTC),
+        published_in=published_in or [],
         dataset_fingerprint=dataset_fingerprint,
         quality_report_fingerprint=quality_report_fingerprint,
         splits_fingerprint=splits_fingerprint,
@@ -161,6 +193,15 @@ def upload_archive(archive_path: Path, bucket: str, version: str) -> None:
     get_s3_client().upload_file(str(archive_path), bucket, key)
 
 
+def publication(remote: str, bucket: str, version: str) -> RemotePublication:
+    """El registro de que esta version quedo publicada en `remote`."""
+    return RemotePublication(
+        remote=remote,
+        storage_uri=storage_uri(bucket, version),
+        published_at=datetime.now(UTC),
+    )
+
+
 @dataclass
 class ReleaseResult:
     entry: DatasetVersion
@@ -178,6 +219,7 @@ def run(
     bump: Bump = "patch",
     version: str | None = None,
     notes: str | None = None,
+    remote: str = DEFAULT_REMOTE,
     out: Path = DEFAULT_VERSIONS_PATH,
     archive_dir: Path = Path("reports") / "releases",
     upload: bool = True,
@@ -212,6 +254,11 @@ def run(
 
     if upload:
         upload_archive(archive_path, bucket, resolved_version)
+        # El remote se registra DESPUES del upload: si la subida falla, la
+        # excepcion sube y no queda escrito que la version esta publicada.
+        entry = entry.model_copy(
+            update={"published_in": [publication(remote, bucket, resolved_version)]}
+        )
         new_manifest = append_entry(manifest, entry)
         write_manifest(new_manifest, out)
     else:
