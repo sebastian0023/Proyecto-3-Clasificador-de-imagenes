@@ -91,6 +91,14 @@ def check_git_hygiene() -> tuple[bool, float, str]:
 
 
 def main() -> int:
+    # La consola de Windows usa cp1252 cuando la salida va a una tuberia, y las
+    # lineas de recuadro de abajo la revientan con UnicodeEncodeError antes de
+    # ejecutar un solo chequeo. Reconfigurar el stream evita que `make check |
+    # tee` falle por un caracter decorativo.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     print(f"\n{BOLD}══════════════════════════════════════════════════════════════════════{RESET}")
     print(f"{BOLD}  Dataset Quality — Validación Rápida de Frente 10 (<30s){RESET}")
     print(f"{BOLD}══════════════════════════════════════════════════════════════════════{RESET}\n")
@@ -99,8 +107,16 @@ def main() -> int:
     failures: list[tuple[str, str]] = []
 
     ruff = find_executable("ruff")
-    pytest = find_executable("pytest")
     terraform = find_executable("terraform")
+
+    # pytest se invoca como MODULO del interprete actual, no por su `pytest.exe`.
+    # El shim que genera pip es un ejecutable que vuelve a lanzar el Python base,
+    # y con el Python de la Microsoft Store esa relanzada falla sin imprimir
+    # nada y devolviendo 1 — con lo que este script reportaba un FAIL de una
+    # suite que en realidad esta entera en verde, que es el peor fallo posible
+    # en una herramienta de validacion. `ruff` no tiene el problema porque su
+    # ejecutable es un binario nativo, no un shim de Python.
+    pytest = [sys.executable, "-m", "pytest"]
 
     # 1. Ruff Lint
     if ruff:
@@ -123,16 +139,13 @@ def main() -> int:
         print(f"  {YELLOW}⚠ Ruff no encontrado. Omitiendo.{RESET}")
 
     # 2. Pytest suite
-    if pytest:
-        ok, _, out = run_step(
-            "Pytest: suite completa de pruebas unitarias",
-            [pytest],
-            PROYECTO2_DIR,
-        )
-        if not ok:
-            failures.append(("Pytest", out))
-    else:
-        print(f"  {YELLOW}⚠ Pytest no encontrado. Omitiendo.{RESET}")
+    ok, _, out = run_step(
+        "Pytest: suite completa de pruebas unitarias",
+        pytest,
+        PROYECTO2_DIR,
+    )
+    if not ok:
+        failures.append(("Pytest", out))
 
     # 3. Terraform checks
     if terraform:

@@ -70,3 +70,7 @@ Thumbs.db
 /web/node_modules/
 /src/dataset_quality/static/assets/
 /src/dataset_quality/static/index.html
+
+# Salida cruda de Playwright: trazas y capturas por prueba, que el reporte HTML
+# de `reports/evaluation/playwright/` ya incluye. Se regenera en cada corrida.
+/web/test-results/
