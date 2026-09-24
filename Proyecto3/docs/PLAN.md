@@ -8,7 +8,7 @@ Todo cierra el **miércoles 30 (Control 3)**. El jueves 1 es exclusivamente revi
 
 | Persona | Rol | Fases | Puntos | Revisa sus PRs | Responsabilidad |
 |---|---|---|---:|---|---|
-| Diego | Líder de datos, evaluación y entrega | F2, F3, F6, F7, F11 | 42 | Edith | Dueño del camino de los datos: release de P2, recortes, manifiesto, evaluación en test y publicación en S3. Coordina el calendario, corre la autoevaluación final y pone el tag de entrega. |
+| Diego | PM · datos · evaluación · entrega | F2, F3, F6, F7, F11 | 42 | Edith | PM del proyecto: dirige el kickoff de decisiones, custodia el test y vigila que la cadena release → recortes → split → run → checkpoint → test → S3 → predicción sea demostrable. Dueño del almacenamiento, los datos, la evaluación final y la publicación en S3; prepara la demo y pone el tag de entrega. |
 | Edith | Líder de ML y MLOps | F1, F4, F5 | 32 | Andrés | Dueña del stack de entrenamiento: docker-compose con worker y MLflow, contratos, modelo, entrenador, barrido de corridas, selección del candidato y servicio de inferencia. |
 | Andrés | Líder de portal y calidad | F8, F9, F10 | 26 | Diego | Dueño de las 5 páginas del portal, la CI, la prueba de extremo a extremo y el ensayo de arranque desde un clon limpio. |
 
@@ -20,8 +20,8 @@ Revisión en rotación: Diego → Edith → Andrés → Diego. Nadie aprueba su 
 
 | Fase | jue 24 | vie 25 | sáb 26 | dom 27 | lun 28 | mar 29 | mié 30 | jue 1 |
 |---|---|---|---|---|---|---|---|---|
-| F1 Arranque del stack y contratos (Edith) | 🟩 |   | · | · |   |   |   |   |
-| F2 Traspaso del release y recortes COCO (Diego) | 🟦 | 🟦 | · | · |   |   |   |   |
+| F1 Kickoff, arranque del stack y contratos (Edith) | 🟩 |   | · | · |   |   |   |   |
+| F2 Almacenamiento, release y recortes COCO (Diego) | 🟦 | 🟦 | · | · |   |   |   |   |
 | F3 Manifiesto 70/20/10 sin fuga (Diego) |   | 🟦 | · | · | 🟦 |   |   |   |
 | F4 Modelo, entrenador y servicio de inferencia (Edith) |   | 🟩 | · | · | 🟩 | 🟩 |   |   |
 | F5 Experimentos MLflow y selección (Edith) |   |   | · | · | 🟩 | 🟩 |   |   |
@@ -30,14 +30,14 @@ Revisión en rotación: Diego → Edith → Andrés → Diego. Nadie aprueba su 
 | F8 Portal: Training y Experiments (Andrés) | 🟧 | 🟧 | · | · | 🟧 |   |   |   |
 | F9 Portal: Evaluation, Models e Inference (Andrés) |   |   | · | · | 🟧 | 🟧 | 🟧 |   |
 | F10 Pruebas, CI y ensayo de arranque (Andrés) | 🟧 | 🟧 | · | · | 🟧 | 🟧 | 🟧 |   |
-| F11 Autoevaluación y congelación (Diego) |   |   | · | · |   |   | 🟦 |   |
+| F11 Autoevaluación, demo y congelación (Diego) |   |   | · | · |   |   | 🟦 |   |
 
 ## Fases
 
 | ID | Fase | Responsable | Fechas | Puntos | Depende de | Bloquea a | Archivo |
 |---|---|---|---|---:|---|---|---|
-| F1 | Arranque del stack y contratos | Edith | 24 sep | 0 | — | F2–F10 | `docs/p3/fases/F1-arranque-contratos.md` |
-| F2 | Traspaso del release y recortes COCO | Diego | 24 sep → 25 sep | 9 | F1 (contratos) | F3 | `docs/p3/fases/F2-release-recortes.md` |
+| F1 | Kickoff, arranque del stack y contratos | Edith | 24 sep | 0 | — | F2–F10 | `docs/p3/fases/F1-arranque-contratos.md` |
+| F2 | Almacenamiento, release y recortes COCO | Diego | 24 sep → 25 sep | 9 | F1 (contratos y decisiones) | F3, F7 | `docs/p3/fases/F2-release-recortes.md` |
 | F3 | Manifiesto 70/20/10 sin fuga | Diego | 25 sep → 28 sep | 5 | F2 | F5, F6 | `docs/p3/fases/F3-manifiesto.md` |
 | F4 | Modelo, entrenador y servicio de inferencia | Edith | 25 sep → 29 sep | 18 | F1 | F5, F9 | `docs/p3/fases/F4-modelo-entrenador.md` |
 | F5 | Experimentos MLflow y selección | Edith | 28 sep → 29 sep | 14 | F3, F4 | F6, F7, F8 | `docs/p3/fases/F5-experimentos-seleccion.md` |
@@ -46,7 +46,7 @@ Revisión en rotación: Diego → Edith → Andrés → Diego. Nadie aprueba su 
 | F8 | Portal: Training y Experiments | Andrés | 24 sep → 28 sep | 7 | F1 (contratos) | F9 | `docs/p3/fases/F8-portal-training-experiments.md` |
 | F9 | Portal: Evaluation, Models e Inference | Andrés | 28 sep → 30 sep | 11 | F4, F6, F7 | F10 | `docs/p3/fases/F9-portal-evaluation-models-inference.md` |
 | F10 | Pruebas, CI y ensayo de arranque | Andrés | 24 sep → 30 sep | 8 | F1 (CI arranca el jueves 24) | F11 | `docs/p3/fases/F10-pruebas-ci.md` |
-| F11 | Autoevaluación y congelación | Diego | 30 sep | 0 | F1–F10 | — | `docs/p3/fases/F11-autoevaluacion-cierre.md` |
+| F11 | Autoevaluación, demo y congelación | Diego | 30 sep | 0 | F1–F10 | — | `docs/p3/fases/F11-autoevaluacion-cierre.md` |
 
 ## Controles
 

@@ -23,8 +23,8 @@ Documentos de referencia:
 
 | ID | Fase | Responsable | Fechas | Archivo |
 |---|---|---|---|---|
-| F1 | Arranque del stack y contratos | Edith | 24 sep | `docs/p3/fases/F1-arranque-contratos.md` |
-| F2 | Traspaso del release y recortes COCO | Diego | 24 sep → 25 sep | `docs/p3/fases/F2-release-recortes.md` |
+| F1 | Kickoff, arranque del stack y contratos | Edith | 24 sep | `docs/p3/fases/F1-arranque-contratos.md` |
+| F2 | Almacenamiento, release y recortes COCO | Diego | 24 sep → 25 sep | `docs/p3/fases/F2-release-recortes.md` |
 | F3 | Manifiesto 70/20/10 sin fuga | Diego | 25 sep → 28 sep | `docs/p3/fases/F3-manifiesto.md` |
 | F4 | Modelo, entrenador y servicio de inferencia | Edith | 25 sep → 29 sep | `docs/p3/fases/F4-modelo-entrenador.md` |
 | F5 | Experimentos MLflow y selección | Edith | 28 sep → 29 sep | `docs/p3/fases/F5-experimentos-seleccion.md` |
@@ -33,7 +33,7 @@ Documentos de referencia:
 | F8 | Portal: Training y Experiments | Andrés | 24 sep → 28 sep | `docs/p3/fases/F8-portal-training-experiments.md` |
 | F9 | Portal: Evaluation, Models e Inference | Andrés | 28 sep → 30 sep | `docs/p3/fases/F9-portal-evaluation-models-inference.md` |
 | F10 | Pruebas, CI y ensayo de arranque | Andrés | 24 sep → 30 sep | `docs/p3/fases/F10-pruebas-ci.md` |
-| F11 | Autoevaluación y congelación | Diego | 30 sep | `docs/p3/fases/F11-autoevaluacion-cierre.md` |
+| F11 | Autoevaluación, demo y congelación | Diego | 30 sep | `docs/p3/fases/F11-autoevaluacion-cierre.md` |
 
 ## Reglas del equipo
 

@@ -1,19 +1,42 @@
-# F2 — Traspaso del release y recortes COCO
+# F2 — Almacenamiento, release y recortes COCO
 
 | Campo | Valor |
 |---|---|
-| Responsable | Diego (Líder de datos, evaluación y entrega) |
+| Responsable | Diego (PM · datos · evaluación · entrega) |
 | Revisor de PRs | Edith |
 | Fechas | 24 sep → 25 sep de 2026 |
 | Rama | `feat/fase-2-release-recortes` |
 | Puntos de rúbrica | 9 (1.1, 1.2, M2 (compuerta)) |
-| Depende de | F1 (contratos) |
-| Bloquea a | F3 |
+| Depende de | F1 (contratos y decisiones) |
+| Bloquea a | F3, F7 |
 | Control | Control 2 |
 
-**Nota de calendario:** Las clases se fijan y se hace commit antes de cualquier corrida.
+**Nota de calendario:** El bucket propio y la copia de los datos de DVC van primero (jueves); las clases se fijan y se hace commit antes de cualquier corrida.
 
 > Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+
+## Bloque T31 — Almacenamiento propio en S3 (DVC, MLflow y modelos)
+
+**Objetivo:** Tener, desde el inicio, un bucket del equipo con permisos listos para los datos de DVC, los artefactos de MLflow y los modelos publicados, sin depender del almacenamiento del equipo anterior.
+
+**Criterios de rúbrica:** M2, 1.1, 1.3, 3.2, 5.2
+
+**Pasos**
+
+1. Crea (o confirma) un bucket de AWS S3 con versionado habilitado y prefijos dvc/, mlflow/ y models/.
+2. Crea credenciales con el mínimo privilegio sobre ese bucket; guárdalas en .env y .dvc/config.local (ignorados por git) y en los Secrets de GitHub Actions si la CI las necesita. Nunca en el repo.
+3. Copia los datos del release aprobado del P2: dvc pull desde el remoto original, dvc remote add -d p3storage s3://<bucket>/dvc, dvc push -r p3storage. Los hashes no cambian.
+4. Verifica desde un clon limpio que dvc pull del release funciona solo con el remoto nuevo.
+5. Apunta el artifact store de MLflow (T02) a s3://<bucket>/mlflow/ o confirma el volumen persistente elegido en decisiones.md.
+6. Documenta bucket, prefijos, región y variables de entorno necesarias (solo nombres) en docs/p3/almacenamiento.md.
+
+**Aceptación** (marca al cumplir, con enlace a la evidencia)
+
+- [ ] dvc pull del release funciona desde un clon limpio con el remoto propio
+- [ ] Versionado del bucket habilitado
+- [ ] gitleaks sin hallazgos tras el cambio
+
+**Entregables:** `docs/p3/almacenamiento.md`; `.dvc/config actualizado (sin credenciales)`
 
 ## Bloque T05 — Selector de release DVC aprobado y consumo de COCO
 

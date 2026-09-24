@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Responsable | Diego (Líder de datos, evaluación y entrega) |
+| Responsable | Diego (PM · datos · evaluación · entrega) |
 | Revisor de PRs | Edith |
 | Fechas | 29 sep → 30 sep de 2026 |
 | Rama | `feat/fase-7-paquete-s3` |
@@ -11,7 +11,7 @@
 | Bloquea a | F9, F11 |
 | Control | Control 3 |
 
-**Nota de calendario:** Debe estar en S3 el miércoles 30 a mediodía para que Models funcione.
+**Nota de calendario:** El bucket ya existe desde F2; aquí solo se empaqueta, se publica y se verifica la descarga. Debe estar en S3 el miércoles 30 a mediodía para que Models e Inference funcionen.
 
 > Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
@@ -24,13 +24,14 @@
 **Pasos**
 
 1. Arma el paquete: model.pt (state_dict), config de arquitectura, classes.json, preprocess.json (image_size, mean, std), requirements con versiones fijadas.
-2. Escribe model_card.md: propósito, datos y release de origen con hash, manifiesto y split, run_id MLflow, métricas de test (de T15, no reescritas a mano), baseline, limitaciones, origen de pesos preentrenados, versión semántica 1.0.0.
+2. Escribe model_card.md con: propósito; clases incluidas y exclusiones; release DVC de origen con hash; manifiesto y split; run_id de MLflow y configuración; desempeño global y POR CLASE en test (tomado de T15, no reescrito a mano) y baseline; preprocesamiento exacto (image_size, mean, std); limitaciones; origen de pesos preentrenados; modo de cargarla (código mínimo de carga e inferencia); versión semántica 1.0.0.
 3. Prueba: cargar el paquete en un proceso limpio e inferir una imagen.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
 - [ ] La tarjeta describe exactamente el run de selection.json
-- [ ] El paquete carga en venv limpio
+- [ ] La tarjeta incluye desempeño por clase, preprocesamiento y modo de carga
+- [ ] El paquete carga en venv limpio siguiendo solo la tarjeta
 
 **Entregables:** `models/p3/<version>/ (ignorado en git salvo metadatos)`; `model_card.md`
 

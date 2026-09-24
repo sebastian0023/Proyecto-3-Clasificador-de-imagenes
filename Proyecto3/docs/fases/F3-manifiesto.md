@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Responsable | Diego (Líder de datos, evaluación y entrega) |
+| Responsable | Diego (PM · datos · evaluación · entrega) |
 | Revisor de PRs | Edith |
 | Fechas | 25 sep → 28 sep de 2026 |
 | Rama | `feat/fase-3-manifiesto` |

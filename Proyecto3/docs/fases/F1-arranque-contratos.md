@@ -1,4 +1,4 @@
-# F1 — Arranque del stack y contratos
+# F1 — Kickoff, arranque del stack y contratos
 
 | Campo | Valor |
 |---|---|
@@ -11,9 +11,30 @@
 | Bloquea a | F2–F10 |
 | Control | Control 1 |
 
-**Nota de calendario:** Todo el equipo depende de esta fase; los contratos se publican antes de mediodía.
+**Nota de calendario:** Kickoff de decisiones a primera hora, dirigido por Diego (PM); los contratos se publican antes de mediodía. Todo el equipo depende de esta fase.
 
 > Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+
+## Bloque T00 — Hoja de decisiones de arranque (kickoff)
+
+**Objetivo:** Cerrar en un kickoff de los tres, dirigido por Diego (PM), las 8 decisiones que la guía del curso pide antes del primer entrenamiento, y dejarlas versionadas.
+
+**Criterios de rúbrica:** Todas (evita retrabajo en 1.2, 3.3, 3.2, 5.2)
+
+**Pasos**
+
+1. Crea docs/p3/decisiones.md con una sección por decisión: (1) release DVC de origen y hash, con compuerta aprobada; (2) clases incluidas y exclusiones (se confirman con los conteos de F2 el viernes 25); (3) framework y arquitectura inicial, con origen de pesos preentrenados; (4) métrica de selección del candidato y desempate, p. ej. mayor val_accuracy y luego menor val_loss; (5) servicio de MLflow y dónde persisten registros y artefactos; (6) destino S3 del modelo (bucket y prefijo) y cómo se gestionan permisos sin claves en Git; (7) presupuesto de cómputo: máquina, CPU/GPU y horas reservadas para ≥10 corridas y una prueba final (se actualiza el viernes con la medición real); (8) custodio del test: Diego.
+2. Cada decisión lleva responsable, fecha y estado (cerrada / pendiente de dato). No incluyas contraseñas ni claves.
+3. Haz commit antes de cualquier corrida de entrenamiento; la fecha del commit es evidencia de que la métrica y las clases se decidieron antes de ver el test.
+4. Opcional: exporta las mismas decisiones al formulario de la guía del PM (HTML del curso) y guarda el JSON exportado en docs/p3/guia-pm-plan.json.
+
+**Aceptación** (marca al cumplir, con enlace a la evidencia)
+
+- [ ] docs/p3/decisiones.md con las 8 decisiones y su responsable
+- [ ] La métrica de selección está fijada antes de la primera corrida
+- [ ] Commit fechado el jueves 24
+
+**Entregables:** `docs/p3/decisiones.md`
 
 ## Bloque T01 — Inventario del repo y línea base
 
@@ -48,12 +69,14 @@
 2. Agrega un worker (Celery/RQ/cola que ya use el proyecto) que tome trabajos de entrenamiento; el endpoint HTTP solo encola y devuelve job_id.
 3. Persiste en BD estado, progreso, logs y error de cada trabajo para que sobrevivan a recargar la página.
 4. Prueba: encolar un trabajo 'dummy' y consultar su estado tras reiniciar el backend.
-5. Actualiza el README con los pasos exactos de arranque (sin pasos implícitos).
+5. Prueba de persistencia de MLflow: registra un run de prueba con un artefacto, reinicia todo el stack (docker compose down && up) y verifica que el run_id, sus métricas y el artefacto siguen disponibles.
+6. Actualiza el README con los pasos exactos de arranque (sin pasos implícitos).
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
 - [ ] docker compose up levanta portal, worker y MLflow desde clon limpio
 - [ ] Estado de un trabajo persiste tras reinicio
+- [ ] Run IDs y artefactos de MLflow sobreviven al reinicio del stack
 - [ ] README actualizado
 
 **Entregables:** docker-compose actualizado; `src/p3/worker/`; README

@@ -1,8 +1,8 @@
-# F11 — Autoevaluación y congelación
+# F11 — Autoevaluación, demo y congelación
 
 | Campo | Valor |
 |---|---|
-| Responsable | Diego (Líder de datos, evaluación y entrega) |
+| Responsable | Diego (PM · datos · evaluación · entrega) |
 | Revisor de PRs | Edith |
 | Fechas | 30 sep de 2026 |
 | Rama | `feat/fase-11-autoevaluacion-cierre` |
@@ -11,7 +11,7 @@
 | Bloquea a | — |
 | Control | Control 3 |
 
-**Nota de calendario:** Miércoles 30 en la tarde; todo lo inyectado se revierte antes de etiquetar.
+**Nota de calendario:** Miércoles 30 en la tarde: autoevaluación, guion y ensayo de la demo, y tag final. Todo lo inyectado se revierte antes de etiquetar.
 
 > Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
@@ -34,6 +34,26 @@
 - [ ] Lista de pérdidas de puntos atendida o justificada
 
 **Entregables:** `docs/p3/autoevaluacion.md`; reporte HTML de ensayo
+
+## Bloque T33 — Guion de demo de la cadena completa
+
+**Objetivo:** Preparar una demo en la que, desde una versión del dataset, se siga el mismo trabajo hasta una predicción en el portal, y en la que cada integrante pueda explicar sus cifras.
+
+**Criterios de rúbrica:** Todas (evidencia para la evaluación)
+
+**Pasos**
+
+1. Escribe docs/p3/demo.md con los pasos y enlaces reales: release DVC (ID y hash) → manifiesto 70/20/10 y conteos → run seleccionado en MLflow (curvas, parámetros y selection.json) → evaluación en test (matriz, F1 por clase) → versión del modelo y objeto en S3 (key, VersionId, SHA-256) → predicción en Inference hecha con ese archivo descargado → envío a la cola de anotación.
+2. Verifica que todos los enlaces apunten al mismo trabajo (mismos IDs de punta a punta).
+3. Asigna quién explica cada tramo: Diego datos y test, Edith entrenamiento y MLflow, Andrés portal e inferencia; cada uno prepara la respuesta a '¿de dónde sale este número?' para sus cifras.
+4. Haz un ensayo cronometrado con los tres.
+
+**Aceptación** (marca al cumplir, con enlace a la evidencia)
+
+- [ ] docs/p3/demo.md con IDs reales y consistentes
+- [ ] Ensayo realizado con los tres integrantes
+
+**Entregables:** `docs/p3/demo.md`
 
 ## Bloque T30 — Congelamiento, etiqueta de entrega y checklist final
 

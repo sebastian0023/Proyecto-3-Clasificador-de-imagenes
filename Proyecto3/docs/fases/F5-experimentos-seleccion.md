@@ -11,7 +11,7 @@
 | Bloquea a | F6, F7, F8 |
 | Control | Control 3 |
 
-**Nota de calendario:** Barrido la noche del lunes; selection.json con commit el martes antes de mediodía.
+**Nota de calendario:** Barrido según el calendario medido en F4; selección con la métrica ya fijada en decisiones.md y commit de selection.json el martes antes de mediodía.
 
 > Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
@@ -44,7 +44,7 @@
 
 **Pasos**
 
-1. Implementa POST /api/p3/selection que toma el run con mayor val_accuracy (desempate: menor val_loss), escribe docs/p3/selection.json con run_id, ruta del checkpoint, métrica, valor y timestamp, y etiqueta el run en MLflow (selected=true).
+1. Implementa POST /api/p3/selection usando EXACTAMENTE la métrica y el desempate declarados en docs/p3/decisiones.md (por defecto: mayor val_accuracy, desempate menor val_loss); toma el run ganador, escribe docs/p3/selection.json con run_id, ruta del checkpoint, métrica, valor y timestamp, y etiqueta el run en MLflow (selected=true).
 2. Haz commit de selection.json antes de que Diego ejecute T15.
 3. Avisa a Diego en la tarjeta cuando esté listo.
 

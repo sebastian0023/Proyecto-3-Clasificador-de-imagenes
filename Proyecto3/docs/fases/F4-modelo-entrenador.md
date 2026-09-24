@@ -11,7 +11,7 @@
 | Bloquea a | F5, F9 |
 | Control | Control 2 |
 
-**Nota de calendario:** Entrenador con early stopping listo el lunes 28 en la mañana; el servicio de inferencia se hace el martes mientras corre el barrido.
+**Nota de calendario:** El viernes 25 se mide una corrida corta y se calendariza el barrido. Entrenador con early stopping listo el lunes 28 en la mañana; el servicio de inferencia se hace el martes mientras corre el barrido y se verifica con el objeto real de S3 el miércoles.
 
 > Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
@@ -75,6 +75,26 @@
 
 **Entregables:** `src/p3/train/config.py`; `src/p3/train/trainer.py`; Pruebas
 
+## Bloque T32 — Medir una corrida corta y calendarizar el barrido
+
+**Objetivo:** Saber con datos reales si las ≥10 corridas caben en el tiempo disponible antes de lanzarlas el lunes 28.
+
+**Criterios de rúbrica:** 3.1 (riesgo: diez corridas sin presupuesto)
+
+**Pasos**
+
+1. Con el manifiesto provisional de Diego (o el fixture escalado si aún no existe), ejecuta una corrida corta por el worker: 2 épocas con image_size 128 y 224.
+2. Mide segundos por época y memoria usada; estima la duración de cada combinación de config/p3/sweep.yaml con su max_epochs y el efecto esperado del early stopping.
+3. Si el total estimado supera la ventana de la noche del lunes 28 al martes 29 a mediodía, ajusta: reduce image_size o max_epochs, paraleliza corridas o adelanta parte del barrido al fin de semana, sin romper la variación de los 7 parámetros.
+4. Actualiza la decisión 7 (presupuesto de cómputo) en docs/p3/decisiones.md con la medición real y el calendario de corridas.
+
+**Aceptación** (marca al cumplir, con enlace a la evidencia)
+
+- [ ] Tiempo por época medido para al menos 2 tamaños de imagen
+- [ ] Calendario del barrido documentado y dentro de la ventana
+
+**Entregables:** `docs/p3/decisiones.md (decisión 7)`; `config/p3/sweep.yaml ajustado si hace falta`
+
 ## Bloque T12 — Early stopping con restauración y registro completo en MLflow
 
 **Objetivo:** Detener cuando la métrica de validación deja de mejorar, restaurar la mejor época y registrar todo en MLflow.
@@ -106,11 +126,12 @@
 1. Pruebas primero: rechaza tipos no imagen y archivos > límite (p. ej. 10 MB) con 400/413; las probabilidades suman 1±1e-4; cambiar la versión activa cambia el modelo cargado (hash distinto).
 2. Implementa POST /api/p3/inference: acepta imagen completa + bbox opcional para recortar, aplica build_eval_transform, devuelve clase, probabilidades por clase, versión de modelo y id de inferencia persistido.
 3. Implementa POST /api/p3/inference/{id}/send-to-annotation que crea un elemento real en la cola de anotación existente del P1.
-4. Cachea el modelo en memoria por versión; carga desde el registro (S3 o artefacto local según config).
+4. Carga SIEMPRE el paquete de la versión activa publicado en S3: descárgalo, verifica su SHA-256 contra el registro y cachéalo en memoria por versión. Nunca uses un checkpoint local del entrenamiento. Hasta que F7 publique (miércoles 30), pruébalo contra MinIO o un bucket de prueba; el miércoles verifica con el objeto real de S3.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
 - [ ] Una predicción sobre una imagen de test coincide con predictions_test.csv
+- [ ] El modelo usado se descargó de S3 y su SHA-256 coincide con el registro
 - [ ] El elemento enviado aparece en la cola de anotación
 
 **Entregables:** `src/p3/inference/service.py`; Endpoints; Pruebas

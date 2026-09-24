@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Responsable | Diego (Líder de datos, evaluación y entrega) |
+| Responsable | Diego (PM · datos · evaluación · entrega) |
 | Revisor de PRs | Edith |
 | Fechas | 28 sep → 29 sep de 2026 |
 | Rama | `feat/fase-6-evaluacion-test` |
@@ -11,7 +11,7 @@
 | Bloquea a | F7, F9 |
 | Control | Control 3 |
 
-**Nota de calendario:** Se implementa el lunes con el fixture; se ejecuta UNA vez el martes, después de la selección.
+**Nota de calendario:** Diego es el custodio del test. Se implementa el lunes con el fixture; se ejecuta UNA vez el martes, después de la selección.
 
 > Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
@@ -27,6 +27,7 @@
 2. Implementa evaluate.py: carga checkpoint y mapa de clases del run elegido, usa el preprocesamiento determinista compartido, infiere todos los crop_id de test.
 3. Guarda predictions_test.csv (crop_id, clase_real, clase_predicha, probabilidades), la matriz y las métricas; regístralo todo como artefactos en el run de MLflow elegido junto con timestamp, hash del manifiesto y hash del checkpoint.
 4. Ejecuta la evaluación final solo después de la selección; compara accuracy con 0.85 sin redondear.
+5. Diego es el custodio del test (ver docs/p3/decisiones.md): nadie más ejecuta inferencia ni calcula métricas sobre el test antes de este paso, y la evaluación final se corre una sola vez.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
