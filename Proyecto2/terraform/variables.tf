@@ -32,22 +32,22 @@ variable "s3_bucket_name" {
   description = "Nombre único global para el bucket S3 del remote DVC"
   type        = string
   # Tiene que ser EXACTAMENTE la URL del remote `prod` de `.dvc/config`
-  # (s3://dataset-quality-dvc-cache-prod). Si los dos nombres se separan,
+  # (s3://dataset-quality-dvc-cache-750702272375). Si los dos nombres se separan,
   # `dvc push -r prod` apunta a un bucket que no existe y el fallo aparece
   # recien en CI, no aqui.
-  default = "dataset-quality-dvc-cache-prod"
+  default = "dataset-quality-dvc-cache-750702272375"
 }
 
 variable "s3_releases_bucket_name" {
   description = "Nombre único global para el bucket S3 de releases del dataset"
   type        = string
-  default     = "dataset-quality-releases-prod"
+  default     = "dataset-quality-releases-750702272375"
 }
 
 variable "github_repository" {
   description = "Repositorio de GitHub en formato 'owner/repo' para la asunción del rol OIDC"
   type        = string
-  default     = "stephy0410/ruta-al-dataset-v1"
+  default     = "sebastian0023/Proyecto-3-Clasificador-de-imagenes"
 }
 
 variable "tags" {
@@ -56,3 +56,15 @@ variable "tags" {
   default     = {}
 }
 
+
+variable "existing_oidc_provider_arn" {
+  description = "ARN del proveedor OIDC de GitHub si la cuenta ya tiene uno (solo puede existir uno por cuenta). Vacio = crearlo."
+  type        = string
+  default     = ""
+}
+
+variable "team_members" {
+  description = "Integrantes del equipo con acceso de lectura/escritura a los buckets"
+  type        = list(string)
+  default     = []
+}

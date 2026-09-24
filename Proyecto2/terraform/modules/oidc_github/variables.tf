@@ -24,3 +24,9 @@ variable "tags" {
   default     = {}
 }
 
+
+variable "existing_oidc_provider_arn" {
+  description = "ARN de un proveedor OIDC de GitHub ya existente en la cuenta. Vacio = crearlo."
+  type        = string
+  default     = ""
+}

@@ -4,14 +4,20 @@
 # garantizando el cumplimiento estricto de la compuerta M2 (cero secretos).
 # -----------------------------------------------------------------------------
 data "tls_certificate" "github" {
-  url = "https://token.actions.githubusercontent.com"
+  count = var.existing_oidc_provider_arn == "" ? 1 : 0
+  url   = "https://token.actions.githubusercontent.com"
 }
 
+# Solo puede haber un proveedor OIDC por URL en cada cuenta. Si la cuenta ya lo
+# tiene (otro proyecto lo creo), se reutiliza por ARN en vez de importarlo: un
+# `terraform destroy` de este proyecto no debe borrarle el proveedor a otros.
 resource "aws_iam_openid_connect_provider" "github" {
+  count = var.existing_oidc_provider_arn == "" ? 1 : 0
+
   url            = "https://token.actions.githubusercontent.com"
   client_id_list = ["sts.amazonaws.com"]
   thumbprint_list = distinct(concat(
-    [data.tls_certificate.github.certificates[0].sha1_fingerprint],
+    [data.tls_certificate.github[0].certificates[0].sha1_fingerprint],
     ["6938fd4d98bab03faadb97b34396831e3780aea1", "1c58a3a8518e8759bf075b76b750d4f8d264fcd9"]
   ))
 
@@ -22,6 +28,19 @@ resource "aws_iam_openid_connect_provider" "github" {
       Environment = var.environment
       Project     = var.project_name
     }
+  )
+}
+
+moved {
+  from = aws_iam_openid_connect_provider.github
+  to   = aws_iam_openid_connect_provider.github[0]
+}
+
+locals {
+  oidc_provider_arn = (
+    var.existing_oidc_provider_arn != ""
+    ? var.existing_oidc_provider_arn
+    : aws_iam_openid_connect_provider.github[0].arn
   )
 }
 
@@ -37,7 +56,7 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [local.oidc_provider_arn]
     }
 
     condition {

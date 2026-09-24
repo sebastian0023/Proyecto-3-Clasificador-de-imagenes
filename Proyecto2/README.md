@@ -501,7 +501,7 @@ python scripts/backfill_version_quality.py 0.1.1
 ```
 
 La promocion conserva version, fecha y huellas, y copia el archivo de DEV al
-bucket `dataset-quality-releases-prod`. Usa credenciales AWS independientes de
+bucket `dataset-quality-releases-750702272375`. Usa credenciales AWS independientes de
 MinIO: un perfil explicito en el host o el rol OIDC del repositorio en Actions.
 
 ```bash

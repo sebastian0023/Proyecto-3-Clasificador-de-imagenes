@@ -53,3 +53,13 @@ output "s3_releases_bucket_arn" {
   description = "ARN del bucket S3 de releases del dataset"
   value       = module.s3_releases.bucket_arn
 }
+
+output "team_user_names" {
+  description = "Usuarios IAM de lectura/escritura del equipo"
+  value       = module.team_access.team_user_names
+}
+
+output "evaluator_user_name" {
+  description = "Usuario IAM de solo lectura para el evaluador"
+  value       = module.team_access.evaluator_user_name
+}

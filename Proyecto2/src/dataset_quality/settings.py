@@ -66,7 +66,7 @@ class Settings(BaseSettings):
 
     # AWS usa su cadena de credenciales (perfil explicito u OIDC en CI).
     # Las credenciales de MinIO nunca se reutilizan para PROD.
-    prod_bucket_releases: str = Field(default="dataset-quality-releases-prod", min_length=1)
+    prod_bucket_releases: str = Field(default="dataset-quality-releases-750702272375", min_length=1)
     prod_region: str = Field(default="us-east-1", min_length=1)
 
     @computed_field  # type: ignore[prop-decorator]
