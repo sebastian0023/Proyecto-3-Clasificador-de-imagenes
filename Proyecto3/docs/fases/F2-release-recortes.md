@@ -53,9 +53,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Con dos releases distintos los conteos de imágenes/anotaciones difieren
-- [ ] Un release con gate fallido no puede usarse
-- [ ] El release_id y hash quedan disponibles para el manifiesto
+- [x] Con dos releases distintos los conteos de imágenes/anotaciones difieren — `tests/test_releases.py::test_cambiar_de_release_cambia_los_conteos` y `python scripts/demo_cambio_release.py` (9.0.0: 30 imágenes, 31 cajas, 28 válidas → 9.1.0: 20, 21, 18) en entorno de prueba; en S3 solo hay 0.1.2 y 0.1.3, con la misma huella
+- [x] Un release con gate fallido no puede usarse — `ReleaseNotApprovedError` → HTTP 409 (`tests/test_releases.py::test_get_release_con_compuerta_fallida_responde_409`, `::test_release_con_compuerta_fallida_no_se_puede_usar`)
+- [x] El release_id y hash quedan disponibles para el manifiesto — `p3.data.releases.Release` (`release_id`, `dataset_fingerprint`, `quality_report_fingerprint`, `archive_sha256`) y `GET /api/p3/releases/{release_id}`
 
 **Entregables:** Endpoint de releases; Módulo de carga de release; Pruebas unitarias
 
@@ -114,3 +114,4 @@
 |---|---|---|---|---|
 | 25 sep 2026 | Diego | T07a | Validación de cajas: `src/p3/data/crops.py` (`validate_annotations`, `read_image_sizes`) y `tests/test_crops_validation.py` (red `25e5490` → green `5374469`). Motivos del contrato; límites con el tamaño real del archivo. 11 mutaciones manuales (degenerada, bordes, faltante, categoría, etiqueta, ids, bbox) ponen la suite en rojo. | T07b: recorte con Pillow, `exclusions.csv`, `verificacion_recortes.md`; la casilla "caja degenerada no aparece en el manifiesto" se cierra con F3 |
 | 25 sep 2026 | Diego | T31 | `docs/almacenamiento.md`: buckets de la cuenta 750702272375 (DVC, releases y `models/`), MLflow en volumen, permisos por Terraform y variables solo por nombre. | Evidencia con credenciales de Diego: `dvc pull -r prod` desde clon limpio, `get-bucket-versioning`, gitleaks |
+| 25 sep 2026 | Diego | T05 | `src/p3/data/releases.py`, `api.py`, `settings.py` (red `c2cb87f` → green `675616b`); router montado en la app de P2; `scripts/demo_cambio_release.py`; contrato actualizado (`published_in`, `GET /releases/{id}`). 7 mutaciones (filtro, 409, SHA-256, huella, bucket) ponen la suite en rojo. | Leer el `0.1.3/dataset.tar.zst` real de S3 y comprobar la huella de P2 (`2200274d…`) con credenciales de Diego (se hace en T06) |
