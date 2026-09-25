@@ -89,3 +89,5 @@ P2 no tiene un endpoint que entregue el COCO completo ni las imágenes originale
 | 5 | Sin README en la raíz | El evaluador "sigue el README" desde un clon limpio y no hay uno que explique el arranque de P3 (portal + worker + MLflow). | **M1** | Edith (F1 T02) |
 | 6 | Dataset real | Requiere `dvc pull -r prod data/raw.dvc` con un perfil de `~/.aws` autorizado; está documentado en `Proyecto2/README.md:427`, pero no en un flujo único de arranque. | Bajo | Edith (F1 T02) |
 | 7 | CI | `.github/workflows/ci.yml` solo cubre `Proyecto2/` y Terraform; nada de P3. | 7.3 | Andrés (F10) |
+
+**Resueltos en T02 (24 sep):** 1 (`042295d`), 3, 5 y 6 (`d14f462`). Pendientes: 2 (Diego), 4 y 7 (Andrés).

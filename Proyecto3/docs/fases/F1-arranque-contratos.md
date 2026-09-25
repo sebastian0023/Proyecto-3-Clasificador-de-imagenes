@@ -74,10 +74,10 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] docker compose up levanta portal, worker y MLflow desde clon limpio
-- [ ] Estado de un trabajo persiste tras reinicio
-- [ ] Run IDs y artefactos de MLflow sobreviven al reinicio del stack
-- [ ] README actualizado
+- [x] docker compose up levanta portal, worker y MLflow desde clon limpio → `git clone` de la rama + `python scripts/up.py` sin `.env` y con volúmenes vacíos (24 sep): exit 0, `/health` ok, MLflow ok y un trabajo `dummy` terminó `succeeded`; commits `042295d` y `d14f462`
+- [x] Estado de un trabajo persiste tras reinicio → trabajo `02b40a98db684455b93dce8c89c107ee` sigue `succeeded` (progreso 1.0, 7 líneas de log) tras `docker compose restart app p3-worker` y tras `down`/`up`; un trabajo reiniciado a mitad queda `failed` con "El worker se reinicio…"; pruebas en `Proyecto3/tests/test_jobs.py` y `test_runner.py`
+- [x] Run IDs y artefactos de MLflow sobreviven al reinicio del stack → run `01b222d3468946d4982c551d46270c40` (experimento `f1-t02-persistencia`) conserva estado `FINISHED`, `val_accuracy` y el artefacto `evidencia.txt` tras `docker compose down` + `python scripts/up.py`
+- [x] README actualizado → [README.md](../../../README.md) en la raíz (arranque, dataset con DVC, worker) y `Proyecto2/README.md` (ruta de clonado, servicios, puerto de MLflow)
 
 **Entregables:** docker-compose actualizado; `src/p3/worker/`; README
 
@@ -116,3 +116,4 @@
 |---|---|---|---|---|
 | 24 sep | Edith | T00 | `docs/decisiones.md` con las 8 decisiones; release 0.1.3 verificado por SHA-256 en S3 | Confirmar clases (2) y cómputo (7) el vie 25; marcar "commit fechado" con su hash; review de Andrés en el PR |
 | 24 sep | Edith | T01 | `docs/inventario.md` con línea base, rutas `archivo:línea` y 7 hallazgos del README (MinIO fijado ya no se publica; `dvc.lock` desfasado) | Arreglar hallazgos 1, 3, 5 y 6 en T02; avisar a Diego (2) y Andrés (4, 7) |
+| 24 sep | Edith | T02 | Cola `p3_training_jobs` en MariaDB, `p3-worker` y `POST/GET /api/p3/training/jobs` montados en la app de P2 (red `db4056b` → green `55167a8`); MLflow 3.16.1 persistente; MinIO reemplazado por `pgsty/minio` (`042295d`); README en la raíz (`d14f462`). Hallazgos 1, 3, 5 y 6 del inventario resueltos | Andrés: revisar el cambio en `Proyecto2/` (compose, `main.py`) y sumar `Proyecto3/` a la CI (F10). El worker aún no entrena: el handler real llega en F4 |
