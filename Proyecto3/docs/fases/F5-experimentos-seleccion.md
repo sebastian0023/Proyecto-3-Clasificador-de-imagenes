@@ -13,7 +13,7 @@
 
 **Nota de calendario:** Barrido según el calendario medido en F4; selección con la métrica ya fijada en decisiones.md y commit de selection.json el martes antes de mediodía.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T13 — Barrido de ≥10 corridas válidas
 
@@ -25,7 +25,7 @@
 
 1. Define en config/p3/sweep.yaml ≥12 combinaciones (margen por si alguna falla) donde optimizer, batch_size, max_epochs, learning_rate, image_size, hidden_layers y dropout aparecen cada uno con ≥2 valores. Ejemplo: optimizer {adam, sgd, adamw}, batch_size {32, 64}, max_epochs {15, 30}, lr {1e-3, 3e-4, 1e-2 para sgd}, image_size {128, 224}, hidden_layers {[256], [512,128]}, dropout {0.2, 0.5}.
 2. Lanza las corridas por el worker (se pueden ejecutar de noche); ninguna corrida de un solo batch ni duplicada.
-3. Al terminar, lista con mlflow.search_runs los run_id FINISHED con su mejor val_accuracy y guárdalo en docs/p3/corridas.md.
+3. Al terminar, lista con mlflow.search_runs los run_id FINISHED con su mejor val_accuracy y guárdalo en docs/corridas.md.
 4. NO mires ninguna métrica de test en este paso.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
@@ -34,7 +34,7 @@
 - [ ] Cada uno de los 7 parámetros tiene ≥2 valores
 - [ ] Todos con el mismo hash de manifiesto
 
-**Entregables:** `config/p3/sweep.yaml`; `docs/p3/corridas.md`
+**Entregables:** `config/p3/sweep.yaml`; `docs/corridas.md`
 
 ## Bloque T14 — Selección del candidato por validación
 
@@ -44,16 +44,16 @@
 
 **Pasos**
 
-1. Implementa POST /api/p3/selection usando EXACTAMENTE la métrica y el desempate declarados en docs/p3/decisiones.md (por defecto: mayor val_accuracy, desempate menor val_loss); toma el run ganador, escribe docs/p3/selection.json con run_id, ruta del checkpoint, métrica, valor y timestamp, y etiqueta el run en MLflow (selected=true).
+1. Implementa POST /api/p3/selection usando EXACTAMENTE la métrica y el desempate declarados en docs/decisiones.md (por defecto: mayor val_accuracy, desempate menor val_loss); toma el run ganador, escribe docs/selection.json con run_id, ruta del checkpoint, métrica, valor y timestamp, y etiqueta el run en MLflow (selected=true).
 2. Haz commit de selection.json antes de que Diego ejecute T15.
 3. Avisa a Diego en la tarjeta cuando esté listo.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
 - [ ] selection.json commiteado con fecha anterior a la evaluación
-- [ ] El run seleccionado tiene la mejor val_accuracy de docs/p3/corridas.md
+- [ ] El run seleccionado tiene la mejor val_accuracy de docs/corridas.md
 
-**Entregables:** `docs/p3/selection.json`; Endpoint de selección
+**Entregables:** `docs/selection.json`; Endpoint de selección
 
 ## Definición de terminado
 

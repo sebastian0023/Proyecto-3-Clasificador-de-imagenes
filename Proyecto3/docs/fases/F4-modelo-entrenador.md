@@ -13,7 +13,7 @@
 
 **Nota de calendario:** El viernes 25 se mide una corrida corta y se calendariza el barrido. Entrenador con early stopping listo el lunes 28 en la mañana; el servicio de inferencia se hace el martes mientras corre el barrido y se verifica con el objeto real de S3 el miércoles.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T09 — Dataset, DataLoader y transforms (aumentación solo en train)
 
@@ -25,7 +25,7 @@
 
 1. Pruebas primero: val/test/inferencia usan exactamente la misma función de preprocesamiento; aplicar dos veces el transform de val a la misma imagen da el mismo tensor; el dataset de train nunca incluye ids de val/test.
 2. Implementa src/p3/data/transforms.py con build_train_transform(cfg) y build_eval_transform(cfg) (resize a image_size, normalización ImageNet).
-3. Implementa CropDataset que lee el manifiesto (esquema de docs/p3/contratos.md) filtrando por split.
+3. Implementa CropDataset que lee el manifiesto (esquema de docs/contratos.md) filtrando por split.
 4. Implementa DataLoaders con generator y worker_init_fn sembrados para orden reproducible.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
@@ -45,14 +45,14 @@
 
 1. Pruebas primero: la salida tiene tamaño = número de clases de classes.yaml; tras 3 pasos de optimizador los pesos de la cabeza cambian; el modelo se guarda y recarga con mapa de clases idéntico.
 2. Implementa build_model(cfg, num_classes): backbone torchvision ResNet18 con pesos ImageNet (documenta origen y licencia) y cabeza MLP con hidden_layers y dropout configurables; documenta qué capas son entrenables.
-3. Documenta en docs/p3/modelo.md la arquitectura, el origen de pesos iniciales y la justificación.
+3. Documenta en docs/modelo.md la arquitectura, el origen de pesos iniciales y la justificación.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
 - [ ] Prueba de cambio de pesos pasa
-- [ ] docs/p3/modelo.md declara origen de pesos
+- [ ] docs/modelo.md declara origen de pesos
 
-**Entregables:** `src/p3/model/build.py`; `docs/p3/modelo.md`
+**Entregables:** `src/p3/model/build.py`; `docs/modelo.md`
 
 ## Bloque T11 — Loop por minibatches, config validada y semillas
 
@@ -86,14 +86,14 @@
 1. Con el manifiesto provisional de Diego (o el fixture escalado si aún no existe), ejecuta una corrida corta por el worker: 2 épocas con image_size 128 y 224.
 2. Mide segundos por época y memoria usada; estima la duración de cada combinación de config/p3/sweep.yaml con su max_epochs y el efecto esperado del early stopping.
 3. Si el total estimado supera la ventana de la noche del lunes 28 al martes 29 a mediodía, ajusta: reduce image_size o max_epochs, paraleliza corridas o adelanta parte del barrido al fin de semana, sin romper la variación de los 7 parámetros.
-4. Actualiza la decisión 7 (presupuesto de cómputo) en docs/p3/decisiones.md con la medición real y el calendario de corridas.
+4. Actualiza la decisión 7 (presupuesto de cómputo) en docs/decisiones.md con la medición real y el calendario de corridas.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
 - [ ] Tiempo por época medido para al menos 2 tamaños de imagen
 - [ ] Calendario del barrido documentado y dentro de la ventana
 
-**Entregables:** `docs/p3/decisiones.md (decisión 7)`; `config/p3/sweep.yaml ajustado si hace falta`
+**Entregables:** `docs/decisiones.md (decisión 7)`; `config/p3/sweep.yaml ajustado si hace falta`
 
 ## Bloque T12 — Early stopping con restauración y registro completo en MLflow
 

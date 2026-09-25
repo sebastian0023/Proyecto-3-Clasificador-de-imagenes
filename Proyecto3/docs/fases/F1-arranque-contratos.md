@@ -13,7 +13,7 @@
 
 **Nota de calendario:** Kickoff de decisiones a primera hora, dirigido por Diego (PM); los contratos se publican antes de mediodía. Todo el equipo depende de esta fase.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T00 — Hoja de decisiones de arranque (kickoff)
 
@@ -23,18 +23,18 @@
 
 **Pasos**
 
-1. Crea docs/p3/decisiones.md con una sección por decisión: (1) release DVC de origen y hash, con compuerta aprobada; (2) clases incluidas y exclusiones (se confirman con los conteos de F2 el viernes 25); (3) framework y arquitectura inicial, con origen de pesos preentrenados; (4) métrica de selección del candidato y desempate, p. ej. mayor val_accuracy y luego menor val_loss; (5) servicio de MLflow y dónde persisten registros y artefactos; (6) destino S3 del modelo (bucket y prefijo) y cómo se gestionan permisos sin claves en Git; (7) presupuesto de cómputo: máquina, CPU/GPU y horas reservadas para ≥10 corridas y una prueba final (se actualiza el viernes con la medición real); (8) custodio del test: Diego.
+1. Crea docs/decisiones.md con una sección por decisión: (1) release DVC de origen y hash, con compuerta aprobada; (2) clases incluidas y exclusiones (se confirman con los conteos de F2 el viernes 25); (3) framework y arquitectura inicial, con origen de pesos preentrenados; (4) métrica de selección del candidato y desempate, p. ej. mayor val_accuracy y luego menor val_loss; (5) servicio de MLflow y dónde persisten registros y artefactos; (6) destino S3 del modelo (bucket y prefijo) y cómo se gestionan permisos sin claves en Git; (7) presupuesto de cómputo: máquina, CPU/GPU y horas reservadas para ≥10 corridas y una prueba final (se actualiza el viernes con la medición real); (8) custodio del test: Diego.
 2. Cada decisión lleva responsable, fecha y estado (cerrada / pendiente de dato). No incluyas contraseñas ni claves.
 3. Haz commit antes de cualquier corrida de entrenamiento; la fecha del commit es evidencia de que la métrica y las clases se decidieron antes de ver el test.
-4. Opcional: exporta las mismas decisiones al formulario de la guía del PM (HTML del curso) y guarda el JSON exportado en docs/p3/guia-pm-plan.json.
+4. Opcional: exporta las mismas decisiones al formulario de la guía del PM (HTML del curso) y guarda el JSON exportado en docs/guia-pm-plan.json.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] docs/p3/decisiones.md con las 8 decisiones y su responsable
+- [ ] docs/decisiones.md con las 8 decisiones y su responsable
 - [ ] La métrica de selección está fijada antes de la primera corrida
 - [ ] Commit fechado el jueves 24
 
-**Entregables:** `docs/p3/decisiones.md`
+**Entregables:** `docs/decisiones.md`
 
 ## Bloque T01 — Inventario del repo y línea base
 
@@ -46,16 +46,16 @@
 
 1. Ejecuta: git rev-parse --short HEAD; git status --short; git log --oneline --graph --all | head -60; git branch -a; dvc remote list -v; dvc status.
 2. Localiza y anota con ruta: comando de arranque (docker-compose/Makefile), servicio que sirve COCO e imágenes, dónde se registran los releases DVC y su estado de quality gate, stack del backend y del frontend, router de páginas, y dónde se leen las credenciales (sin imprimir valores).
-3. Copia el archivo de rúbrica del proyecto a docs/p3/rubrica.md.
+3. Copia el archivo de rúbrica del proyecto a docs/rubrica.md.
 4. Verifica que el portal actual arranca siguiendo el README desde un clon limpio y anota cualquier paso faltante.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] docs/p3/inventario.md existe con rutas concretas (archivo:línea) para cada elemento listado
-- [ ] docs/p3/rubrica.md está en el repo
+- [ ] docs/inventario.md existe con rutas concretas (archivo:línea) para cada elemento listado
+- [ ] docs/rubrica.md está en el repo
 - [ ] Hay una lista de pasos del README que fallan o faltan (o 'ninguno')
 
-**Entregables:** `docs/p3/inventario.md`; `docs/p3/rubrica.md`
+**Entregables:** `docs/inventario.md`; `docs/rubrica.md`
 
 ## Bloque T02 — Worker de entrenamiento + servidor MLflow en el stack
 
@@ -97,11 +97,11 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] docs/p3/contratos.md con esquemas y ejemplos JSON
+- [ ] docs/contratos.md con esquemas y ejemplos JSON
 - [ ] Fixture de pruebas disponible
 - [ ] PR aprobado por los otros dos integrantes
 
-**Entregables:** `docs/p3/contratos.md`; `tests/fixtures/p3/`
+**Entregables:** `docs/contratos.md`; `tests/fixtures/p3/`
 
 ## Definición de terminado
 

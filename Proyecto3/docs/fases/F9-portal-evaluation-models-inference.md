@@ -13,7 +13,7 @@
 
 **Nota de calendario:** Evaluation debe bloquearse hasta que exista la selección.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T21 — Página Evaluation
 

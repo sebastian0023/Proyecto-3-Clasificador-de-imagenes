@@ -13,7 +13,7 @@
 
 **Nota de calendario:** Congelado el lunes 28 antes de mediodía; sin esto no arranca el barrido.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T08 — Manifiesto 70/20/10 agrupado, reproducible y versionado
 
@@ -26,17 +26,17 @@
 1. Pruebas primero: intersección vacía entre particiones por crop_id, source_image_id y dup_group_id; misma semilla -> mismos IDs; cada clase presente en val y test; desviación global <= ±5 pp por partición.
 2. Define dup_group_id: reutiliza los grupos de casi-duplicados del P2 si existen; si no, calcula pHash (imagehash) y agrupa distancias de Hamming <= umbral documentado.
 3. Asigna particiones por grupo (todos los recortes de un original y de su grupo de duplicados juntos) de forma estratificada por clase, con semilla fija.
-4. Versiona el manifiesto con DVC; guarda su hash y el release_id/hash de origen dentro del propio archivo y en docs/p3/manifiesto.md. No sobrescribas el split 70/15/15 del P2.
+4. Versiona el manifiesto con DVC; guarda su hash y el release_id/hash de origen dentro del propio archivo y en docs/manifiesto.md. No sobrescribas el split 70/15/15 del P2.
 5. Reporta tabla de conteos por clase x partición (recortes y originales distintos).
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
 - [ ] Dos generaciones con la misma semilla producen archivos idénticos (mismo hash)
 - [ ] Intersecciones vacías demostradas por prueba
-- [ ] Tabla por clase y partición en docs/p3/manifiesto.md
+- [ ] Tabla por clase y partición en docs/manifiesto.md
 - [ ] Manifiesto versionado en DVC y etiquetado como congelado
 
-**Entregables:** `src/p3/data/split.py`; `manifiesto .dvc`; `docs/p3/manifiesto.md`
+**Entregables:** `src/p3/data/split.py`; `manifiesto .dvc`; `docs/manifiesto.md`
 
 ## Definición de terminado
 

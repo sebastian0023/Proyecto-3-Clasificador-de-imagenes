@@ -13,11 +13,11 @@
 
 **Nota de calendario:** Miércoles 30 en la tarde: autoevaluación, guion y ensayo de la demo, y tag final. Todo lo inyectado se revierte antes de etiquetar.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T29 — Autoevaluación con el prompt de rúbrica
 
-**Objetivo:** Ejecutar el prompt de evaluación (docs/p3/rubrica.md) sobre el repo como lo haría el docente y corregir lo que falle.
+**Objetivo:** Ejecutar el prompt de evaluación (docs/rubrica.md) sobre el repo como lo haría el docente y corregir lo que falle.
 
 **Criterios de rúbrica:** Todas
 
@@ -33,7 +33,7 @@
 - [ ] Compuerta M1–M4 en CUMPLE
 - [ ] Lista de pérdidas de puntos atendida o justificada
 
-**Entregables:** `docs/p3/autoevaluacion.md`; reporte HTML de ensayo
+**Entregables:** `docs/autoevaluacion.md`; reporte HTML de ensayo
 
 ## Bloque T33 — Guion de demo de la cadena completa
 
@@ -43,17 +43,17 @@
 
 **Pasos**
 
-1. Escribe docs/p3/demo.md con los pasos y enlaces reales: release DVC (ID y hash) → manifiesto 70/20/10 y conteos → run seleccionado en MLflow (curvas, parámetros y selection.json) → evaluación en test (matriz, F1 por clase) → versión del modelo y objeto en S3 (key, VersionId, SHA-256) → predicción en Inference hecha con ese archivo descargado → envío a la cola de anotación.
+1. Escribe docs/demo.md con los pasos y enlaces reales: release DVC (ID y hash) → manifiesto 70/20/10 y conteos → run seleccionado en MLflow (curvas, parámetros y selection.json) → evaluación en test (matriz, F1 por clase) → versión del modelo y objeto en S3 (key, VersionId, SHA-256) → predicción en Inference hecha con ese archivo descargado → envío a la cola de anotación.
 2. Verifica que todos los enlaces apunten al mismo trabajo (mismos IDs de punta a punta).
 3. Asigna quién explica cada tramo: Diego datos y test, Edith entrenamiento y MLflow, Andrés portal e inferencia; cada uno prepara la respuesta a '¿de dónde sale este número?' para sus cifras.
 4. Haz un ensayo cronometrado con los tres.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] docs/p3/demo.md con IDs reales y consistentes
+- [ ] docs/demo.md con IDs reales y consistentes
 - [ ] Ensayo realizado con los tres integrantes
 
-**Entregables:** `docs/p3/demo.md`
+**Entregables:** `docs/demo.md`
 
 ## Bloque T30 — Congelamiento, etiqueta de entrega y checklist final
 
@@ -63,7 +63,7 @@
 
 **Pasos**
 
-1. Rellena docs/p3/trazabilidad.md: release DVC y hash -> manifiesto y hash -> run MLflow elegido -> checkpoint -> versión -> S3 bucket/key y SHA-256 -> predicción de prueba desde el portal.
+1. Rellena docs/trazabilidad.md: release DVC y hash -> manifiesto y hash -> run MLflow elegido -> checkpoint -> versión -> S3 bucket/key y SHA-256 -> predicción de prueba desde el portal.
 2. Confirma git status limpio, CI en verde en main y que no hay secretos (gitleaks o similar sobre el historial de P3).
 3. Crea el tag git 'p3-entrega' y compártelo con el equipo.
 
@@ -72,7 +72,7 @@
 - [ ] Tabla de trazabilidad sin celdas vacías
 - [ ] Tag creado sobre commit con CI verde
 
-**Entregables:** `docs/p3/trazabilidad.md`; Tag p3-entrega
+**Entregables:** `docs/trazabilidad.md`; Tag p3-entrega
 
 ## Definición de terminado
 

@@ -13,7 +13,7 @@
 
 **Nota de calendario:** La CI se monta el jueves 24 y corre en cada PR; la prueba E2E y el ensayo desde clon limpio son el miércoles 30.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T25 — CI en GitHub Actions, lint y secretos
 
@@ -45,7 +45,7 @@
 
 1. Test (pytest o Playwright) que: selecciona release aprobado del fixture -> genera manifiesto -> lanza trabajo corto (1–2 épocas, imagen pequeña) -> verifica run en MLflow -> selección -> evaluación -> publicación en MinIO -> inferencia vía API/portal.
 2. Imprime al final la cadena de IDs (release, manifiesto, run, checkpoint, versión, key, id de inferencia).
-3. Prueba de mutación manual en rama aparte: permite un grupo duplicado en train y test, o altera una predicción en la matriz; confirma que la suite falla y documenta en docs/p3/mutaciones.md; revierte.
+3. Prueba de mutación manual en rama aparte: permite un grupo duplicado en train y test, o altera una predicción en la matriz; confirma que la suite falla y documenta en docs/mutaciones.md; revierte.
 4. Agrega el test al CI como job separado (puede marcarse como lento).
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
@@ -53,7 +53,7 @@
 - [ ] La prueba E2E pasa en CI
 - [ ] Las mutaciones documentadas hacen fallar la suite
 
-**Entregables:** `tests/p3/test_e2e.py`; `docs/p3/mutaciones.md`
+**Entregables:** `tests/p3/test_e2e.py`; `docs/mutaciones.md`
 
 ## Bloque T28 — Ensayo de arranque desde clon limpio (M1)
 
@@ -73,7 +73,7 @@
 - [ ] Arranque completo sin pasos inventados
 - [ ] Las 5 páginas funcionan con datos reales
 
-**Entregables:** README corregido; `docs/p3/ensayo_arranque.md`
+**Entregables:** README corregido; `docs/ensayo_arranque.md`
 
 ## Definición de terminado
 

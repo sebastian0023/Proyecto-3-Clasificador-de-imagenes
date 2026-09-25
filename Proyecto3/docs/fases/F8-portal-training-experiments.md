@@ -13,7 +13,7 @@
 
 **Nota de calendario:** Se construye contra el contrato y se conecta al backend real el lunes.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T03 — Rutas y navegación de las 5 páginas + cliente API
 
@@ -24,7 +24,7 @@
 **Pasos**
 
 1. Crea las 5 rutas en el router actual y enlázalas desde el menú existente.
-2. Crea un cliente API tipado (tipos generados o escritos a partir de docs/p3/contratos.md) con manejo de errores común.
+2. Crea un cliente API tipado (tipos generados o escritos a partir de docs/contratos.md) con manejo de errores común.
 3. Mientras el backend no exista, usa MSW o similar SOLO en desarrollo/pruebas; nada de datos fijos en el build de producción.
 4. Prueba de componente: cada ruta renderiza y la navegación funciona.
 

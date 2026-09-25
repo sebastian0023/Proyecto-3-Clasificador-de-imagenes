@@ -13,7 +13,7 @@
 
 **Nota de calendario:** Diego es el custodio del test. Se implementa el lunes con el fixture; se ejecuta UNA vez el martes, después de la selección.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T15 — Evaluación final en test congelado
 
@@ -23,11 +23,11 @@
 
 **Pasos**
 
-1. Pruebas primero: la evaluación se niega a correr si no existe docs/p3/selection.json con run_id y checkpoint; matriz con filas=real y columnas=predicho, todas las clases, suma = total de test; accuracy = diagonal/total sin redondear; F1 macro y precision/recall/support por clase coinciden con sklearn.
+1. Pruebas primero: la evaluación se niega a correr si no existe docs/selection.json con run_id y checkpoint; matriz con filas=real y columnas=predicho, todas las clases, suma = total de test; accuracy = diagonal/total sin redondear; F1 macro y precision/recall/support por clase coinciden con sklearn.
 2. Implementa evaluate.py: carga checkpoint y mapa de clases del run elegido, usa el preprocesamiento determinista compartido, infiere todos los crop_id de test.
 3. Guarda predictions_test.csv (crop_id, clase_real, clase_predicha, probabilidades), la matriz y las métricas; regístralo todo como artefactos en el run de MLflow elegido junto con timestamp, hash del manifiesto y hash del checkpoint.
 4. Ejecuta la evaluación final solo después de la selección; compara accuracy con 0.85 sin redondear.
-5. Diego es el custodio del test (ver docs/p3/decisiones.md): nadie más ejecuta inferencia ni calcula métricas sobre el test antes de este paso, y la evaluación final se corre una sola vez.
+5. Diego es el custodio del test (ver docs/decisiones.md): nadie más ejecuta inferencia ni calcula métricas sobre el test antes de este paso, y la evaluación final se corre una sola vez.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
@@ -48,14 +48,14 @@
 1. Calcula el baseline de clase mayoritaria sobre el MISMO test.
 2. Identifica la clase más confundida (par real->predicho con más errores) y el recall por clase; indica si el 85% oculta bajo recall de alguna clase.
 3. Genera errors.json con N aciertos y N errores del test (crop_id, ruta del recorte, real, predicho, probabilidad) para que la página Evaluation los muestre.
-4. Documenta en docs/p3/analisis_errores.md.
+4. Documenta en docs/analisis_errores.md.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
 - [ ] Baseline calculado y comparado
 - [ ] Ejemplos provienen solo de test (verificable por crop_id en el manifiesto)
 
-**Entregables:** `errors.json`; `docs/p3/analisis_errores.md`
+**Entregables:** `errors.json`; `docs/analisis_errores.md`
 
 ## Definición de terminado
 

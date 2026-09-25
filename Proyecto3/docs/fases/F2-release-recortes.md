@@ -13,7 +13,7 @@
 
 **Nota de calendario:** El bucket propio y la copia de los datos de DVC van primero (jueves); las clases se fijan y se hace commit antes de cualquier corrida.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T31 — Almacenamiento propio en S3 (DVC, MLflow y modelos)
 
@@ -28,7 +28,7 @@
 3. Copia los datos del release aprobado del P2: dvc pull desde el remoto original, dvc remote add -d p3storage s3://<bucket>/dvc, dvc push -r p3storage. Los hashes no cambian.
 4. Verifica desde un clon limpio que dvc pull del release funciona solo con el remoto nuevo.
 5. Apunta el artifact store de MLflow (T02) a s3://<bucket>/mlflow/ o confirma el volumen persistente elegido en decisiones.md.
-6. Documenta bucket, prefijos, región y variables de entorno necesarias (solo nombres) en docs/p3/almacenamiento.md.
+6. Documenta bucket, prefijos, región y variables de entorno necesarias (solo nombres) en docs/almacenamiento.md.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
@@ -36,7 +36,7 @@
 - [ ] Versionado del bucket habilitado
 - [ ] gitleaks sin hallazgos tras el cambio
 
-**Entregables:** `docs/p3/almacenamiento.md`; `.dvc/config actualizado (sin credenciales)`
+**Entregables:** `docs/almacenamiento.md`; `.dvc/config actualizado (sin credenciales)`
 
 ## Bloque T05 — Selector de release DVC aprobado y consumo de COCO
 
@@ -47,7 +47,7 @@
 **Pasos**
 
 1. Escribe primero pruebas: listar solo releases con quality gate aprobado; rechazar (HTTP 409 con mensaje claro) un release con gate fallido; conservar release_id, hash DVC y referencia al reporte de calidad.
-2. Implementa GET /api/p3/releases?approved=true reutilizando el registro de releases del P2 (ver docs/p3/inventario.md).
+2. Implementa GET /api/p3/releases?approved=true reutilizando el registro de releases del P2 (ver docs/inventario.md).
 3. Implementa la carga del COCO e imágenes del release elegido mediante el servicio existente (dvc get/dvc api o el servicio del portal), nunca desde una ruta fija.
 4. Agrega un script de comprobación que cambie de versión de release en entorno de prueba y muestre que los conteos cambian.
 
@@ -69,7 +69,7 @@
 
 1. Escribe un script que cuente, por categoría del release aprobado, imágenes ORIGINALES distintas (no recortes) con al menos una caja válida.
 2. Elige al menos 2 clases con ≥300 originales distintos cada una; documenta criterios de exclusión del resto (por conteo, ambigüedad, etc.).
-3. Guarda la lista en config/p3/classes.yaml (id, nombre, conteo) y la justificación en docs/p3/clases.md, con fecha y hash del release.
+3. Guarda la lista en config/p3/classes.yaml (id, nombre, conteo) y la justificación en docs/clases.md, con fecha y hash del release.
 4. Haz commit antes de que exista cualquier corrida de entrenamiento: la fecha del commit es evidencia de que se decidió antes del test.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
@@ -78,7 +78,7 @@
 - [ ] Cada clase incluida tiene ≥300 originales distintos según el script
 - [ ] Commit fechado antes de la primera corrida en MLflow
 
-**Entregables:** `config/p3/classes.yaml`; `docs/p3/clases.md`; `scripts/p3/count_classes.py`
+**Entregables:** `config/p3/classes.yaml`; `docs/clases.md`; `scripts/p3/count_classes.py`
 
 ## Bloque T07 — Generador de recortes COCO con validación y exclusiones
 
@@ -91,7 +91,7 @@
 1. Pruebas primero: caja con w o h <= 0 se rechaza; caja fuera de los límites de la imagen se rechaza (o se recorta al borde con regla documentada); imagen faltante se rechaza; categoría no incluida se excluye; cada exclusión queda registrada con motivo.
 2. Implementa el recorte (Pillow) conservando image_id, annotation_id, category_id y bbox original; un original puede producir varios recortes.
 3. Genera exclusions.csv con annotation_id, image_id y motivo.
-4. Verifica manualmente 10 recortes al azar contra el COCO original y guarda la evidencia (ids + miniaturas) en docs/p3/verificacion_recortes.md.
+4. Verifica manualmente 10 recortes al azar contra el COCO original y guarda la evidencia (ids + miniaturas) en docs/verificacion_recortes.md.
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
@@ -99,7 +99,7 @@
 - [ ] Cada recorte conserva los 4 identificadores de origen
 - [ ] exclusions.csv con motivos
 
-**Entregables:** `src/p3/data/crops.py`; `exclusions.csv`; Pruebas; `docs/p3/verificacion_recortes.md`
+**Entregables:** `src/p3/data/crops.py`; `exclusions.csv`; Pruebas; `docs/verificacion_recortes.md`
 
 ## Definición de terminado
 

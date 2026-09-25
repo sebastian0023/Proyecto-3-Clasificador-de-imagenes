@@ -36,17 +36,17 @@ Revisión en rotación: Diego → Edith → Andrés → Diego. Nadie aprueba su 
 
 | ID | Fase | Responsable | Fechas | Puntos | Depende de | Bloquea a | Archivo |
 |---|---|---|---|---:|---|---|---|
-| F1 | Kickoff, arranque del stack y contratos | Edith | 24 sep | 0 | — | F2–F10 | `docs/p3/fases/F1-arranque-contratos.md` |
-| F2 | Almacenamiento, release y recortes COCO | Diego | 24 sep → 25 sep | 9 | F1 (contratos y decisiones) | F3, F7 | `docs/p3/fases/F2-release-recortes.md` |
-| F3 | Manifiesto 70/20/10 sin fuga | Diego | 25 sep → 28 sep | 5 | F2 | F5, F6 | `docs/p3/fases/F3-manifiesto.md` |
-| F4 | Modelo, entrenador y servicio de inferencia | Edith | 25 sep → 29 sep | 18 | F1 | F5, F9 | `docs/p3/fases/F4-modelo-entrenador.md` |
-| F5 | Experimentos MLflow y selección | Edith | 28 sep → 29 sep | 14 | F3, F4 | F6, F7, F8 | `docs/p3/fases/F5-experimentos-seleccion.md` |
-| F6 | Evaluación final en test | Diego | 28 sep → 29 sep | 18 | F3, F5 (selección) | F7, F9 | `docs/p3/fases/F6-evaluacion-test.md` |
-| F7 | Paquete, tarjeta y publicación en S3 | Diego | 29 sep → 30 sep | 10 | F5, F6 | F9, F11 | `docs/p3/fases/F7-paquete-s3.md` |
-| F8 | Portal: Training y Experiments | Andrés | 24 sep → 28 sep | 7 | F1 (contratos) | F9 | `docs/p3/fases/F8-portal-training-experiments.md` |
-| F9 | Portal: Evaluation, Models e Inference | Andrés | 28 sep → 30 sep | 11 | F4, F6, F7 | F10 | `docs/p3/fases/F9-portal-evaluation-models-inference.md` |
-| F10 | Pruebas, CI y ensayo de arranque | Andrés | 24 sep → 30 sep | 8 | F1 (CI arranca el jueves 24) | F11 | `docs/p3/fases/F10-pruebas-ci.md` |
-| F11 | Autoevaluación, demo y congelación | Diego | 30 sep | 0 | F1–F10 | — | `docs/p3/fases/F11-autoevaluacion-cierre.md` |
+| F1 | Kickoff, arranque del stack y contratos | Edith | 24 sep | 0 | — | F2–F10 | `docs/fases/F1-arranque-contratos.md` |
+| F2 | Almacenamiento, release y recortes COCO | Diego | 24 sep → 25 sep | 9 | F1 (contratos y decisiones) | F3, F7 | `docs/fases/F2-release-recortes.md` |
+| F3 | Manifiesto 70/20/10 sin fuga | Diego | 25 sep → 28 sep | 5 | F2 | F5, F6 | `docs/fases/F3-manifiesto.md` |
+| F4 | Modelo, entrenador y servicio de inferencia | Edith | 25 sep → 29 sep | 18 | F1 | F5, F9 | `docs/fases/F4-modelo-entrenador.md` |
+| F5 | Experimentos MLflow y selección | Edith | 28 sep → 29 sep | 14 | F3, F4 | F6, F7, F8 | `docs/fases/F5-experimentos-seleccion.md` |
+| F6 | Evaluación final en test | Diego | 28 sep → 29 sep | 18 | F3, F5 (selección) | F7, F9 | `docs/fases/F6-evaluacion-test.md` |
+| F7 | Paquete, tarjeta y publicación en S3 | Diego | 29 sep → 30 sep | 10 | F5, F6 | F9, F11 | `docs/fases/F7-paquete-s3.md` |
+| F8 | Portal: Training y Experiments | Andrés | 24 sep → 28 sep | 7 | F1 (contratos) | F9 | `docs/fases/F8-portal-training-experiments.md` |
+| F9 | Portal: Evaluation, Models e Inference | Andrés | 28 sep → 30 sep | 11 | F4, F6, F7 | F10 | `docs/fases/F9-portal-evaluation-models-inference.md` |
+| F10 | Pruebas, CI y ensayo de arranque | Andrés | 24 sep → 30 sep | 8 | F1 (CI arranca el jueves 24) | F11 | `docs/fases/F10-pruebas-ci.md` |
+| F11 | Autoevaluación, demo y congelación | Diego | 30 sep | 0 | F1–F10 | — | `docs/fases/F11-autoevaluacion-cierre.md` |
 
 ## Controles
 

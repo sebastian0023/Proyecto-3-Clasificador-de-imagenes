@@ -13,7 +13,7 @@
 
 **Nota de calendario:** El bucket ya existe desde F2; aquí solo se empaqueta, se publica y se verifica la descarga. Debe estar en S3 el miércoles 30 a mediodía para que Models e Inference funcionen.
 
-> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/p3/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
+> Antes de empezar lee `AGENTS.md` (contexto y reglas) y `docs/contratos.md`. Trabaja los bloques en orden; cada bloque es al menos un PR.
 
 ## Bloque T17 — Paquete del modelo y tarjeta
 
@@ -55,7 +55,7 @@
 - [ ] SHA-256 local coincide tras descargar
 - [ ] Inferencia exitosa con el modelo descargado
 
-**Entregables:** `src/p3/registry/publish.py`; `docs/p3/publicacion_s3.md (sin secretos)`
+**Entregables:** `src/p3/registry/publish.py`; `docs/publicacion_s3.md (sin secretos)`
 
 ## Definición de terminado
 
