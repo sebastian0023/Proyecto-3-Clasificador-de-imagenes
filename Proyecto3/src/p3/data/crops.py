@@ -1,0 +1,159 @@
+"""Recortes COCO: que cajas del release se convierten en muestras (F2 T07, criterio 1.2).
+
+Cada anotacion termina en exactamente uno de dos lados:
+
+- `CropSource`: caja valida, lista para recortar. Conserva `annotation_id`,
+  `source_image_id`, `source_file_name`, `category_id`/`category_name` y la
+  bbox original del COCO sin redondear. Un original puede producir varios.
+- `Exclusion`: caja descartada con su motivo (`docs/contratos.md` §2).
+
+Si una anotacion cumple varios motivos se registra el primero de este orden:
+`excluded_category` (la caja no es de una clase fijada, lo demas no importa),
+`missing_image`, `degenerate_bbox`, `bbox_out_of_bounds`.
+
+Se trabaja sobre el COCO como `dict` y no con `dataset_quality.models.coco` de
+P2 a proposito: ese modelo rechaza el dataset COMPLETO ante una sola caja
+degenerada, y aqui hace falta lo contrario: descartar esa caja, registrar por
+que y seguir con las demas.
+
+Logica pura salvo `read_image_sizes`, que solo lee cabeceras de imagen: no se
+leen variables de entorno ni se crean clientes de S3 o BD.
+"""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Collection, Iterable, Mapping
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal
+
+from PIL import Image, UnidentifiedImageError
+
+ExclusionReason = Literal[
+    "degenerate_bbox",
+    "bbox_out_of_bounds",
+    "missing_image",
+    "excluded_category",
+]
+
+BBox = tuple[float, float, float, float]
+
+
+@dataclass(frozen=True)
+class CropSource:
+    """Caja valida de una clase incluida: una fila futura del manifiesto."""
+
+    annotation_id: int
+    source_image_id: int
+    source_file_name: str
+    category_id: int
+    category_name: str
+    bbox_xywh: BBox
+
+
+@dataclass(frozen=True)
+class Exclusion:
+    """Anotacion descartada; va a `exclusions.csv` y a `manifest.meta.json`."""
+
+    annotation_id: int
+    source_image_id: int
+    reason: ExclusionReason
+
+
+@dataclass(frozen=True)
+class ValidationResult:
+    """Ambas tuplas ordenadas por `annotation_id`."""
+
+    valid: tuple[CropSource, ...]
+    exclusions: tuple[Exclusion, ...]
+
+
+def read_image_sizes(
+    images: Iterable[Mapping[str, Any]], images_dir: Path
+) -> dict[int, tuple[int, int]]:
+    """`(ancho, alto)` REAL de cada imagen del COCO que existe y se puede abrir.
+
+    Una imagen ausente o ilegible no aparece en el resultado; para la
+    validacion eso es `missing_image`. Se usan las dimensiones del archivo y no
+    las del COCO: si difieren, recortar con las del COCO podria salirse de la
+    imagen sin que nadie lo note.
+    """
+    sizes: dict[int, tuple[int, int]] = {}
+    for image in images:
+        path = images_dir / image["file_name"]
+        try:
+            with Image.open(path) as handle:
+                sizes[image["id"]] = handle.size
+        except (FileNotFoundError, IsADirectoryError, UnidentifiedImageError):
+            continue
+    return sizes
+
+
+def validate_annotations(
+    coco: Mapping[str, Any],
+    included_category_ids: Collection[int],
+    image_sizes: Mapping[int, tuple[int, int]],
+) -> ValidationResult:
+    """Separa las anotaciones del COCO en cajas validas y exclusiones con motivo.
+
+    `image_sizes` viene de `read_image_sizes`: una imagen sin entrada es una
+    imagen faltante. No modifica `coco`.
+    """
+    images = {image["id"]: image for image in coco["images"]}
+    category_names = {category["id"]: category["name"] for category in coco["categories"]}
+
+    valid: list[CropSource] = []
+    exclusions: list[Exclusion] = []
+    for ann in sorted(coco["annotations"], key=lambda a: a["id"]):
+        image_id = ann["image_id"]
+        reason = _exclusion_reason(ann, images, included_category_ids, image_sizes)
+        if reason is not None:
+            exclusions.append(Exclusion(ann["id"], image_id, reason))
+            continue
+        bbox = _as_bbox(ann.get("bbox"))
+        assert bbox is not None  # _exclusion_reason ya descarto las malformadas
+        valid.append(
+            CropSource(
+                annotation_id=ann["id"],
+                source_image_id=image_id,
+                source_file_name=images[image_id]["file_name"],
+                category_id=ann["category_id"],
+                category_name=category_names[ann["category_id"]],
+                bbox_xywh=bbox,
+            )
+        )
+    return ValidationResult(tuple(valid), tuple(exclusions))
+
+
+def _exclusion_reason(
+    ann: Mapping[str, Any],
+    images: Mapping[int, Mapping[str, Any]],
+    included_category_ids: Collection[int],
+    image_sizes: Mapping[int, tuple[int, int]],
+) -> ExclusionReason | None:
+    if ann["category_id"] not in included_category_ids:
+        return "excluded_category"
+    image_id = ann["image_id"]
+    if image_id not in images or image_id not in image_sizes:
+        return "missing_image"
+    bbox = _as_bbox(ann.get("bbox"))
+    if bbox is None or bbox[2] <= 0 or bbox[3] <= 0:
+        return "degenerate_bbox"
+    x, y, w, h = bbox
+    width, height = image_sizes[image_id]
+    if x < 0 or y < 0 or x + w > width or y + h > height:
+        return "bbox_out_of_bounds"
+    return None
+
+
+def _as_bbox(value: Any) -> BBox | None:
+    """La bbox como 4 floats finitos, o `None` si esta malformada."""
+    if not isinstance(value, list | tuple) or len(value) != 4:
+        return None
+    if not all(isinstance(v, int | float) and not isinstance(v, bool) for v in value):
+        return None
+    x, y, w, h = (float(v) for v in value)
+    if not all(math.isfinite(v) for v in (x, y, w, h)):
+        return None
+    return (x, y, w, h)
