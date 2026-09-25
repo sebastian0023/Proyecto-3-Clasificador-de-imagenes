@@ -97,8 +97,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] docs/contratos.md con esquemas y ejemplos JSON
-- [ ] Fixture de pruebas disponible
+- [x] docs/contratos.md con esquemas y ejemplos JSON → [contratos.md](../contratos.md): manifiesto, mapa de clases, `TrainingConfig`, 13 endpoints, `selection.json` y versión de modelo
+- [x] Fixture de pruebas disponible → [`tests/fixtures/p3/`](../../tests/fixtures/p3/): COCO de 3 clases y 30 imágenes con casos borde; protegido por `tests/test_fixture_p3.py` (red `cfb839c` → green `da89571`)
 - [ ] PR aprobado por los otros dos integrantes
 
 **Entregables:** `docs/contratos.md`; `tests/fixtures/p3/`
@@ -108,7 +108,7 @@
 - [ ] Todas las casillas de aceptación marcadas con evidencia real
 - [ ] PRs fusionados con review de Andrés
 - [ ] CI en verde en `main`
-- [ ] Commits red → green visibles en el historial
+- [x] Commits red → green visibles en el historial → T02 `db4056b` → `55167a8`; T04 `cfb839c` → `da89571`
 
 ## Registro de avance
 
@@ -117,3 +117,4 @@
 | 24 sep | Edith | T00 | `docs/decisiones.md` con las 8 decisiones; release 0.1.3 verificado por SHA-256 en S3 | Confirmar clases (2) y cómputo (7) el vie 25; marcar "commit fechado" con su hash; review de Andrés en el PR |
 | 24 sep | Edith | T01 | `docs/inventario.md` con línea base, rutas `archivo:línea` y 7 hallazgos del README (MinIO fijado ya no se publica; `dvc.lock` desfasado) | Arreglar hallazgos 1, 3, 5 y 6 en T02; avisar a Diego (2) y Andrés (4, 7) |
 | 24 sep | Edith | T02 | Cola `p3_training_jobs` en MariaDB, `p3-worker` y `POST/GET /api/p3/training/jobs` montados en la app de P2 (red `db4056b` → green `55167a8`); MLflow 3.16.1 persistente; MinIO reemplazado por `pgsty/minio` (`042295d`); README en la raíz (`d14f462`). Hallazgos 1, 3, 5 y 6 del inventario resueltos | Andrés: revisar el cambio en `Proyecto2/` (compose, `main.py`) y sumar `Proyecto3/` a la CI (F10). El worker aún no entrena: el handler real llega en F4 |
+| 24 sep | Edith | T04 | `docs/contratos.md` (manifiesto 70/20/10, mapa de clases, `TrainingConfig` con rangos, API, `selection.json`, versión de modelo) y fixture `tests/fixtures/p3/` | Aprobación del PR por Diego y Andrés; cualquier cambio de forma se avisa al equipo |
