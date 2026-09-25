@@ -23,8 +23,11 @@ services:
       - mariadb_data:/var/lib/mysql
 
   minio:
-    # Imagen oficial desde quay.io: el repo minio/minio ya no esta publicado en Docker Hub.
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # MinIO dejo de publicar sus imagenes (al 24 sep 2026 quay.io y Docker Hub
+    # responden "no such manifest") y un clon limpio ya no arrancaba.
+    # `pgsty/minio` es un build comunitario del mismo codigo, multi-arquitectura
+    # (amd64/arm64), con el mismo entrypoint y `mc` incluido para el healthcheck.
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: dq_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -44,7 +47,8 @@ services:
 
   # Job de un solo uso: crea los buckets y termina. Es idempotente.
   minio-init:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    # Mismo motivo que `minio`: la imagen oficial de `mc` ya no se publica.
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     container_name: dq_minio_init
     depends_on:
       minio:
