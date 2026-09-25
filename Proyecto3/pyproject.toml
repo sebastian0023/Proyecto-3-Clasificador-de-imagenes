@@ -18,6 +18,8 @@ dependencies = [
     "pymysql==1.2.3",
     # Recortes COCO (F2): misma version que `Proyecto2/requirements.lock.txt`.
     "pillow==12.3.0",
+    # Releases de P2 (`dataset.tar.zst`, F2 T05): misma version que Proyecto2.
+    "zstandard==0.25.0",
 ]
 
 [project.optional-dependencies]
