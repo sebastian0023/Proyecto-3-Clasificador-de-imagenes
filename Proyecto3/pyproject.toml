@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "p3"
+version = "0.1.0"
+description = "Proyecto 3: clasificador de imagenes integrado al portal (worker, entrenamiento e inferencia)."
+requires-python = ">=3.12,<3.13"
+# El router de `p3.worker.api` corre dentro de la app de Proyecto2, asi que las
+# librerias compartidas usan las mismas versiones que `Proyecto2/requirements.lock.txt`.
+dependencies = [
+    "fastapi==0.141.1",
+    "starlette==1.6.0",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.15.0",
+    "sqlalchemy==2.0.54",
+    "pymysql==1.2.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx==0.28.1",
+    "pytest==9.1.1",
+    "ruff==0.16.8",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/p3"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["p3"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
