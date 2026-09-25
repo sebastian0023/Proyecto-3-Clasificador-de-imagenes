@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from p3.worker.api import router as p3_training_router
 
 from dataset_quality import __version__
 from dataset_quality.api.artifacts import router as artifacts_router
@@ -78,6 +79,8 @@ def create_app() -> FastAPI:
     app.include_router(duplicates_router)
     app.include_router(pipeline_router)
     app.include_router(policy_router)
+    # Proyecto 3 (`Proyecto3/src/p3`): mismo portal, rutas bajo `/api/p3/`.
+    app.include_router(p3_training_router)
 
     # El build de Vite (si existe). En desarrollo puede no estar compilado
     # todavia: la API sigue respondiendo y /docs tambien.

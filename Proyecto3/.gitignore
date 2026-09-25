@@ -1,0 +1,24 @@
+# Secretos: nunca se versionan.
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Artefactos de entrenamiento: viven en MLflow y S3, nunca en Git.
+mlruns/
+mlartifacts/
+*.pt
+*.pth
+*.ckpt
+
+# Datos derivados (recortes, manifiestos locales): viven en DVC.
+/data/

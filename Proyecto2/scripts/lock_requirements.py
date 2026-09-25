@@ -14,7 +14,14 @@ arrastraria paquetes que en Linux no existen y omitiria los que solo existen
 alli (`uvloop` es el ejemplo evidente).
 
     python scripts/lock_requirements.py
-    python scripts/lock_requirements.py --check   # falla si esta desactualizado
+    python scripts/lock_requirements.py --check     # falla si esta desactualizado
+    python scripts/lock_requirements.py --upgrade   # sube todo a lo ultimo que admiten los rangos
+
+pip-compile parte del lockfile existente: conserva cada pin que siga cumpliendo
+`pyproject.toml` y solo cambia lo que el `pyproject.toml` obliga. Sin eso,
+`--check` fallaba cada vez que PyPI publicaba una version nueva de cualquier
+dependencia, aunque nadie hubiera tocado el repositorio. Subir versiones es una
+decision explicita: `--upgrade`.
 """
 
 from __future__ import annotations
@@ -63,11 +70,19 @@ UVLOOP_CON_MARCADOR = (
 )
 
 
-def compilar() -> str:
+def compilar(upgrade: bool = False) -> str:
     """Devuelve el lockfile que resuelve pip-compile dentro del contenedor."""
+    # El lockfile actual se copia como punto de partida: pip-compile respeta los
+    # pines que ya estan en `--output-file` salvo que se le pida `--upgrade`.
+    semilla = (
+        "cp requirements.lock.txt /salida/requirements.lock.txt && "
+        if LOCKFILE.exists() and not upgrade
+        else ""
+    )
     guion = (
-        f"pip install -q --root-user-action=ignore {PIP_TOOLS} && "
+        f"{semilla}pip install -q --root-user-action=ignore {PIP_TOOLS} && "
         "pip-compile --quiet --strip-extras --extra dev --extra pipeline "
+        f"{'--upgrade ' if upgrade else ''}"
         # La ruta va RELATIVA: pip-compile la copia tal cual dentro de los
         # comentarios `# via dataset-quality (...)`, y con una ruta absoluta
         # el lockfile llevaria impresa la ruta del contenedor.
@@ -127,9 +142,16 @@ def main() -> int:
         action="store_true",
         help="No escribe: sale con codigo 1 si el lockfile del repositorio no coincide.",
     )
+    parser.add_argument(
+        "--upgrade",
+        action="store_true",
+        help="Ignora los pines actuales y resuelve lo ultimo que admiten los rangos.",
+    )
     args = parser.parse_args()
+    if args.check and args.upgrade:
+        parser.error("--check y --upgrade no se combinan")
 
-    nuevo = normalizar(compilar())
+    nuevo = normalizar(compilar(upgrade=args.upgrade))
 
     if args.check:
         actual = LOCKFILE.read_text(encoding="utf-8") if LOCKFILE.exists() else ""

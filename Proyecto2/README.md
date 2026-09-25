@@ -26,8 +26,8 @@ No se necesita nada más. Sin Node, sin `pip install` previo, sin pasos manuales
 Desde un clon limpio, estos son **todos** los comandos necesarios:
 
 ```bash
-git clone <url-del-repo>
-cd ruta-al-dataset-v1/Proyecto2
+git clone <url-del-repo> Proyecto-3-Clasificador-de-imagenes
+cd Proyecto-3-Clasificador-de-imagenes/Proyecto2
 python scripts/up.py
 ```
 
@@ -36,13 +36,14 @@ completa sin intervención manual:
 
 1. Si no existe `.env`, lo crea copiando `.env.example`. Los valores por defecto
    funcionan para el entorno local; no se versiona ningún `.env` real.
-2. Construye la imagen de la app y levanta los tres servicios —
-   **app + MariaDB + MinIO** — esperando a que los tres reporten `healthy`
-   (`docker compose up -d --build --wait`).
+2. Construye las imágenes y levanta los servicios — **app + MariaDB + MinIO**,
+   más **MLflow y el worker de entrenamiento** del Proyecto 3 — esperando a que
+   reporten `healthy` (`docker compose up -d --build --wait`).
 3. Crea los buckets de MinIO con un job idempotente (`minio-init`).
 4. Consulta `/health` y **falla con código distinto de cero** si MariaDB o MinIO
    no responden desde dentro de la app. No basta con que el contenedor exista.
-5. Imprime las URLs de trabajo.
+5. Espera a que MLflow responda en `/health`.
+6. Imprime las URLs de trabajo.
 
 > La primera ejecución descarga las imágenes base de Docker y compila la imagen
 > de la app; tarda unos minutos. Las siguientes son cuestión de segundos.
@@ -56,6 +57,7 @@ Entorno listo.
   OpenAPI           http://localhost:8000/docs
   Health            http://localhost:8000/health
   Consola MinIO     http://localhost:9101   (usuario y clave en .env)
+  MLflow            http://localhost:5000
 ```
 
 ### Puertos
@@ -66,6 +68,7 @@ Entorno listo.
 | MariaDB        | `localhost:3307`         | `DB_PORT`             |
 | MinIO (API)    | `localhost:9100`         | `MINIO_PORT`          |
 | MinIO (consola)| `http://localhost:9101`  | `MINIO_CONSOLE_PORT`  |
+| MLflow         | `http://localhost:5000`  | `MLFLOW_PORT`         |
 
 Los puertos están corridos a propósito respecto al proyecto de anotación
 (3306 / 9000 / 9001) para que ambos entornos convivan en la misma máquina.

@@ -61,5 +61,6 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+# `../Proyecto3/src`: la app monta el router de Proyecto 3 (`p3.worker.api`).
+pythonpath = ["src", "../Proyecto3/src"]
 addopts = "-q"
