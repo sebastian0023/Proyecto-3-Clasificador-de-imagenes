@@ -128,6 +128,20 @@ def wait_for_health(url: str, timeout_seconds: int = 90) -> dict[str, object] | 
     return last_body
 
 
+def wait_for_mlflow(url: str, timeout_seconds: int = 90) -> bool:
+    """MLflow responde `OK` en texto plano, no JSON: basta con un 200."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=5) as response:
+                if response.status == 200:
+                    return True
+        except (urllib.error.URLError, OSError):
+            pass
+        time.sleep(2)
+    return False
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Levanta el entorno local completo.")
     parser.add_argument(
@@ -153,12 +167,13 @@ def main() -> None:
     env = read_env()
     app_port = env.get("APP_PORT", "8000")
     console_port = env.get("MINIO_CONSOLE_PORT", "9101")
+    mlflow_port = env.get("MLFLOW_PORT", "5000")
 
     if args.fresh:
         log("Borrando contenedores y volumenes previos (--fresh)...")
         compose("down", "-v", check=False)
 
-    log("Levantando MariaDB + MinIO + app y esperando healthchecks...")
+    log("Levantando MariaDB + MinIO + app + MLflow + worker P3 y esperando healthchecks...")
     up_args = ["up", "-d", "--wait"]
     if not args.no_build:
         up_args.insert(1, "--build")
@@ -174,6 +189,10 @@ def main() -> None:
         )
     print(json.dumps(health, indent=2, ensure_ascii=False))
 
+    log("Verificando MLflow (tracking de Proyecto 3)...")
+    if not wait_for_mlflow(f"http://localhost:{mlflow_port}/health"):
+        fail("MLflow no responde. Revisa `docker compose logs mlflow`.")
+
     print(
         f"""
 \033[32mEntorno listo.\033[0m
@@ -182,6 +201,7 @@ def main() -> None:
   OpenAPI           http://localhost:{app_port}/docs
   Health            http://localhost:{app_port}/health
   Consola MinIO     http://localhost:{console_port}   (usuario y clave en .env)
+  MLflow            http://localhost:{mlflow_port}
 
   Logs              docker compose logs -f app
   Apagar            python scripts/down.py

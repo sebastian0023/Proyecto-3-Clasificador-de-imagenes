@@ -125,6 +125,9 @@ services:
       MINIO_ENDPOINT: minio
       MINIO_PORT: "9000"
       MCP_SERVER_URL: http://mcp:8001/mcp
+      # Proyecto 3 vive en el mismo portal: su paquete `p3` se monta en
+      # `/opt/p3/src` (ver `volumes`) y la app monta su router `/api/p3/...`.
+      PYTHONPATH: /app/src:/opt/p3/src
     ports:
       - "${APP_PORT:?falta APP_PORT en .env}:8000"
     volumes:
@@ -144,6 +147,9 @@ services:
       # no reescribe sus propias fuentes. Ya no tapa el build de la web: vive
       # en `/opt/dq/static` (ver `DQ_STATIC_DIR` en docker/Dockerfile).
       - ./src:/app/src:ro
+      # El codigo de Proyecto 3, en solo lectura y fuera de `/app/src` para no
+      # crear un punto de montaje dentro del arbol de Proyecto2.
+      - ../Proyecto3/src:/opt/p3/src:ro
       # Volumenes anonimos que tapan artefactos del host sin sentido aqui
       # dentro: un venv de Windows y binarios nativos compilados para el host.
       - /app/.venv
@@ -158,6 +164,8 @@ services:
       - --reload
       - --reload-dir
       - /app/src
+      - --reload-dir
+      - /opt/p3/src
     healthcheck:
       test:
         - CMD
@@ -180,6 +188,69 @@ services:
       mcp:
         condition: service_healthy
 
+  # --- Proyecto 3 ------------------------------------------------------------
+
+  # Tracking de experimentos. Registros en SQLite y artefactos en disco, ambos
+  # dentro del volumen `mlflow_data`: sobreviven a `down`/`up` (solo `down -v`
+  # los borra). `--serve-artifacts` hace que los clientes suban y bajen
+  # artefactos por HTTP, sin credenciales de almacenamiento.
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.16.1
+    container_name: p3_mlflow
+    restart: unless-stopped
+    command:
+      - mlflow
+      - server
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "5000"
+      - --backend-store-uri
+      - sqlite:////mlflow/mlflow.db
+      - --artifacts-destination
+      - /mlflow/artifacts
+      - --serve-artifacts
+      - --allowed-hosts
+      - localhost:*,127.0.0.1:*,mlflow:*
+    ports:
+      - "${MLFLOW_PORT:-5000}:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - |
+          import sys, urllib.request
+          sys.exit(0 if urllib.request.urlopen("http://localhost:5000/health", timeout=5).status == 200 else 1)
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+
+  # Worker de entrenamiento: toma trabajos de la tabla `p3_training_jobs` de
+  # MariaDB y reporta estado, progreso, logs y error en la misma fila. El
+  # endpoint HTTP solo encola (`POST /api/p3/training/jobs`).
+  p3-worker:
+    build:
+      context: ../Proyecto3
+      dockerfile: docker/Dockerfile
+    container_name: p3_worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+
 volumes:
   mariadb_data:
   minio_data:
+  mlflow_data:
