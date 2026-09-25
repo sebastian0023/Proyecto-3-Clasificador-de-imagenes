@@ -30,8 +30,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] docs/decisiones.md con las 8 decisiones y su responsable
-- [ ] La métrica de selección está fijada antes de la primera corrida
+- [x] docs/decisiones.md con las 8 decisiones y su responsable → [decisiones.md](../decisiones.md)
+- [x] La métrica de selección está fijada antes de la primera corrida → [decisiones.md §4](../decisiones.md#4-métrica-de-selección-del-candidato); aún no existe ninguna corrida de MLflow
 - [ ] Commit fechado el jueves 24
 
 **Entregables:** `docs/decisiones.md`
@@ -114,3 +114,4 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 24 sep | Edith | T00 | `docs/decisiones.md` con las 8 decisiones; release 0.1.3 verificado por SHA-256 en S3 | Confirmar clases (2) y cómputo (7) el vie 25; marcar "commit fechado" con su hash; review de Andrés en el PR |
