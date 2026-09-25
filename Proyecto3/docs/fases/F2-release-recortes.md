@@ -112,3 +112,4 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 25 sep 2026 | Diego | T07a | Validación de cajas: `src/p3/data/crops.py` (`validate_annotations`, `read_image_sizes`) y `tests/test_crops_validation.py` (red `25e5490` → green `5374469`). Motivos del contrato; límites con el tamaño real del archivo. 11 mutaciones manuales (degenerada, bordes, faltante, categoría, etiqueta, ids, bbox) ponen la suite en rojo. | T07b: recorte con Pillow, `exclusions.csv`, `verificacion_recortes.md`; la casilla "caja degenerada no aparece en el manifiesto" se cierra con F3 |
