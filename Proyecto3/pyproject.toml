@@ -16,6 +16,8 @@ dependencies = [
     "pydantic-settings==2.15.0",
     "sqlalchemy==2.0.54",
     "pymysql==1.2.3",
+    # Recortes COCO (F2): misma version que `Proyecto2/requirements.lock.txt`.
+    "pillow==12.3.0",
 ]
 
 [project.optional-dependencies]
