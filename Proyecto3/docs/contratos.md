@@ -160,7 +160,7 @@ Lee `Proyecto2/reports/versions.json`. Con `approved=true` solo devuelve `qualit
 ```
 
 - **Cambio F2 T05 (aditivo):** campo `published_in`, con los remotes donde P2 publicó el release.
-- `storage_uri` se arma con el bucket configurado (`P3_RELEASES_BUCKET`) si el release está en el remote `prod` (`P3_RELEASES_REMOTE`); si no, es `null`: el release solo existe en el MinIO local de quien lo generó y no se recupera desde un clon limpio. No se usa la URI que guarda P2, porque la del 0.1.3 apunta al bucket de la cuenta anterior ([decisiones.md §1](decisiones.md#1-release-dvc-de-origen)).
+- `storage_uri` se arma con el bucket configurado (`P3_RELEASES_BUCKET`) si el release está en el remote `prod` (`P3_RELEASES_REMOTE`); si no, es `null`: el release solo existe en el MinIO local de quien lo generó y no se recupera desde un clon limpio. No se usa la URI que guarda P2, porque la del 0.1.3 apunta al bucket de la cuenta anterior ([decisiones.md §1](decisiones.md#1-release-dvc-de-origen)). El registro de P2 es la fuente de verdad: el archivo del 0.1.2 existe en el bucket del equipo, pero `versions.json` no registra esa publicación en `prod`, así que su `storage_uri` sale `null` (observación de la revisión del PR #3; el release elegido es el 0.1.3).
 - Sin `approved` (o con `approved=false`) devuelve todos, incluidos los de compuerta fallida.
 
 ### `GET /api/p3/releases/{release_id}` (nuevo en F2 T05)

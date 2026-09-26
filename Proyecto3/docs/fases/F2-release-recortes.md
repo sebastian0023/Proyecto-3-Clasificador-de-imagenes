@@ -96,8 +96,8 @@
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
 - [ ] Una caja degenerada inyectada no aparece en el manifiesto — ya no produce recorte (`tests/test_crops_generation.py::test_fixture_completo_da_28_recortes_trazables`, anotación 30 del fixture); la casilla se cierra con el manifiesto de F3
-- [x] Cada recorte conserva los 4 identificadores de origen — `CropRecord` (`annotation_id`, `source_image_id`, `source_file_name`, categoría + bbox original); `scripts/verificar_recortes.py` lo comprobó en los 1459 recortes del 0.1.3 ([verificacion_recortes.md](../verificacion_recortes.md))
-- [x] exclusions.csv con motivos — [`reports/crops/0.1.3/exclusions.csv`](../../reports/crops/0.1.3/exclusions.csv): 661 anotaciones, todas `excluded_category` (car y bicycle)
+- [x] Cada recorte conserva los 4 identificadores de origen — `CropRecord` (`annotation_id`, `source_image_id`, `source_file_name`, categoría + bbox original); `scripts/verificar_recortes.py` (independiente del generador) lo comprobó en los 1459 recortes del 0.1.3, más revisión visual de 23 ([verificacion_recortes.md](../verificacion_recortes.md))
+- [x] exclusions.csv con motivos — [`reports/crops/0.1.3/exclusions.csv`](../../reports/crops/0.1.3/exclusions.csv): 661 anotaciones, todas `excluded_category` (car y bicycle); ninguna caja de las clases incluidas es inválida
 
 **Entregables:** `src/p3/data/crops.py`; `exclusions.csv`; Pruebas; `docs/verificacion_recortes.md`
 
@@ -119,3 +119,4 @@
 | 25 sep 2026 | Diego | T06 | `src/p3/data/classes.py` (red `f5591c8` → green `578c6c0`), `scripts/count_classes.py` sobre el release real con SHA-256, huella de P2 y huella de DVC verificados; `config/classes.yaml` + `docs/clases.md` (red `085368e` → green `219fed3`): cat 312, dog 348, person 441; car y bicycle excluidas. 5 mutaciones ponen la suite en rojo. | Confirmar con Edith que no hay corridas en MLflow anteriores a `219fed3` |
 | 25 sep 2026 | Diego | T31 | gitleaks v8.30.1 sobre el historial completo (159 commits): sin hallazgos. | — |
 | 25 sep 2026 | Diego | T07b | `generate_crops`, `crop_box`, `write_exclusions_csv` (red `a4be2ef` → green `57a8b58`; prueba reforzada `2be6416` tras una mutación sobreviviente). Release 0.1.3: 1459 recortes (cat 329, dog 379, person 751), deterministas; `reports/crops/0.1.3/`; 1459/1459 verificados contra COCO y píxeles, 10/10 en revisión visual (`docs/verificacion_recortes.md`). | Casilla del manifiesto en F3 |
+| 26 sep 2026 | Diego | T05/T06/T07 | Revisión de Edith en el PR #3. Rotación EXIF y tamaño distinto al COCO: red `388c1c7` → green `1142a35`; la revisión visual mostró que el intercambio de ejes era incorrecto → red `455927a` → green `a3d2e59` (escalado por eje desde el espacio del COCO). Verificación ya no circular (`fec9ced`): detecta 11 recortes malos de la versión anterior. `quality.json` del archivo debe decir `pass` (red `f5fcf28` → green `7182ec7`). `decided_at` en hora local. Regenerados: 1459 recortes, clases sin cambio (bicycle 239 → 240), 23/23 en revisión visual. | Respuesta a Edith en el PR |

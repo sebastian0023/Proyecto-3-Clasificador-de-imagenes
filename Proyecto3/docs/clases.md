@@ -24,7 +24,7 @@ Clases fijadas **antes de cualquier experimento**, con conteos recalculados sobr
 
 La exclusión de `car` y `bicycle` depende solo de ese umbral. No se agregan ni se quitan clases después de ver validación o prueba.
 
-**Sin filtro por tamaño de caja.** Las cajas diminutas (231 de 2120, 10.9 %: menos del 2 % del área de su imagen o menos de 1024 px², según `Proyecto2/reports/stats.json`) **se conservan**: el contrato solo define los cuatro motivos de exclusión de [contratos.md §2](contratos.md#2-manifiesto-de-recortes-702010--contrato-f2-f3). Cambiar esta regla después de ver el test contaría como resultado inflado.
+**Sin filtro por tamaño de caja.** Las cajas diminutas (231 de 2120, 10.9 %: menos del 2 % del área de su imagen o menos de 1024 px², según `Proyecto2/reports/stats.json`) **se conservan**: el contrato solo define los motivos de exclusión de [contratos.md §2](contratos.md#2-manifiesto-de-recortes-702010--contrato-f2-f3). Cambiar esta regla después de ver el test contaría como resultado inflado.
 
 ## Procedencia verificada
 
