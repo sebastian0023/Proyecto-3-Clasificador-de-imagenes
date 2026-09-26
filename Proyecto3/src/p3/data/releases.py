@@ -8,8 +8,9 @@ compuerta, `quality_report_fingerprint` y `archive_sha256`.
 Un release solo se usa si:
 
 1. su compuerta es `pass` (si no, `ReleaseNotApprovedError` -> HTTP 409), y
-2. su `dataset.tar.zst` tiene exactamente el `archive_sha256` registrado y el
-   COCO de adentro produce el `dataset_fingerprint` registrado.
+2. su `dataset.tar.zst` tiene exactamente el `archive_sha256` registrado, el
+   COCO de adentro produce el `dataset_fingerprint` registrado y el
+   `quality.json` de adentro tambien dice `pass`.
 
 La huella se recibe como funcion para no reimplementar la de P2: dentro del
 portal se pasa `p2_dataset_fingerprint`, que usa `dataset_quality`
@@ -150,11 +151,13 @@ def open_release_archive(
             f"La huella del COCO del release {release.release_id} es {huella}; "
             f"el registro dice {release.dataset_fingerprint}."
         )
-    return ReleaseContent(
-        release=release,
-        coco=json.loads(coco_bytes),
-        quality=json.loads(members[QUALITY_MEMBER]),
-    )
+    quality = json.loads(members[QUALITY_MEMBER])
+    if quality.get("status") != "pass":
+        raise ReleaseIntegrityError(
+            f"El quality.json del archivo del release {release.release_id} dice "
+            f"status={quality.get('status')!r}; se exige 'pass', igual que en el registro."
+        )
+    return ReleaseContent(release=release, coco=json.loads(coco_bytes), quality=quality)
 
 
 def coco_counts(coco: dict[str, Any]) -> dict[str, Any]:
