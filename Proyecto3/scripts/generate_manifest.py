@@ -3,6 +3,8 @@
 1. Verifica el release de punta a punta (`release_local.load_verified_release`).
 2. Exige que `config/classes.yaml` cite ese mismo release y huella.
 3. Valida las cajas de las clases fijadas (`p3.data.crops.validate_annotations`).
+   Las imagenes deben coincidir con `Proyecto2/data/raw.dvc` (`dvc status` limpio);
+   su md5 queda en `manifest.meta.json` (`release.dvc_pointer`).
 4. Calcula los grupos de casi duplicados con el codigo de P2
    (`dataset_quality.analyzers.duplicates`) y el umbral de `quality.yaml`.
 5. Reparte con `p3.data.split.build_manifest` y exige `check_manifest` vacio.
@@ -25,6 +27,8 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -104,6 +108,7 @@ def main() -> None:
             "quality_report_fingerprint": release.quality_report_fingerprint,
             "archive_sha256": release.archive_sha256,
             "p2_splits_fingerprint": entry["splits_fingerprint"],
+            "dvc_pointer": _raw_dvc_pointer(args.raw_dir),
         },
         "seed": args.seed,
         "ratios": dict(split.DEFAULT_RATIOS),
@@ -142,6 +147,32 @@ def main() -> None:
         f"exclusiones: {len(result.exclusions)} (todas {set(e.reason for e in result.exclusions)})"
     )
     print(json.dumps(meta["counts"], indent=1))
+
+
+def _raw_dvc_pointer(raw_dir: Path) -> dict[str, object]:
+    """Puntero DVC de las imagenes del release (`Proyecto2/data/raw.dvc`), verificado.
+
+    Exige `dvc status` limpio: las imagenes en disco son exactamente las del md5
+    registrado en Git (M2: hash DVC en la cadena release -> manifiesto).
+    """
+    pointer_path = raw_dir.with_suffix(".dvc")
+    [out] = yaml.safe_load(pointer_path.read_text(encoding="utf-8"))["outs"]
+    dvc = Path(sys.executable).with_name("dvc")
+    status = subprocess.run(
+        [str(dvc), "status", str(pointer_path)],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=pointer_path.parent.parent,
+    ).stdout
+    if "up to date" not in status:
+        raise SystemExit(f"{pointer_path} no coincide con los datos en disco:\n{status}")
+    return {
+        "path": pointer_path.relative_to(ROOT).as_posix(),
+        "md5": out["md5"],
+        "nfiles": out["nfiles"],
+        "size": out["size"],
+    }
 
 
 def _git_commit() -> str:
