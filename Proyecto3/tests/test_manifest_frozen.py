@@ -16,7 +16,7 @@ import yaml
 
 MANIFESTS = Path(__file__).parents[1] / "data" / "manifests"
 MANIFEST_ID = "m-0.1.3-s42-1"
-POINTER_MD5 = "0077dc79d400d62aaeeb63757dc98a0b.dir"
+POINTER_MD5 = "64eae7e52ddd9c73261680c860805494.dir"
 MANIFEST_HASH = "45600f297d13f51685e051e0cbc4962beb1f7c6a4e03247cbf61a345e6fa4305"
 
 

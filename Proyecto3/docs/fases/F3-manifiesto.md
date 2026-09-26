@@ -34,7 +34,7 @@
 - [x] Dos generaciones con la misma semilla producen archivos idénticos (mismo hash) — `generate_manifest.py --check`: `45600f29…`, escrito idéntico ([manifiesto.md](../manifiesto.md#reproducibilidad)); `tests/test_split.py::test_misma_semilla_mismo_manifiesto_y_mismo_hash`
 - [x] Intersecciones vacías demostradas por prueba — `tests/test_split.py::test_ningun_identificador_aparece_en_dos_particiones` y 0 en las 9 intersecciones del manifiesto real ([manifiesto.md](../manifiesto.md#evidencia-de-aislamiento-m3))
 - [x] Tabla por clase y partición en docs/manifiesto.md — recortes y originales por clase y partición ([manifiesto.md](../manifiesto.md#conteos-por-clase-y-partición))
-- [ ] Manifiesto versionado en DVC y etiquetado como congelado — puntero `data/manifests/m-0.1.3-s42-1.dvc` en Git (md5 `0077dc79…`, con el puntero DVC de las imágenes en el meta); `dvc push` al remote `prod` hecho y comprobado con `dvc pull` desde una copia limpia (mismo hash `45600f29…`); falta la etiqueta de congelado al fusionar en `main`
+- [ ] Manifiesto versionado en DVC y etiquetado como congelado — puntero `data/manifests/m-0.1.3-s42-1.dvc` en Git (md5 `64eae7e5…`, con el puntero DVC de las imágenes en el meta); `dvc push` al remote `prod` hecho y comprobado con `dvc pull` desde una copia limpia (mismo hash `45600f29…`); falta la etiqueta de congelado al fusionar en `main`
 
 **Entregables:** `src/p3/data/split.py`; `manifiesto .dvc`; `docs/manifiesto.md`
 
