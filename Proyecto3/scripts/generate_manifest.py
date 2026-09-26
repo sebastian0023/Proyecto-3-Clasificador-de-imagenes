@@ -53,6 +53,7 @@ def main() -> None:
     parser.add_argument("--check", action="store_true", help="comparar con lo ya escrito")
     args = parser.parse_args()
 
+    code_commit = _clean_git_commit()
     verified = load_verified_release(args)
     release = verified.content.release
     coco = verified.content.coco
@@ -100,7 +101,7 @@ def main() -> None:
         "manifest_id": manifest_id,
         "manifest_hash": manifest_hash,
         "created_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "code_commit": _git_commit(),
+        "code_commit": code_commit,
         "release": {
             "release_id": release.release_id,
             "dataset_fingerprint": release.dataset_fingerprint,
@@ -175,7 +176,22 @@ def _raw_dvc_pointer(raw_dir: Path) -> dict[str, object]:
     }
 
 
-def _git_commit() -> str:
+def _clean_git_commit() -> str:
+    """Commit exacto del codigo que genera el manifiesto.
+
+    Se niega a seguir con cambios sin commit en archivos versionados: si no,
+    `code_commit` apuntaria a un commit que no contiene el codigo usado
+    (observacion de Edith en el PR #4).
+    """
+    dirty = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=no"],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=ROOT,
+    ).stdout.strip()
+    if dirty:
+        raise SystemExit(f"Hay cambios sin commit; haz commit antes de generar:\n{dirty}")
     return subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True, cwd=ROOT
     ).stdout.strip()
