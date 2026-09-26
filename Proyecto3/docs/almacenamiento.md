@@ -56,4 +56,4 @@ dvc status data/raw.dvc                                 # "Data and pipelines ar
 | `dvc pull -r prod data/raw.dvc` + `dvc status data/raw.dvc` sin datos ni caché previos | 2047 archivos descargados del remote `prod`, 2046 agregados; "Data and pipelines are up to date". Perfil de Diego, solo lectura | 25 sep |
 | Versionado de los buckets | `get-bucket-versioning` está fuera de la política de mínimo privilegio (AccessDenied para integrantes). Evidencia equivalente: `head-object` de `0.1.3/dataset.tar.zst` devuelve `VersionId riojb0ulsh1fzPYrMiAicAGps.5f1JBI`, que S3 solo asigna en buckets versionados; Terraform lo declara en `modules/s3/main.tf:20` | 25 sep |
 | `aws s3api head-object` de `0.1.3/dataset.tar.zst` con `VersionId` | F1: `VersionId riojb0ulsh1fzPYrMiAicAGps.5f1JBI` ([decisiones.md §1](decisiones.md#1-release-dvc-de-origen)) | 24 sep |
-| gitleaks sobre el historial tras el cambio | **Pendiente** (Diego) | — |
+| gitleaks sobre el historial tras el cambio | `ghcr.io/gitleaks/gitleaks` v8.30.1 (`sha256:c00b6bd0aeb3…`), `git --redact`: 159 commits escaneados, **no leaks found** | 25 sep |
