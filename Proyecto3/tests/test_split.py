@@ -120,6 +120,15 @@ def test_los_casi_duplicados_viajan_juntos() -> None:
         assert len({split_de[i] for i in grupo}) == 1, grupo
 
 
+def test_muchos_pares_de_casi_duplicados_nunca_se_separan() -> None:
+    # 60 pares: si el reparto ignorara los grupos, alguno quedaria partido.
+    sources, _ = sintetico()
+    pares = [{i, i + 1} for i in range(1, 121, 2)]
+    rows = rows_of(sources, pares)
+    split_de = {row["source_image_id"]: row["split"] for row in rows}
+    assert all(split_de[a] == split_de[b] for a, b in map(sorted, pares))
+
+
 def test_una_foto_con_dos_clases_no_se_parte() -> None:
     rows = rows_of(*sintetico())
     de_la_225 = {row["split"] for row in rows if row["source_image_id"] == 225}
@@ -160,6 +169,14 @@ def test_cada_clase_aparece_en_val_y_en_test() -> None:
 def test_falla_si_una_clase_no_alcanza_para_val_y_test() -> None:
     sources = [source(i, i, 2) for i in range(1, 40)] + [source(99, 99, 4)]
     with pytest.raises(SplitError, match="cat"):
+        rows_of(sources, [])
+
+
+def test_falla_si_una_clase_queda_en_val_pero_no_en_test() -> None:
+    # 3 originales de cat: 2 van a train y 1 a val; test se queda sin cat.
+    sources = [source(i, i, 2) for i in range(1, 40)]
+    sources += [source(97, 97, 4), source(98, 98, 4), source(99, 99, 4)]
+    with pytest.raises(SplitError, match=r"cat.*test"):
         rows_of(sources, [])
 
 
@@ -260,8 +277,14 @@ def test_check_manifest_detecta_una_clase_ausente_de_test() -> None:
 
 
 def test_check_manifest_detecta_proporciones_fuera_de_tolerancia() -> None:
-    rows = [r | {"split": "train"} if r["split"] == "val" else r for r in rows_of(*sintetico())]
-    assert any("val" in p for p in check_manifest(rows))
+    # Pasa a train la mitad de val: val queda en ~10 % y ninguna clase desaparece.
+    rows = [
+        r | {"split": "train"} if r["split"] == "val" and r["source_image_id"] % 2 else r
+        for r in rows_of(*sintetico())
+    ]
+    problemas = check_manifest(rows)
+    assert any(p.startswith("val:") and "objetivo 20%" in p for p in problemas), problemas
+    assert not any("no tiene recortes" in p for p in problemas)
 
 
 # --- Fixture: la caja degenerada no llega al manifiesto -------------------------------------
