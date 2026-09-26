@@ -16,13 +16,18 @@ P2 a proposito: ese modelo rechaza el dataset COMPLETO ante una sola caja
 degenerada, y aqui hace falta lo contrario: descartar esa caja, registrar por
 que y seguir con las demas.
 
-Logica pura salvo `read_image_sizes`, que solo lee cabeceras de imagen: no se
-leen variables de entorno ni se crean clientes de S3 o BD.
+Despues, `generate_crops` corta cada caja valida en un PNG y devuelve un
+`CropRecord` por recorte; `write_exclusions_csv` deja las exclusiones en CSV.
+
+Aqui no se leen variables de entorno ni se crean clientes de S3 o BD: las
+rutas de imagenes y de salida las pasa quien llama.
 """
 
 from __future__ import annotations
 
+import csv
 import math
+from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -157,3 +162,97 @@ def _as_bbox(value: Any) -> BBox | None:
     if not all(math.isfinite(v) for v in (x, y, w, h)):
         return None
     return (x, y, w, h)
+
+
+# --- Recortes ------------------------------------------------------------------------------
+
+EXCLUSIONS_HEADER = ("annotation_id", "image_id", "reason")
+
+
+@dataclass(frozen=True)
+class CropRecord:
+    """Un recorte generado: la fila base del manifiesto (F3 agrega grupo y particion)."""
+
+    crop_id: str
+    annotation_id: int
+    source_image_id: int
+    source_file_name: str
+    category_id: int
+    category_name: str
+    bbox_xywh: BBox
+    crop_box_xyxy: tuple[int, int, int, int]
+    crop_path: str
+    width: int
+    height: int
+
+
+def crop_id(release_id: str, annotation_id: int) -> str:
+    """`"<release_id>:a<annotation_id>"`, unico y estable entre generaciones (contratos §2)."""
+    return f"{release_id}:a{annotation_id}"
+
+
+def crop_box(bbox: BBox, image_size: tuple[int, int]) -> tuple[int, int, int, int]:
+    """Caja en pixeles enteros `(left, top, right, bottom)` para `Image.crop`.
+
+    Regla: piso a la izquierda y arriba, techo a la derecha y abajo, para cubrir
+    todo pixel que la caja toca; se limita al lienzo (la validacion ya descarto
+    las cajas fuera de la imagen) y se garantiza al menos un pixel.
+    """
+    x, y, w, h = bbox
+    width, height = image_size
+    left = min(max(math.floor(x), 0), width - 1)
+    top = min(max(math.floor(y), 0), height - 1)
+    right = min(max(math.ceil(x + w), left + 1), width)
+    bottom = min(max(math.ceil(y + h), top + 1), height)
+    return (left, top, right, bottom)
+
+
+def generate_crops(
+    valid: Iterable[CropSource], images_dir: Path, out_dir: Path, *, release_id: str
+) -> list[CropRecord]:
+    """Corta cada caja valida en `out_dir/<clase>/<release>_a<annotation_id>.png`.
+
+    PNG sin perdida y en RGB: el recorte conserva los pixeles del original sin
+    una segunda compresion JPEG. Cada original se abre una sola vez. El
+    resultado va ordenado por `annotation_id` y es determinista.
+    """
+    by_image: dict[str, list[CropSource]] = defaultdict(list)
+    for source in valid:
+        by_image[source.source_file_name].append(source)
+
+    records: list[CropRecord] = []
+    for file_name in sorted(by_image):
+        with Image.open(images_dir / file_name) as original:
+            image = original.convert("RGB")
+        for source in by_image[file_name]:
+            box = crop_box(source.bbox_xywh, image.size)
+            relative = f"{source.category_name}/{release_id}_a{source.annotation_id}.png"
+            path = out_dir / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            image.crop(box).save(path, format="PNG", optimize=False)
+            records.append(
+                CropRecord(
+                    crop_id=crop_id(release_id, source.annotation_id),
+                    annotation_id=source.annotation_id,
+                    source_image_id=source.source_image_id,
+                    source_file_name=source.source_file_name,
+                    category_id=source.category_id,
+                    category_name=source.category_name,
+                    bbox_xywh=source.bbox_xywh,
+                    crop_box_xyxy=box,
+                    crop_path=relative,
+                    width=box[2] - box[0],
+                    height=box[3] - box[1],
+                )
+            )
+    return sorted(records, key=lambda record: record.annotation_id)
+
+
+def write_exclusions_csv(exclusions: Iterable[Exclusion], path: Path) -> None:
+    """`annotation_id,image_id,reason`, ordenado por `annotation_id`, con fin de linea LF."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(EXCLUSIONS_HEADER)
+        for exclusion in sorted(exclusions, key=lambda e: e.annotation_id):
+            writer.writerow((exclusion.annotation_id, exclusion.source_image_id, exclusion.reason))
