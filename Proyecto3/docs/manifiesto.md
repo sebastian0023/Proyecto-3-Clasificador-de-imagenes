@@ -12,9 +12,10 @@ Manifiesto derivado del release aprobado **0.1.3** de P2: una fila por recorte c
 | Release de origen | `0.1.3`, `quality_status: pass` |
 | `dataset_fingerprint` | `2200274dc6bbe6d0bc516e0136ae68651c0040bc6cab64a871794924fa39aa84` |
 | `archive_sha256` del release | `787742988af1df41d9a58573b81b5c9b4fe7ab24a647b25f2e71d3eb323838b5` |
+| Imágenes del release (DVC) | `Proyecto2/data/raw.dvc`, md5 `ca56420c9992f8b75fdb10f2ece81704.dir`, 2046 archivos; el script exige `dvc status` limpio antes de generar |
 | Split 70/15/15 de P2 al que se vincula | `splits_fingerprint 9a87e0de3fb3069f06686065f149d64787593c04d90265a3e0f667a170d66279` |
 | Clases | `config/classes.yaml`: cat (0), dog (1), person (2) |
-| Versionado | DVC en `Proyecto3/` (remote `prod`, `s3://dataset-quality-dvc-cache-750702272375`); puntero [`data/manifests/m-0.1.3-s42-1.dvc`](../data/manifests/m-0.1.3-s42-1.dvc), md5 `5fa0e1da5d2ff3c0df6f3a0cd34ab4ed.dir` |
+| Versionado | DVC en `Proyecto3/` (remote `prod`, `s3://dataset-quality-dvc-cache-750702272375`); puntero [`data/manifests/m-0.1.3-s42-1.dvc`](../data/manifests/m-0.1.3-s42-1.dvc), md5 `0077dc79d400d62aaeeb63757dc98a0b.dir` |
 
 Todo esto va también dentro de `manifest.meta.json`, junto con `created_at`, `code_commit`, las 661 exclusiones (todas `excluded_category`: car y bicycle) y los conteos.
 

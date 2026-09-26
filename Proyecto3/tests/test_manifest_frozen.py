@@ -16,7 +16,7 @@ import yaml
 
 MANIFESTS = Path(__file__).parents[1] / "data" / "manifests"
 MANIFEST_ID = "m-0.1.3-s42-1"
-POINTER_MD5 = "5fa0e1da5d2ff3c0df6f3a0cd34ab4ed.dir"
+POINTER_MD5 = "0077dc79d400d62aaeeb63757dc98a0b.dir"
 MANIFEST_HASH = "45600f297d13f51685e051e0cbc4962beb1f7c6a4e03247cbf61a345e6fa4305"
 
 
@@ -36,3 +36,5 @@ def test_si_el_manifiesto_esta_descargado_su_hash_es_el_congelado() -> None:
     meta = json.loads((folder / "manifest.meta.json").read_text(encoding="utf-8"))
     assert meta["manifest_hash"] == MANIFEST_HASH
     assert meta["release"]["release_id"] == "0.1.3"
+    # M2: el hash DVC de las imagenes del release viaja con el manifiesto.
+    assert meta["release"]["dvc_pointer"]["md5"] == "ca56420c9992f8b75fdb10f2ece81704.dir"
