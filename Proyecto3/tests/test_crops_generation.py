@@ -71,6 +71,19 @@ def test_caja_con_decimales_cubre_todos_los_pixeles_que_toca() -> None:
     assert crop_box((20.4, 10.6, 29.2, 29.1), (100, 80)) == (20, 10, 50, 40)
 
 
+@pytest.mark.parametrize(
+    ("bbox", "esperada"),
+    [
+        ((20.2, 10.2, 29.1, 29.1), (20, 10, 50, 40)),  # borde en 49.3: techo 50, no 49
+        ((20.7, 10.7, 29.6, 29.6), (20, 10, 51, 41)),  # borde en 50.3: techo 51
+    ],
+)
+def test_bordes_derecho_e_inferior_usan_techo_y_no_redondeo(
+    bbox: tuple[float, float, float, float], esperada: tuple[int, int, int, int]
+) -> None:
+    assert crop_box(bbox, (100, 80)) == esperada
+
+
 def test_caja_nunca_se_sale_del_lienzo() -> None:
     assert crop_box((0.0, 0.0, 100.0, 80.0), (100, 80)) == (0, 0, 100, 80)
 
