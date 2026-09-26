@@ -7,10 +7,12 @@ Cada anotacion termina en exactamente uno de dos lados:
   bbox original del COCO sin redondear. Un original puede producir varios.
 - `Exclusion`: caja descartada con su motivo (`docs/contratos.md` §2).
 
-Las cajas se dibujaron en P1 sobre la foto que mostraba el navegador: con la
-rotacion EXIF aplicada y con el tamano que registra el COCO. Por eso los
-limites se revisan en esas coordenadas y, para recortar, la foto se gira
-igual y la caja se escala al tamano real del archivo (`pixel_scale`).
+Las cajas estan en las coordenadas del COCO (`width`/`height` de la imagen),
+que P1 tomo de la cabecera del archivo. P1 mostro la foto con la rotacion
+EXIF aplicada y llevo cada caja a ese espacio eje por eje. Por eso los
+limites se revisan contra el tamano del COCO y, para recortar, la foto se
+gira igual que en el navegador y la caja se escala por eje al tamano de la
+foto girada (`pixel_scale`). Verificado a ojo en el release 0.1.3.
 
 Si una anotacion cumple varios motivos se registra el primero de este orden:
 `excluded_category` (la caja no es de una clase fijada, lo demas no importa),
@@ -140,8 +142,8 @@ def validate_annotations(
 ) -> ValidationResult:
     """Separa las anotaciones del COCO en cajas validas y exclusiones con motivo.
 
-    Los limites se revisan en las coordenadas del COCO, que son las de la
-    imagen que se anoto; luego `pixel_scale` lleva la caja al archivo real.
+    Los limites se revisan en las coordenadas del COCO; luego `pixel_scale`
+    lleva la caja, eje por eje, a la foto girada como la mostro P1.
     `image_sizes` viene de `read_image_sizes`: una imagen sin entrada es una
     imagen faltante. No modifica `coco`.
     """
@@ -172,19 +174,6 @@ def validate_annotations(
     return ValidationResult(tuple(valid), tuple(exclusions))
 
 
-def annotation_space(image: Mapping[str, Any], geometry: ImageGeometry) -> tuple[float, float]:
-    """Ancho y alto de la imagen sobre la que se dibujaron las cajas.
-
-    Es el tamano del COCO. Si la foto gira por EXIF y P1 guardo el tamano de
-    la cabecera del archivo (sin girar), se intercambia: P1 mostro y anoto la
-    foto ya girada.
-    """
-    width, height = float(image["width"]), float(image["height"])
-    if geometry.exif_transposed and (width, height) == (geometry.height, geometry.width):
-        return (height, width)
-    return (width, height)
-
-
 def _check(
     ann: Mapping[str, Any],
     images: Mapping[int, Mapping[str, Any]],
@@ -200,14 +189,20 @@ def _check(
     if bbox is None or bbox[2] <= 0 or bbox[3] <= 0:
         return "degenerate_bbox", None
     geometry = image_sizes[image_id]
-    width, height = annotation_space(images[image_id], geometry)
+    width, height = float(images[image_id]["width"]), float(images[image_id]["height"])
     x, y, w, h = bbox
     if x < 0 or y < 0 or x + w > width or y + h > height:
         return "bbox_out_of_bounds", None
-    scale = (geometry.width / width, geometry.height / height)
-    if max(scale) / min(scale) - 1 > MAX_ASPECT_DISTORTION:
+    # P1 registro el tamano de la cabecera, sin girar: la deformacion se mide contra el.
+    stored_w, stored_h = (
+        (geometry.height, geometry.width)
+        if geometry.exif_transposed
+        else (geometry.width, geometry.height)
+    )
+    distortion = (stored_w / width) / (stored_h / height)
+    if max(distortion, 1 / distortion) - 1 > MAX_ASPECT_DISTORTION:
         return "size_mismatch", None
-    return None, scale
+    return None, (geometry.width / width, geometry.height / height)
 
 
 def _as_bbox(value: Any) -> BBox | None:
