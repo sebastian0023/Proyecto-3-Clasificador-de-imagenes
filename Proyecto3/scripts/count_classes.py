@@ -27,7 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import UTC, datetime
+from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -41,6 +41,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     add_release_arguments(parser)
     parser.add_argument("--min-originals", type=int, default=classes.MIN_ORIGINALS)
+    parser.add_argument(
+        "--decided-at",
+        type=date.fromisoformat,
+        default=datetime.now().astimezone().date(),
+        help="fecha de la decision (por defecto hoy en hora local, como la del commit)",
+    )
     parser.add_argument(
         "--write", type=Path, nargs="?", const=ROOT / "Proyecto3" / "config" / "classes.yaml"
     )
@@ -97,7 +103,7 @@ def main() -> None:
             decisions,
             release_id=release.release_id,
             dataset_fingerprint=release.dataset_fingerprint,
-            decided_at=datetime.now(UTC).date(),
+            decided_at=args.decided_at,
             min_originals=args.min_originals,
         )
         args.write.parent.mkdir(parents=True, exist_ok=True)
