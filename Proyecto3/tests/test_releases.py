@@ -41,11 +41,11 @@ def fake_fingerprint(coco_bytes: bytes) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def build_archive(coco: dict[str, Any]) -> bytes:
+def build_archive(coco: dict[str, Any], *, quality_status: str = "pass") -> bytes:
     """`dataset.tar.zst` con los tres miembros que empaqueta P2."""
     members = {
         "annotations.coco.json": json.dumps(coco).encode("utf-8"),
-        "quality.json": b'{"status": "pass"}',
+        "quality.json": json.dumps({"status": quality_status}).encode("utf-8"),
         "splits.json": b'{"assignments": []}',
     }
     raw = io.BytesIO()
@@ -215,6 +215,13 @@ def test_rechaza_un_release_sin_archive_sha256(registry) -> None:
         releases.open_release_archive(
             sin_hash, objects["1.0.0/dataset.tar.zst"], fingerprint=fake_fingerprint
         )
+
+
+def test_rechaza_un_archivo_cuyo_reporte_de_calidad_no_dice_pass(coco_full) -> None:
+    archive = build_archive(coco_full, quality_status="fail")
+    release = Release.model_validate(entry("1.0.0", archive, coco_full))
+    with pytest.raises(ReleaseIntegrityError, match=r"quality\.json"):
+        releases.open_release_archive(release, archive, fingerprint=fake_fingerprint)
 
 
 def test_cambiar_de_release_cambia_los_conteos(registry) -> None:
