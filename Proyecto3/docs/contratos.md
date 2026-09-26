@@ -92,7 +92,15 @@ Un manifiesto se deriva de **un** release aprobado y no se sobrescribe: cada gen
 }
 ```
 
-`reason` ∈ `degenerate_bbox` (ancho o alto ≤ 0), `bbox_out_of_bounds` (la caja sale de la imagen), `missing_image` (el archivo no existe), `excluded_category`.
+`reason` ∈ `degenerate_bbox` (ancho o alto ≤ 0), `bbox_out_of_bounds` (la caja sale de la imagen, en coordenadas del COCO), `missing_image` (el archivo no existe o no se puede abrir), `excluded_category`, `size_mismatch` (la proporción del archivo difiere más de 10 % de la del COCO).
+
+**Coordenadas de las cajas (cambio F2, revisión del PR #3).** Las cajas se dibujaron en P1 sobre la foto que mostraba el navegador: con la rotación EXIF aplicada y con el `width`/`height` del COCO. Por eso:
+
+- los límites se revisan contra el tamaño del COCO; si la foto gira por EXIF (orientación 5–8) y el COCO guarda el tamaño de la cabecera sin girar, ese tamaño se intercambia;
+- para recortar, la foto se abre con la rotación EXIF aplicada y la caja se escala por eje al tamaño real del archivo (`pixel_scale` en `crops.jsonl`);
+- `bbox_xywh` del manifiesto sigue siendo la caja **original del COCO**, sin escalar.
+
+Nuevo motivo `size_mismatch` (aditivo). En el release 0.1.3 ninguna caja lo usa: la mayor deformación es de 5.7 % (imagen 8).
 
 ### Invariantes (las prueba F3)
 
