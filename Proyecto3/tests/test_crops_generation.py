@@ -209,3 +209,50 @@ def test_exclusions_csv_vacio_conserva_el_encabezado(tmp_path: Path) -> None:
     path = tmp_path / "exclusions.csv"
     write_exclusions_csv([], path)
     assert path.read_text(encoding="utf-8") == "annotation_id,image_id,reason\n"
+
+
+# --- Rotacion EXIF y tamano distinto al del COCO (hallazgos de la revision de F2) ----------
+
+
+def _coco_una_caja(bbox: list[float], width: int, height: int) -> dict[str, Any]:
+    return {
+        "images": [{"id": 1, "file_name": "a.png", "width": width, "height": height}],
+        "categories": [{"id": 2, "name": "person"}],
+        "annotations": [{"id": 7, "image_id": 1, "category_id": 2, "bbox": bbox}],
+    }
+
+
+def test_foto_rotada_por_exif_se_recorta_como_se_anoto(tmp_path: Path) -> None:
+    # Lo que se vio en P1: 80x100 de pie, con la persona (roja) en x 10..39, y 50..89.
+    vista = Image.new("RGB", (80, 100), AZUL)
+    vista.paste(ROJO, (10, 50, 40, 90))
+    # En disco va acostada (100x80) con orientacion 6, como la guarda un celular.
+    images = tmp_path / "images"
+    images.mkdir()
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    vista.transpose(Image.Transpose.ROTATE_90).save(images / "a.png", exif=exif)
+    coco = _coco_una_caja([10, 50, 30, 40], width=100, height=80)  # P1 guardo la cabecera
+
+    result = validate_annotations(coco, {2}, read_image_sizes(coco["images"], images))
+    [record] = generate_crops(result.valid, images, tmp_path / "crops", release_id="9.9.9")
+    with Image.open(tmp_path / "crops" / record.crop_path) as crop:
+        assert crop.size == (30, 40)
+        assert set(crop.getdata()) == {ROJO}
+
+
+def test_archivo_mas_grande_que_el_coco_recorta_la_caja_escalada(tmp_path: Path) -> None:
+    images = tmp_path / "images"
+    images.mkdir()
+    grande = Image.new("RGB", (200, 160), AZUL)
+    grande.paste(ROJO, (40, 20, 100, 80))  # la caja (20, 10, 30, 30) del COCO, al doble
+    grande.save(images / "a.png")
+    coco = _coco_una_caja([20, 10, 30, 30], width=100, height=80)
+
+    result = validate_annotations(coco, {2}, read_image_sizes(coco["images"], images))
+    [record] = generate_crops(result.valid, images, tmp_path / "crops", release_id="9.9.9")
+    assert record.bbox_xywh == (20.0, 10.0, 30.0, 30.0)
+    assert record.pixel_scale == (2.0, 2.0)
+    assert record.crop_box_xyxy == (40, 20, 100, 80)
+    with Image.open(tmp_path / "crops" / record.crop_path) as crop:
+        assert set(crop.getdata()) == {ROJO}
