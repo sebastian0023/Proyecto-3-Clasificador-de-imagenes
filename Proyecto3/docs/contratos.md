@@ -92,7 +92,15 @@ Un manifiesto se deriva de **un** release aprobado y no se sobrescribe: cada gen
 }
 ```
 
-`reason` ∈ `degenerate_bbox` (ancho o alto ≤ 0), `bbox_out_of_bounds` (la caja sale de la imagen), `missing_image` (el archivo no existe), `excluded_category`.
+`reason` ∈ `degenerate_bbox` (ancho o alto ≤ 0), `bbox_out_of_bounds` (la caja sale de la imagen, en coordenadas del COCO), `missing_image` (el archivo no existe o no se puede abrir), `excluded_category`, `size_mismatch` (la proporción del archivo difiere más de 10 % de la del COCO).
+
+**Coordenadas de las cajas (cambio F2, revisión del PR #3).** Las cajas se dibujaron en P1 sobre la foto que mostraba el navegador: con la rotación EXIF aplicada y con el `width`/`height` del COCO. Por eso:
+
+- los límites se revisan contra el tamaño del COCO; si la foto gira por EXIF (orientación 5–8) y el COCO guarda el tamaño de la cabecera sin girar, ese tamaño se intercambia;
+- para recortar, la foto se abre con la rotación EXIF aplicada y la caja se escala por eje al tamaño real del archivo (`pixel_scale` en `crops.jsonl`);
+- `bbox_xywh` del manifiesto sigue siendo la caja **original del COCO**, sin escalar.
+
+Nuevo motivo `size_mismatch` (aditivo). En el release 0.1.3 ninguna caja lo usa: la mayor deformación es de 5.7 % (imagen 8).
 
 ### Invariantes (las prueba F3)
 
@@ -128,7 +136,8 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 
 | Método y ruta | Responde | Estado |
 |---|---|---|
-| `GET /api/p3/releases?approved=true` | releases de P2 | contrato (F2) |
+| `GET /api/p3/releases?approved=true` | releases de P2 | **implementado** (F2 T05) |
+| `GET /api/p3/releases/{release_id}` | procedencia de un release aprobado | **implementado** (F2 T05) |
 | `POST /api/p3/manifests` | genera un manifiesto | contrato (F3) |
 | `GET /api/p3/manifests/{manifest_id}` | meta de un manifiesto | contrato (F3) |
 | `POST /api/p3/training/jobs` | encola un trabajo | **implementado** para `kind: "dummy"` (T02); `kind: "train"` en F4 |
@@ -147,8 +156,18 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 Lee `Proyecto2/reports/versions.json`. Con `approved=true` solo devuelve `quality_status: "pass"`.
 
 ```json
-{"releases": [{"release_id": "0.1.3", "dataset_fingerprint": "2200274d…", "quality_status": "pass", "created_at": "2026-09-18T04:17:13Z", "counts": {"images": 2045, "annotations": 2120, "categories": 5}, "storage_uri": "s3://dataset-quality-releases-750702272375/0.1.3/dataset.tar.zst"}]}
+{"releases": [{"release_id": "0.1.3", "dataset_fingerprint": "2200274d…", "quality_status": "pass", "created_at": "2026-09-18T04:17:13Z", "counts": {"images": 2045, "annotations": 2120, "categories": 5}, "storage_uri": "s3://dataset-quality-releases-750702272375/0.1.3/dataset.tar.zst", "published_in": ["dev", "prod"]}]}
 ```
+
+- **Cambio F2 T05 (aditivo):** campo `published_in`, con los remotes donde P2 publicó el release.
+- `storage_uri` se arma con el bucket configurado (`P3_RELEASES_BUCKET`) si el release está en el remote `prod` (`P3_RELEASES_REMOTE`); si no, es `null`: el release solo existe en el MinIO local de quien lo generó y no se recupera desde un clon limpio. No se usa la URI que guarda P2, porque la del 0.1.3 apunta al bucket de la cuenta anterior ([decisiones.md §1](decisiones.md#1-release-dvc-de-origen)). El registro de P2 es la fuente de verdad: el archivo del 0.1.2 existe en el bucket del equipo, pero `versions.json` no registra esa publicación en `prod`, así que su `storage_uri` sale `null` (observación de la revisión del PR #3; el release elegido es el 0.1.3).
+- Sin `approved` (o con `approved=false`) devuelve todos, incluidos los de compuerta fallida.
+
+### `GET /api/p3/releases/{release_id}` (nuevo en F2 T05)
+
+Procedencia de un release para la vista de Training. **200** con los campos de la lista más `quality_report_fingerprint` y `archive_sha256`; **409** si la compuerta no pasó (`{"detail": "El release 0.1.0 no paso la compuerta de calidad (quality_status=fail); …"}`); **404** si no existe. `POST /api/p3/manifests` (F3) usa la misma regla.
+
+Leer el COCO del release (`p3.data.releases.open_release_archive`) exige que el SHA-256 del `dataset.tar.zst` sea el `archive_sha256` registrado y que la huella de P2 del COCO sea el `dataset_fingerprint`; si no, `ReleaseIntegrityError`.
 
 ### `POST /api/p3/manifests`
 

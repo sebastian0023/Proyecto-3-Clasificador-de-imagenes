@@ -32,9 +32,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] dvc pull del release funciona desde un clon limpio con el remoto propio
-- [ ] Versionado del bucket habilitado
-- [ ] gitleaks sin hallazgos tras el cambio
+- [x] dvc pull del release funciona desde un clon limpio con el remoto propio — `dvc pull -r prod data/raw.dvc` sin datos ni caché previos: 2047 archivos del remote `prod` de la cuenta 750702272375, `dvc status` limpio ([almacenamiento.md](../almacenamiento.md#evidencia-t31))
+- [x] Versionado del bucket habilitado — `head-object` devuelve `VersionId` sobre `0.1.3/dataset.tar.zst`; `aws_s3_bucket_versioning` en `Proyecto2/terraform/modules/s3/main.tf:20` ([almacenamiento.md](../almacenamiento.md#evidencia-t31))
+- [x] gitleaks sin hallazgos tras el cambio — gitleaks v8.30.1 sobre todo el historial (159 commits): no leaks found ([almacenamiento.md](../almacenamiento.md#evidencia-t31))
 
 **Entregables:** `docs/almacenamiento.md`; `.dvc/config actualizado (sin credenciales)`
 
@@ -53,9 +53,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Con dos releases distintos los conteos de imágenes/anotaciones difieren
-- [ ] Un release con gate fallido no puede usarse
-- [ ] El release_id y hash quedan disponibles para el manifiesto
+- [x] Con dos releases distintos los conteos de imágenes/anotaciones difieren — `tests/test_releases.py::test_cambiar_de_release_cambia_los_conteos` y `python scripts/demo_cambio_release.py` (9.0.0: 30 imágenes, 31 cajas, 28 válidas → 9.1.0: 20, 21, 18) en entorno de prueba; en S3 solo hay 0.1.2 y 0.1.3, con la misma huella
+- [x] Un release con gate fallido no puede usarse — `ReleaseNotApprovedError` → HTTP 409 (`tests/test_releases.py::test_get_release_con_compuerta_fallida_responde_409`, `::test_release_con_compuerta_fallida_no_se_puede_usar`)
+- [x] El release_id y hash quedan disponibles para el manifiesto — `p3.data.releases.Release` (`release_id`, `dataset_fingerprint`, `quality_report_fingerprint`, `archive_sha256`) y `GET /api/p3/releases/{release_id}`
 
 **Entregables:** Endpoint de releases; Módulo de carga de release; Pruebas unitarias
 
@@ -74,9 +74,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] classes.yaml y clases.md existen y citan el release
-- [ ] Cada clase incluida tiene ≥300 originales distintos según el script
-- [ ] Commit fechado antes de la primera corrida en MLflow
+- [x] classes.yaml y clases.md existen y citan el release — [`config/classes.yaml`](../../config/classes.yaml) y [`docs/clases.md`](../clases.md), release 0.1.3, huella `2200274d…`
+- [x] Cada clase incluida tiene ≥300 originales distintos según el script — `scripts/count_classes.py --release 0.1.3`: cat 312, dog 348, person 441; protegido por `tests/test_classes_config.py`
+- [ ] Commit fechado antes de la primera corrida en MLflow — commit `219fed3` del 2026-09-25 21:45 (-06:00); falta confirmar con Edith que MLflow no tiene corridas anteriores
 
 **Entregables:** `config/p3/classes.yaml`; `docs/clases.md`; `scripts/p3/count_classes.py`
 
@@ -95,9 +95,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Una caja degenerada inyectada no aparece en el manifiesto
-- [ ] Cada recorte conserva los 4 identificadores de origen
-- [ ] exclusions.csv con motivos
+- [ ] Una caja degenerada inyectada no aparece en el manifiesto — ya no produce recorte (`tests/test_crops_generation.py::test_fixture_completo_da_28_recortes_trazables`, anotación 30 del fixture); la casilla se cierra con el manifiesto de F3
+- [x] Cada recorte conserva los 4 identificadores de origen — `CropRecord` (`annotation_id`, `source_image_id`, `source_file_name`, categoría + bbox original); `scripts/verificar_recortes.py` (independiente del generador) lo comprobó en los 1459 recortes del 0.1.3, más revisión visual de 23 ([verificacion_recortes.md](../verificacion_recortes.md))
+- [x] exclusions.csv con motivos — [`reports/crops/0.1.3/exclusions.csv`](../../reports/crops/0.1.3/exclusions.csv): 661 anotaciones, todas `excluded_category` (car y bicycle); ninguna caja de las clases incluidas es inválida
 
 **Entregables:** `src/p3/data/crops.py`; `exclusions.csv`; Pruebas; `docs/verificacion_recortes.md`
 
@@ -112,3 +112,11 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 25 sep 2026 | Diego | T07a | Validación de cajas: `src/p3/data/crops.py` (`validate_annotations`, `read_image_sizes`) y `tests/test_crops_validation.py` (red `25e5490` → green `5374469`). Motivos del contrato; límites con el tamaño real del archivo. 11 mutaciones manuales (degenerada, bordes, faltante, categoría, etiqueta, ids, bbox) ponen la suite en rojo. | T07b: recorte con Pillow, `exclusions.csv`, `verificacion_recortes.md`; la casilla "caja degenerada no aparece en el manifiesto" se cierra con F3 |
+| 25 sep 2026 | Diego | T31 | `docs/almacenamiento.md`: buckets de la cuenta 750702272375 (DVC, releases y `models/`), MLflow en volumen, permisos por Terraform y variables solo por nombre. | Evidencia con credenciales de Diego: `dvc pull -r prod` desde clon limpio, `get-bucket-versioning`, gitleaks |
+| 25 sep 2026 | Diego | T05 | `src/p3/data/releases.py`, `api.py`, `settings.py` (red `c2cb87f` → green `675616b`); router montado en la app de P2; `scripts/demo_cambio_release.py`; contrato actualizado (`published_in`, `GET /releases/{id}`). 7 mutaciones (filtro, 409, SHA-256, huella, bucket) ponen la suite en rojo. | Leer el `0.1.3/dataset.tar.zst` real de S3 y comprobar la huella de P2 (`2200274d…`) con credenciales de Diego (se hace en T06) |
+| 25 sep 2026 | Diego | T31 | Evidencia con el perfil de Diego: `dvc pull -r prod` sin caché previa (2047 archivos, `dvc status` limpio) y `VersionId` del release 0.1.3. `get-bucket-versioning` no está en la política de mínimo privilegio. | gitleaks |
+| 25 sep 2026 | Diego | T06 | `src/p3/data/classes.py` (red `f5591c8` → green `578c6c0`), `scripts/count_classes.py` sobre el release real con SHA-256, huella de P2 y huella de DVC verificados; `config/classes.yaml` + `docs/clases.md` (red `085368e` → green `219fed3`): cat 312, dog 348, person 441; car y bicycle excluidas. 5 mutaciones ponen la suite en rojo. | Confirmar con Edith que no hay corridas en MLflow anteriores a `219fed3` |
+| 25 sep 2026 | Diego | T31 | gitleaks v8.30.1 sobre el historial completo (159 commits): sin hallazgos. | — |
+| 25 sep 2026 | Diego | T07b | `generate_crops`, `crop_box`, `write_exclusions_csv` (red `a4be2ef` → green `57a8b58`; prueba reforzada `2be6416` tras una mutación sobreviviente). Release 0.1.3: 1459 recortes (cat 329, dog 379, person 751), deterministas; `reports/crops/0.1.3/`; 1459/1459 verificados contra COCO y píxeles, 10/10 en revisión visual (`docs/verificacion_recortes.md`). | Casilla del manifiesto en F3 |
+| 26 sep 2026 | Diego | T05/T06/T07 | Revisión de Edith en el PR #3. Rotación EXIF y tamaño distinto al COCO: red `388c1c7` → green `1142a35`; la revisión visual mostró que el intercambio de ejes era incorrecto → red `455927a` → green `a3d2e59` (escalado por eje desde el espacio del COCO). Verificación ya no circular (`9217fc1`, ajustada al modelo por eje en `fec9ced`): detecta 11 recortes malos de la versión anterior. `quality.json` del archivo debe decir `pass` (red `f5fcf28` → green `7182ec7`). `decided_at` en hora local. Regenerados: 1459 recortes, clases sin cambio (bicycle 239 → 240), 23/23 en revisión visual. | Respuesta a Edith en el PR |
