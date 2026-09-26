@@ -95,7 +95,7 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Una caja degenerada inyectada no aparece en el manifiesto — ya no produce recorte (`tests/test_crops_generation.py::test_fixture_completo_da_28_recortes_trazables`, anotación 30 del fixture); la casilla se cierra con el manifiesto de F3
+- [x] Una caja degenerada inyectada no aparece en el manifiesto — `tests/test_split.py::test_fixture_la_caja_degenerada_y_la_fuera_de_imagen_no_estan_en_el_manifiesto` (anotaciones 27, 30 y 31 del fixture fuera del manifiesto; cerrada en F3)
 - [x] Cada recorte conserva los 4 identificadores de origen — `CropRecord` (`annotation_id`, `source_image_id`, `source_file_name`, categoría + bbox original); `scripts/verificar_recortes.py` (independiente del generador) lo comprobó en los 1459 recortes del 0.1.3, más revisión visual de 23 ([verificacion_recortes.md](../verificacion_recortes.md))
 - [x] exclusions.csv con motivos — [`reports/crops/0.1.3/exclusions.csv`](../../reports/crops/0.1.3/exclusions.csv): 661 anotaciones, todas `excluded_category` (car y bicycle); ninguna caja de las clases incluidas es inválida
 

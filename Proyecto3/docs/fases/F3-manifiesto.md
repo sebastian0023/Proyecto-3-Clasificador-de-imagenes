@@ -31,10 +31,10 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Dos generaciones con la misma semilla producen archivos idénticos (mismo hash)
-- [ ] Intersecciones vacías demostradas por prueba
-- [ ] Tabla por clase y partición en docs/manifiesto.md
-- [ ] Manifiesto versionado en DVC y etiquetado como congelado
+- [x] Dos generaciones con la misma semilla producen archivos idénticos (mismo hash) — `generate_manifest.py --check`: `45600f29…`, escrito idéntico ([manifiesto.md](../manifiesto.md#reproducibilidad)); `tests/test_split.py::test_misma_semilla_mismo_manifiesto_y_mismo_hash`
+- [x] Intersecciones vacías demostradas por prueba — `tests/test_split.py::test_ningun_identificador_aparece_en_dos_particiones` y 0 en las 9 intersecciones del manifiesto real ([manifiesto.md](../manifiesto.md#evidencia-de-aislamiento-m3))
+- [x] Tabla por clase y partición en docs/manifiesto.md — recortes y originales por clase y partición ([manifiesto.md](../manifiesto.md#conteos-por-clase-y-partición))
+- [ ] Manifiesto versionado en DVC y etiquetado como congelado — puntero `data/manifests/m-0.1.3-s42-1.dvc` en Git (`65f2d46`); falta `dvc push` al remote y la etiqueta de congelado
 
 **Entregables:** `src/p3/data/split.py`; `manifiesto .dvc`; `docs/manifiesto.md`
 
@@ -43,9 +43,10 @@
 - [ ] Todas las casillas de aceptación marcadas con evidencia real
 - [ ] PRs fusionados con review de Edith
 - [ ] CI en verde en `main`
-- [ ] Commits red → green visibles en el historial
+- [x] Commits red → green visibles en el historial — red `3a9cb14` → green `089ac4b`, prueba reforzada `c248087`
 
 ## Registro de avance
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 26 sep 2026 | Diego | T08 | `src/p3/data/split.py` (red `3a9cb14` → green `089ac4b`; prueba corregida `29d4042`; reforzada `c248087` tras 3 mutaciones sobrevivientes) y `scripts/generate_manifest.py` (`935159c`). Manifiesto real `m-0.1.3-s42-1`: 1459 recortes, 70.05/20.01/9.94 %, 0 en las 9 intersecciones, reproducible byte a byte; 0 grupos de casi duplicados (igual que el reporte de P2). DVC en `Proyecto3/` (`65f2d46`). `docs/manifiesto.md`. | `dvc push`, etiqueta de congelado, PR a Edith; `POST /api/p3/manifests` para Training |
