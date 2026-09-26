@@ -9,9 +9,9 @@ PR #3). Ahora hay tres comprobaciones independientes del generador:
    misma imagen, categoria, nombre y bbox.
 2. Geometria por otro camino, sobre TODOS: se toma la foto como la muestra un
    navegador (rotacion EXIF aplicada), se REDIMENSIONA COMPLETA al tamano del
-   COCO y se corta la bbox tal cual; ese resultado se compara con el recorte
-   (llevado al mismo tamano). Si el generador ignorara la rotacion o el
-   escalado, la diferencia seria grande.
+   COCO (estirandola si gira, como hizo P1) y se corta la bbox tal cual;
+   ese resultado se compara con el recorte (llevado al mismo tamano). Si el
+   generador ignorara la rotacion o el escalado, la diferencia seria grande.
 3. Revision visual: TODAS las imagenes con rotacion EXIF o con tamano distinto
    al del COCO (los casos de riesgo), mas una muestra aleatoria con semilla
    fija. Cada miniatura muestra el original con la caja del COCO dibujada
@@ -132,11 +132,9 @@ def _as_browser_shows(path: Path, image: dict) -> tuple[Image.Image, str | None]
 
 
 def _coco_space(shown: Image.Image, image: dict) -> tuple[int, int]:
-    """Tamano sobre el que se dibujo la caja: el del COCO, girado si P1 guardo la cabecera."""
-    width, height = image["width"], image["height"]
-    if (width, height) != shown.size and (height, width) == shown.size:
-        return (height, width)
-    return (width, height)
+    """Tamano del COCO, el espacio de las cajas. P1 lo tomo de la cabecera sin girar y
+    llevo cada caja ahi eje por eje, asi que se usa tal cual aunque la foto gire."""
+    return (image["width"], image["height"])
 
 
 def _mean_diff(resized: Image.Image, bbox: list[float], crop: Image.Image) -> float:
