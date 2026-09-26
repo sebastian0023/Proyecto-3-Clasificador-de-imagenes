@@ -247,18 +247,22 @@ def test_proporcion_muy_distinta_se_excluye() -> None:
     assert _motivo(_coco([10, 10, 20, 20]), {1: ImageGeometry(100, 100)}) == "size_mismatch"
 
 
-def test_imagen_rotada_por_exif_usa_el_coco_girado() -> None:
-    # P1 guardo 4000x3000 (cabecera del archivo) pero mostro y anoto la foto de pie, 3000x4000.
-    coco = _coco([100, 3000, 500, 900], width=4000, height=3000)
+def test_imagen_rotada_por_exif_escala_por_eje_desde_la_cabecera() -> None:
+    # P1 mostro la foto de pie (3000x4000) pero guardo el tamano de la cabecera (4000x3000)
+    # y llevo la caja a ese espacio eje por eje. Verificado a ojo en las anotaciones 39, 43,
+    # 47, 57, 59 y 61 del release 0.1.3.
+    coco = _coco([100, 100, 400, 300], width=4000, height=3000)
     geometry = ImageGeometry(3000, 4000, exif_transposed=True)
     [crop] = validate_annotations(coco, {2}, {1: geometry}).valid
-    assert crop.pixel_scale == (1.0, 1.0)
+    assert crop.pixel_scale == pytest.approx((3000 / 4000, 4000 / 3000))
 
 
-def test_imagen_rotada_por_exif_revisa_limites_de_pie() -> None:
-    coco = _coco([2900, 100, 500, 500], width=4000, height=3000)
+def test_imagen_rotada_por_exif_revisa_limites_en_el_espacio_del_coco() -> None:
     geometry = ImageGeometry(3000, 4000, exif_transposed=True)
-    assert _motivo(coco, {1: geometry}) == "bbox_out_of_bounds"
+    dentro = _coco([3500, 100, 400, 300], width=4000, height=3000)
+    assert validate_annotations(dentro, {2}, {1: geometry}).exclusions == ()
+    fuera = _coco([100, 2800, 100, 300], width=4000, height=3000)
+    assert _motivo(fuera, {1: geometry}) == "bbox_out_of_bounds"
 
 
 # --- Imagenes faltantes --------------------------------------------------------------------

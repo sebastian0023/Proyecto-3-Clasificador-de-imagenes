@@ -232,7 +232,9 @@ def test_foto_rotada_por_exif_se_recorta_como_se_anoto(tmp_path: Path) -> None:
     exif = Image.Exif()
     exif[0x0112] = 6
     vista.transpose(Image.Transpose.ROTATE_90).save(images / "a.png", exif=exif)
-    coco = _coco_una_caja([10, 50, 30, 40], width=100, height=80)  # P1 guardo la cabecera
+    # P1 guardo la cabecera (100x80) y llevo la caja a ese espacio eje por eje:
+    # x por 100/80 y y por 80/100.
+    coco = _coco_una_caja([12.5, 40, 37.5, 32], width=100, height=80)
 
     result = validate_annotations(coco, {2}, read_image_sizes(coco["images"], images))
     [record] = generate_crops(result.valid, images, tmp_path / "crops", release_id="9.9.9")
