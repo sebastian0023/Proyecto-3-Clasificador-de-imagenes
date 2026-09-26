@@ -32,8 +32,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] dvc pull del release funciona desde un clon limpio con el remoto propio
-- [ ] Versionado del bucket habilitado
+- [x] dvc pull del release funciona desde un clon limpio con el remoto propio — `dvc pull -r prod data/raw.dvc` sin datos ni caché previos: 2047 archivos del remote `prod` de la cuenta 750702272375, `dvc status` limpio ([almacenamiento.md](../almacenamiento.md#evidencia-t31))
+- [x] Versionado del bucket habilitado — `head-object` devuelve `VersionId` sobre `0.1.3/dataset.tar.zst`; `aws_s3_bucket_versioning` en `Proyecto2/terraform/modules/s3/main.tf:20` ([almacenamiento.md](../almacenamiento.md#evidencia-t31))
 - [ ] gitleaks sin hallazgos tras el cambio
 
 **Entregables:** `docs/almacenamiento.md`; `.dvc/config actualizado (sin credenciales)`
@@ -74,9 +74,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] classes.yaml y clases.md existen y citan el release
-- [ ] Cada clase incluida tiene ≥300 originales distintos según el script
-- [ ] Commit fechado antes de la primera corrida en MLflow
+- [x] classes.yaml y clases.md existen y citan el release — [`config/classes.yaml`](../../config/classes.yaml) y [`docs/clases.md`](../clases.md), release 0.1.3, huella `2200274d…`
+- [x] Cada clase incluida tiene ≥300 originales distintos según el script — `scripts/count_classes.py --release 0.1.3`: cat 312, dog 348, person 441; protegido por `tests/test_classes_config.py`
+- [ ] Commit fechado antes de la primera corrida en MLflow — commit `219fed3` del 2026-09-25 21:45 (-06:00); falta confirmar con Edith que MLflow no tiene corridas anteriores
 
 **Entregables:** `config/p3/classes.yaml`; `docs/clases.md`; `scripts/p3/count_classes.py`
 
@@ -115,3 +115,5 @@
 | 25 sep 2026 | Diego | T07a | Validación de cajas: `src/p3/data/crops.py` (`validate_annotations`, `read_image_sizes`) y `tests/test_crops_validation.py` (red `25e5490` → green `5374469`). Motivos del contrato; límites con el tamaño real del archivo. 11 mutaciones manuales (degenerada, bordes, faltante, categoría, etiqueta, ids, bbox) ponen la suite en rojo. | T07b: recorte con Pillow, `exclusions.csv`, `verificacion_recortes.md`; la casilla "caja degenerada no aparece en el manifiesto" se cierra con F3 |
 | 25 sep 2026 | Diego | T31 | `docs/almacenamiento.md`: buckets de la cuenta 750702272375 (DVC, releases y `models/`), MLflow en volumen, permisos por Terraform y variables solo por nombre. | Evidencia con credenciales de Diego: `dvc pull -r prod` desde clon limpio, `get-bucket-versioning`, gitleaks |
 | 25 sep 2026 | Diego | T05 | `src/p3/data/releases.py`, `api.py`, `settings.py` (red `c2cb87f` → green `675616b`); router montado en la app de P2; `scripts/demo_cambio_release.py`; contrato actualizado (`published_in`, `GET /releases/{id}`). 7 mutaciones (filtro, 409, SHA-256, huella, bucket) ponen la suite en rojo. | Leer el `0.1.3/dataset.tar.zst` real de S3 y comprobar la huella de P2 (`2200274d…`) con credenciales de Diego (se hace en T06) |
+| 25 sep 2026 | Diego | T31 | Evidencia con el perfil de Diego: `dvc pull -r prod` sin caché previa (2047 archivos, `dvc status` limpio) y `VersionId` del release 0.1.3. `get-bucket-versioning` no está en la política de mínimo privilegio. | gitleaks |
+| 25 sep 2026 | Diego | T06 | `src/p3/data/classes.py` (red `f5591c8` → green `578c6c0`), `scripts/count_classes.py` sobre el release real con SHA-256, huella de P2 y huella de DVC verificados; `config/classes.yaml` + `docs/clases.md` (red `085368e` → green `219fed3`): cat 312, dog 348, person 441; car y bicycle excluidas. 5 mutaciones ponen la suite en rojo. | Confirmar con Edith que no hay corridas en MLflow anteriores a `219fed3` |

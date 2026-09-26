@@ -5,7 +5,7 @@ Las 8 decisiones que la guía del curso pide cerrar antes del primer entrenamien
 | # | Decisión | Responsable | Fecha | Estado |
 |---|---|---|---|---|
 | 1 | Release de origen | Diego | 24 sep 2026 | Cerrada |
-| 2 | Clases incluidas y exclusiones | Diego | 24 sep 2026 | Pendiente de dato (conteos de F2, vie 25) |
+| 2 | Clases incluidas y exclusiones | Diego | 25 sep 2026 | Cerrada ([clases.md](clases.md), `config/classes.yaml`) |
 | 3 | Framework y arquitectura | Edith | 24 sep 2026 | Cerrada |
 | 4 | Métrica de selección y desempate | Edith | 24 sep 2026 | Cerrada |
 | 5 | Servicio de MLflow | Edith | 24 sep 2026 | Cerrada |
@@ -54,7 +54,7 @@ Las 8 decisiones que la guía del curso pide cerrar antes del primer entrenamien
 
 **Riesgo registrado:** `person` aporta cerca del 51% de las cajas. El baseline de clase mayoritaria ronda 51%, así que se reportan F1 macro y recall por clase junto con el accuracy.
 
-**Pendiente:** F2 confirma los conteos después de descartar cajas degeneradas o imágenes faltantes. Si alguna clase baja de 300 originales, se decide aquí antes de la primera corrida.
+**Confirmado (F2 T06, 25 sep):** después de validar todas las cajas del release, los originales con caja válida son cat 312, dog 348 y person 441 (car 247, bicycle 239). Las tres clases se mantienen. Detalle y procedencia en [clases.md](clases.md).
 
 ## 3. Framework y arquitectura inicial
 
