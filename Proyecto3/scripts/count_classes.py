@@ -26,52 +26,34 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-import boto3
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from p3.data import classes, crops, releases
+from release_local import ROOT, add_release_arguments, load_verified_release
 
-ROOT = Path(__file__).resolve().parents[2]
-P2 = ROOT / "Proyecto2"
-DEFAULT_BUCKET = "dataset-quality-releases-750702272375"
+from p3.data import classes, crops
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--release", required=True)
-    parser.add_argument("--profile", required=True, help="perfil de ~/.aws (solo lectura basta)")
-    parser.add_argument("--bucket", default=DEFAULT_BUCKET)
-    parser.add_argument("--region", default="us-east-1")
-    parser.add_argument("--raw-dir", type=Path, default=P2 / "data" / "raw")
-    parser.add_argument("--registry", type=Path, default=P2 / "reports" / "versions.json")
+    add_release_arguments(parser)
     parser.add_argument("--min-originals", type=int, default=classes.MIN_ORIGINALS)
     parser.add_argument(
         "--write", type=Path, nargs="?", const=ROOT / "Proyecto3" / "config" / "classes.yaml"
     )
     args = parser.parse_args()
 
-    release = releases.get_approved_release(releases.load_releases(args.registry), args.release)
-    key = releases.archive_key(release.release_id)
-    s3 = boto3.Session(profile_name=args.profile).client("s3", region_name=args.region)
-    obj = s3.get_object(Bucket=args.bucket, Key=key)
-    archive = obj["Body"].read()
-    content = releases.open_release_archive(
-        release, archive, fingerprint=releases.p2_dataset_fingerprint
-    )
-
-    local_coco = (args.raw_dir / "annotations.coco.json").read_bytes()
-    local_fingerprint = releases.p2_dataset_fingerprint(local_coco)
-    if local_fingerprint != release.dataset_fingerprint:
-        raise SystemExit(
-            f"El COCO de {args.raw_dir} (huella {local_fingerprint}) no es el del release "
-            f"{release.release_id} ({release.dataset_fingerprint}): corre `dvc pull -r prod`."
-        )
+    verified = load_verified_release(args)
+    content = verified.content
+    release = content.release
+    sizes_dir = verified.images_dir
 
     coco = content.coco
     names = {c["id"]: c["name"] for c in coco["categories"]}
-    sizes = crops.read_image_sizes(coco["images"], args.raw_dir / "images")
+    sizes = crops.read_image_sizes(coco["images"], sizes_dir)
     result = crops.validate_annotations(coco, set(names), sizes)
     originals = classes.originals_per_category(result.valid)
     decisions = classes.select_classes(originals, names, min_originals=args.min_originals)
@@ -85,8 +67,8 @@ def main() -> None:
         "quality_status": release.quality_status,
         "quality_report_fingerprint": release.quality_report_fingerprint,
         "archive": {
-            "uri": releases.archive_uri(args.bucket, release.release_id),
-            "version_id": obj.get("VersionId"),
+            "uri": verified.archive_uri,
+            "version_id": verified.archive_version_id,
             "sha256": release.archive_sha256,
         },
         "local_coco_fingerprint_matches": True,
