@@ -20,5 +20,8 @@ mlartifacts/
 *.pth
 *.ckpt
 
-# Datos derivados (recortes, manifiestos locales): viven en DVC.
-/data/
+# Datos derivados: fuera de Git. Los recortes se regeneran desde el release
+# (scripts/generate_crops.py); los manifiestos viven en DVC y solo su puntero
+# `data/manifests/*.dvc` (y el .gitignore que escribe `dvc add`) entra a Git.
+/data/*
+!/data/manifests/

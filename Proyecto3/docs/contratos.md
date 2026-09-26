@@ -68,7 +68,8 @@ Un manifiesto se deriva de **un** release aprobado y no se sobrescribe: cada gen
     "quality_status": "pass",
     "quality_report_fingerprint": "4d6e64aa13c6f66b15801811c4bb84ebc265b07f538ae27982f79628b170631a",
     "archive_sha256": "787742988af1df41d9a58573b81b5c9b4fe7ab24a647b25f2e71d3eb323838b5",
-    "p2_splits_fingerprint": "9a87e0de3fb3069f06686065f149d64787593c04d90265a3e0f667a170d66279"
+    "p2_splits_fingerprint": "9a87e0de3fb3069f06686065f149d64787593c04d90265a3e0f667a170d66279",
+    "dvc_pointer": {"path": "Proyecto2/data/raw.dvc", "md5": "ca56420c9992f8b75fdb10f2ece81704.dir", "nfiles": 2046, "size": 634490876}
   },
   "seed": 42,
   "ratios": {"train": 0.7, "val": 0.2, "test": 0.1},
