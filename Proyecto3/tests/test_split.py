@@ -122,9 +122,12 @@ def test_los_casi_duplicados_viajan_juntos() -> None:
 
 def test_una_foto_con_dos_clases_no_se_parte() -> None:
     rows = rows_of(*sintetico())
-    de_la_25 = {row["split"] for row in rows if row["source_image_id"] == 25}
-    assert len({row["category_name"] for row in rows if row["source_image_id"] == 25}) == 2
-    assert len(de_la_25) == 1
+    de_la_225 = {row["split"] for row in rows if row["source_image_id"] == 225}
+    assert {row["category_name"] for row in rows if row["source_image_id"] == 225} == {
+        "dog",
+        "person",
+    }
+    assert len(de_la_225) == 1
 
 
 # --- Proporciones y presencia de clases -----------------------------------------------------
