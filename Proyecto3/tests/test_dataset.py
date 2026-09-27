@@ -72,9 +72,9 @@ def test_val_test_e_inferencia_comparten_el_mismo_preprocesamiento(crops_dir) ->
 def test_el_transform_de_evaluacion_es_determinista(crops_dir) -> None:
     val = _datasets(crops_dir)["val"]
     torch.manual_seed(0)
-    first, _ = val[0]
+    first, _, _ = val[0]
     torch.manual_seed(123)
-    second, _ = val[0]
+    second, _, _ = val[0]
     assert torch.equal(first, second)
     assert first.shape == (3, 32, 32)
 
