@@ -249,6 +249,17 @@ Aplica la regla de [decisiones.md §4](decisiones.md#4-métrica-de-selección-de
 {"run_id": "…", "manifest_id": "…", "test_size": 0, "accuracy": 0.0, "f1_macro": 0.0, "per_class": [{"class": "cat", "precision": 0.0, "recall": 0.0, "support": 0}], "confusion_matrix": {"labels": ["cat", "dog", "person"], "rows_true_cols_pred": [[0, 0, 0], [0, 0, 0], [0, 0, 0]]}, "majority_baseline": 0.0, "predictions_uri": "…/predictions.jsonl"}
 ```
 
+### `predictions_test.csv` (F6) — cambio aditivo de F4 T24
+
+Una fila por recorte de test, en el orden del manifiesto, con estas columnas (`scripts/verify_inference.py` las usa para comparar el portal con la evaluación):
+
+```text
+crop_id,clase_real,clase_predicha,prob_cat,prob_dog,prob_person
+0.1.3:a1234,dog,dog,0.0213,0.9701,0.0086
+```
+
+Las probabilidades salen del mismo `build_eval_transform` y del checkpoint de `selection.json`, y suman 1.
+
 ### `GET /api/p3/models` y `POST /api/p3/models/{version}/activate`
 
 ```json
