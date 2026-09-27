@@ -177,3 +177,57 @@ def test_una_caja_fuera_de_la_imagen_se_rechaza(svc) -> None:
     inference, _ = svc
     with pytest.raises(service.InvalidBoxError):
         inference.predict(_png((60, 40)), "image/png", bbox_xywh=(50, 0, 20, 10))
+
+
+def test_una_foto_rotada_por_exif_llega_al_modelo_ya_girada(svc, monkeypatch) -> None:
+    """Fotos de celular (F2): guardada acostada con orientacion 6, se ve de pie."""
+    tamanos: list[tuple[int, int]] = []
+    original = service.build_eval_transform
+
+    def espia(image_size: int):
+        transform = original(image_size)
+
+        def registrar(image):
+            tamanos.append(image.size)
+            return transform(image)
+
+        return registrar
+
+    monkeypatch.setattr(service, "build_eval_transform", espia)
+    acostada = Image.new("RGB", (60, 40), (10, 200, 10))
+    exif = acostada.getexif()
+    exif[0x0112] = 6
+    buffer = io.BytesIO()
+    acostada.save(buffer, format="JPEG", exif=exif.tobytes())
+
+    inference, _ = svc
+    inference.predict(buffer.getvalue(), "image/jpeg")
+
+    assert tamanos == [(40, 60)]
+
+
+def test_un_png_declarado_como_jpeg_se_rechaza_con_415(svc) -> None:
+    inference, _ = svc
+    with pytest.raises(service.UnsupportedMediaError) as error:
+        inference.predict(_png(), "image/jpeg")
+    assert error.value.status_code == 415
+
+
+def test_el_cache_es_por_version_y_sha256_no_solo_por_version(svc, tmp_path: Path) -> None:
+    inference, store = svc
+    antes = inference.predict(_png(), "image/png")
+
+    # Misma version 1.0.0, pero otro objeto y otro sha256 en el registro.
+    nuevo = _checkpoint_bytes(tmp_path, seed=99)
+    store.put(f"{PREFIX}/1.0.0/model.pt", nuevo)
+    body = json.loads(store.objects[(BUCKET, f"{PREFIX}/registry.json")])
+    for entry in body["versions"]:
+        if entry["version"] == "1.0.0":
+            entry["sha256"] = hashlib.sha256(nuevo).hexdigest()
+    store.put(f"{PREFIX}/registry.json", json.dumps(body).encode())
+
+    despues = inference.predict(_png(), "image/png")
+
+    assert despues.model_version == antes.model_version == "1.0.0"
+    assert despues.model_sha256 == hashlib.sha256(nuevo).hexdigest() != antes.model_sha256
+    assert despues.probabilities != antes.probabilities
