@@ -126,7 +126,13 @@ def seed_worker(worker_id: int) -> None:
 
 
 def build_loader(
-    dataset: CropDataset, *, batch_size: int, shuffle: bool, seed: int, num_workers: int = 0
+    dataset: CropDataset,
+    *,
+    batch_size: int,
+    shuffle: bool,
+    seed: int,
+    num_workers: int = 0,
+    drop_last: bool = False,
 ) -> DataLoader[tuple[torch.Tensor, int, str]]:
     """DataLoader con orden reproducible: `generator` y `worker_init_fn` sembrados."""
     generator = torch.Generator()
@@ -139,4 +145,5 @@ def build_loader(
         generator=generator,
         worker_init_fn=seed_worker,
         persistent_workers=num_workers > 0,
+        drop_last=drop_last,
     )
