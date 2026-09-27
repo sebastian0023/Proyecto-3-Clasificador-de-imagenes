@@ -99,9 +99,21 @@ def require_docker() -> None:
         fail("`docker compose` no responde. Revisa que Docker Desktop este corriendo.")
 
 
+COMPOSE_FILES: list[str] = []
+
+
+def use_gpu() -> bool:
+    """GPU NVIDIA para el worker de P3: `P3_GPU=1/0` manda; si no, se detecta `nvidia-smi`."""
+    forced = os.environ.get("P3_GPU")
+    if forced is not None:
+        return forced == "1"
+    return shutil.which("nvidia-smi") is not None
+
+
 def compose(*args: str, check: bool = True) -> int:
     """Ejecuta `docker compose ...` mostrando la salida en vivo."""
-    command = ["docker", "compose", *args]
+    files = [flag for name in COMPOSE_FILES for flag in ("-f", name)]
+    command = ["docker", "compose", *files, *args]
     print(f"\033[90m$ {' '.join(command)}\033[0m", flush=True)
     result = subprocess.run(command, cwd=REPO_ROOT, check=False)
     if check and result.returncode != 0:
@@ -172,6 +184,12 @@ def main() -> None:
     if args.fresh:
         log("Borrando contenedores y volumenes previos (--fresh)...")
         compose("down", "-v", check=False)
+
+    if use_gpu():
+        COMPOSE_FILES.extend(["docker-compose.yml", "docker-compose.gpu.yml"])
+        log("GPU NVIDIA detectada: el worker de P3 entrenara con ella.")
+    else:
+        log("Sin GPU NVIDIA: el worker de P3 entrenara en CPU.")
 
     log("Levantando MariaDB + MinIO + app + MLflow + worker P3 y esperando healthchecks...")
     up_args = ["up", "-d", "--wait"]
