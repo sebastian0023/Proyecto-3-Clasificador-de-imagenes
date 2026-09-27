@@ -12,6 +12,7 @@ trabajo queda `failed` con el mensaje y el worker sigue con el siguiente.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import socket
 import time
@@ -80,7 +81,9 @@ def make_train_handler(
         training = TrainingConfig.model_validate(config["training"])
         rows = dataset.load_manifest(manifest_dir / "manifest.jsonl")
         release = meta["release"]
-        crop_index = dataset.load_crop_index(data_dir / "crops" / release["release_id"])
+        crops_dir = data_dir / "crops" / release["release_id"]
+        crop_index = dataset.load_crop_index(crops_dir)
+        crops_sha256 = hashlib.sha256((crops_dir / "crops.jsonl").read_bytes()).hexdigest()
         datasets = dataset.build_datasets(rows, crop_index, image_size=training.image_size)
         classes = sorted(meta["classes"], key=lambda c: c["class_index"])
         context = tracking.RunContext(
@@ -89,6 +92,7 @@ def make_train_handler(
             release_id=release["release_id"],
             release_hash=release["dataset_fingerprint"],
             dvc_md5=release["dvc_pointer"]["md5"],
+            crops_sha256=crops_sha256,
             class_names=tuple(c["category_name"] for c in classes),
             code_commit=code_commit,
             code_dirty=code_dirty,

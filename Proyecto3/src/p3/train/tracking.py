@@ -4,6 +4,7 @@
 
 - parametros: la `TrainingConfig` efectiva (incluida la semilla);
 - tags: manifiesto y su hash, release y su huella, md5 DVC de las imagenes,
+  SHA-256 del `crops.jsonl` con que se entreno,
   clases, commit del codigo, id del trabajo, pesos iniciales y entorno
   (`env.*`: versiones de Python, PyTorch, CUDA, dispositivo);
 - metricas por epoca (`step` = epoca): loss y accuracy de train y val y su
@@ -44,6 +45,8 @@ class RunContext:
     release_id: str
     release_hash: str
     dvc_md5: str
+    # SHA-256 de `crops.jsonl`: prueba con que recortes se entreno (no estan en Git ni DVC).
+    crops_sha256: str
     class_names: tuple[str, ...]
     code_commit: str
     code_dirty: bool
@@ -115,6 +118,7 @@ def run_training(
                 "release_id": context.release_id,
                 "release_hash": context.release_hash,
                 "dvc_md5": context.dvc_md5,
+                "crops_jsonl_sha256": context.crops_sha256,
                 "classes": json.dumps(list(context.class_names)),
                 "code_commit": context.code_commit,
                 "code_dirty": "true" if context.code_dirty else "false",
