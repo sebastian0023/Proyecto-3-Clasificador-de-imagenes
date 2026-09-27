@@ -15,6 +15,7 @@ import logging
 import socket
 import time
 from collections.abc import Callable, Mapping
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -39,6 +40,57 @@ def run_dummy(config: dict[str, Any], report: Report) -> None:
 
 
 HANDLERS: Mapping[str, Handler] = {"dummy": run_dummy}
+
+
+def make_train_handler(
+    *, data_dir: Path, device: str, pretrained: bool = True, num_workers: int = 0
+) -> Handler:
+    """Handler de `kind: "train"`: entrena sobre un manifiesto y reporta cada epoca.
+
+    `data_dir` contiene `manifests/<manifest_id>/manifest.jsonl` y
+    `crops/<release_id>/crops.jsonl` (salidas de F3 y de `generate_crops.py`).
+    PyTorch se importa aqui para que la app de P2, que importa este paquete, no
+    lo necesite.
+    """
+
+    def run_train(config: dict[str, Any], report: Report) -> None:
+        from p3.data import dataset
+        from p3.train import trainer
+        from p3.train.config import TrainingConfig
+
+        training = TrainingConfig.model_validate(config["training"])
+        rows = dataset.load_manifest(
+            data_dir / "manifests" / config["manifest_id"] / "manifest.jsonl"
+        )
+        releases = {row["release_id"] for row in rows}
+        if len(releases) != 1:
+            raise ValueError(f"El manifiesto mezcla releases: {sorted(releases)}")
+        crop_index = dataset.load_crop_index(data_dir / "crops" / releases.pop())
+        datasets = dataset.build_datasets(rows, crop_index, image_size=training.image_size)
+        num_classes = len({row["class_index"] for row in rows})
+        report(0.0, f"entorno: {trainer.environment_info(device)}")
+
+        def on_epoch(metrics: dict[str, float]) -> None:
+            epoch = int(metrics["epoch"])
+            report(
+                epoch / training.max_epochs,
+                f"epoca {epoch}/{training.max_epochs} "
+                f"train_loss={metrics['train_loss']:.4f} train_acc={metrics['train_accuracy']:.4f} "
+                f"val_loss={metrics['val_loss']:.4f} val_acc={metrics['val_accuracy']:.4f}",
+            )
+
+        trainer.train(
+            training,
+            train_set=datasets["train"],
+            val_set=datasets["val"],
+            num_classes=num_classes,
+            pretrained=pretrained,
+            device=device,
+            num_workers=num_workers,
+            on_epoch=on_epoch,
+        )
+
+    return run_train
 
 
 def run_once(
@@ -77,13 +129,21 @@ def main() -> None:
     settings = get_settings()
     session_factory = get_session_factory()
     worker_id = socket.gethostname()
+    handlers = {
+        **HANDLERS,
+        "train": make_train_handler(
+            data_dir=settings.data_dir,
+            device=settings.resolved_device(),
+            num_workers=settings.num_workers,
+        ),
+    }
 
     with session_factory.begin() as session:
         recovered = jobs.recover_orphans(session)
     logger.info("worker %s listo; %d trabajo(s) huerfano(s) marcados failed", worker_id, recovered)
 
     while True:
-        if not run_once(session_factory, worker_id, HANDLERS):
+        if not run_once(session_factory, worker_id, handlers):
             time.sleep(settings.poll_seconds)
 
 

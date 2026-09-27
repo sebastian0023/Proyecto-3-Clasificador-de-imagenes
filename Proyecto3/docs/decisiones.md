@@ -10,7 +10,7 @@ Las 8 decisiones que la guía del curso pide cerrar antes del primer entrenamien
 | 4 | Métrica de selección y desempate | Edith | 24 sep 2026 | Cerrada |
 | 5 | Servicio de MLflow | Edith | 24 sep 2026 | Cerrada |
 | 6 | Destino S3 del modelo y permisos | Diego | 24 sep 2026 | Cerrada |
-| 7 | Presupuesto de cómputo | Edith | 24 sep 2026 | Pendiente de dato (medición real, vie 25) |
+| 7 | Presupuesto de cómputo | Edith | 26 sep 2026 | Cerrada (medición real, F4 T32) |
 | 8 | Custodio del test | Diego | 24 sep 2026 | Cerrada |
 
 ## 1. Release DVC de origen
@@ -100,19 +100,30 @@ Las 8 decisiones que la guía del curso pide cerrar antes del primer entrenamien
 
 ## 7. Presupuesto de cómputo
 
-**Decisión (estimada):** entrenamiento en la máquina de Edith.
+**Decisión (medida el 26 sep, F4 T32):** el barrido corre en el worker del stack (`p3-worker`) en la máquina de Edith, con la GPU reservada por `Proyecto2/docker-compose.gpu.yml`. Sin GPU NVIDIA el mismo worker entrena en CPU.
 
 | Recurso | Valor |
 |---|---|
-| GPU | NVIDIA GeForce RTX 4060, 8 GB |
+| GPU | NVIDIA GeForce RTX 4060, 8 GB (driver 610.88, CUDA 13.0 en el contenedor) |
 | CPU | AMD Ryzen 5 5500, 6 núcleos / 12 hilos |
 | RAM | 32 GB |
-| Reserva | 4 h de GPU entre el lun 28 y el mar 29: 12 a 15 corridas + 1 evaluación final en test |
+| Software | PyTorch 2.14.0+cu130, torchvision 0.29.0, Python 3.12 (imagen del worker) |
 
-**Estimación:** menos de 5 minutos por corrida (≈1,000 recortes de entrenamiento a 224 px con ResNet-18).
+**Medición real** (2 épocas, `adamw`, `batch_size` 32, `[256]`, dropout 0.3, `num_workers` 2, manifiesto `m-0.1.3-s42-1`: 1022 recortes de train y 292 de val). Trabajos `2f9e2c93…` y `494b7fdd…` lanzados por `POST /api/p3/training/jobs`:
 
-**Pendiente:** se actualiza el vie 25 con el tiempo real de una corrida medida.
+| `image_size` | Época 1 | Época 2 | Memoria de GPU del entrenamiento | Uso medio de GPU |
+|---|---:|---:|---:|---:|
+| 224 | 18 s (incluye arranque) | 13 s | ≈ 1.6 GB | ≈ 19 % |
+| 128 | 11 s | 11 s | menor | ≈ 19 % |
 
+El cuello de botella es la lectura y aumentación de las imágenes en CPU, no la GPU: 128 px tarda casi lo mismo que 224 px.
+
+**Calendario del barrido** ([`config/sweep.yaml`](../config/sweep.yaml), 12 corridas):
+
+- Suma de `max_epochs`: 300 épocas. A ≈ 13 s por época más ≈ 20 s de arranque por corrida: **≈ 70 min en el peor caso**; con early stopping (`patience` 5) se espera bastante menos.
+- Las corridas se encolan juntas y el worker las ejecuta una tras otra.
+- Ventana: se lanza el **lun 28 después de mediodía** (Control 2) y termina esa misma tarde. Queda margen para repetir corridas fallidas antes del mar 29 a mediodía, cuando se commitea `selection.json`.
+- Reserva: 2 h de GPU el lun 28 (barrido y repeticiones) + 15 min el mar 29 (evaluación final en test, F6).
 ## 8. Custodio del test
 
 **Decisión:** **Diego**. Guarda el orden "selección → evaluación": no se corre la evaluación final hasta que `selection.json` esté commiteado, y el test no se consulta para aumentación, early stopping ni hiperparámetros.

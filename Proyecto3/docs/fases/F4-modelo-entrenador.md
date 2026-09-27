@@ -30,8 +30,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Mismo seed -> mismo orden de muestras (prueba)
-- [ ] Transform aleatorio solo en train (prueba)
+- [x] Mismo seed -> mismo orden de muestras (prueba) → `tests/test_dataset.py::test_misma_semilla_mismo_orden_de_muestras` (red `7538b71` → green `0ddeba3`)
+- [x] Transform aleatorio solo en train (prueba) → `tests/test_dataset.py::test_la_aumentacion_aleatoria_solo_esta_en_train` y `::test_val_test_e_inferencia_comparten_el_mismo_preprocesamiento`; datos reales: 1022 / 292 / 145 recortes de `m-0.1.3-s42-1`
 
 **Entregables:** `src/p3/data/transforms.py`; `src/p3/data/dataset.py`; Pruebas
 
@@ -49,8 +49,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Prueba de cambio de pesos pasa
-- [ ] docs/modelo.md declara origen de pesos
+- [x] Prueba de cambio de pesos pasa → `tests/test_model.py::test_tres_pasos_del_optimizador_cambian_los_pesos` (red `4590e71` → green `72b80aa`) y `tests/test_trainer.py::test_entrenar_cambia_los_pesos`
+- [x] docs/modelo.md declara origen de pesos → [modelo.md](../modelo.md): `ResNet18_Weights.IMAGENET1K_V1` (`resnet18-f37072fd.pth`), todas las capas entrenables
 
 **Entregables:** `src/p3/model/build.py`; `docs/modelo.md`
 
@@ -70,8 +70,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Config inválida rechazada por API con 422
-- [ ] Corrida corta con mismo seed reproduce orden de muestras
+- [x] Config inválida rechazada por API con 422 → `tests/test_api.py::test_train_con_config_invalida_da_422_nombrando_el_campo_y_no_crea_trabajo`; en el stack real `batch_size: 0` responde 422 con `loc` `[body, train, config, batch_size]` y el conteo de `p3_training_jobs` no cambia (4 → 4)
+- [x] Corrida corta con mismo seed reproduce orden de muestras → `tests/test_trainer.py::test_misma_semilla_misma_corrida` (mismo orden, misma historia y mismos pesos en CPU; red `e6f3947` → green `fff1b14`)
 
 **Entregables:** `src/p3/train/config.py`; `src/p3/train/trainer.py`; Pruebas
 
@@ -90,8 +90,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Tiempo por época medido para al menos 2 tamaños de imagen
-- [ ] Calendario del barrido documentado y dentro de la ventana
+- [x] Tiempo por época medido para al menos 2 tamaños de imagen → trabajos `2f9e2c93…` (224 px: 18 s y 13 s) y `494b7fdd…` (128 px: 11 s y 11 s) en la RTX 4060 ([decisiones.md §7](../decisiones.md#7-presupuesto-de-cómputo))
+- [x] Calendario del barrido documentado y dentro de la ventana → [`config/sweep.yaml`](../../config/sweep.yaml) (12 corridas, protegido por `tests/test_sweep_config.py`): ≈ 70 min en el peor caso, lanzado el lun 28 después de mediodía
 
 **Entregables:** `docs/decisiones.md (decisión 7)`; `config/p3/sweep.yaml ajustado si hace falta`
 
@@ -147,3 +147,7 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 26 sep 2026 | Edith | T09 | `src/p3/data/transforms.py` y `dataset.py`: preprocesamiento único para val/test/inferencia, aumentación solo en train, fuga revisada otra vez al construir, loader sembrado (red `7538b71` → green `0ddeba3`). Torch 2.14.0 y torchvision 0.29.0 en el extra `train`, lockfile generado en Linux (`8be9c15`) | — |
+| 26 sep 2026 | Edith | T10 | `src/p3/model/build.py`: ResNet-18 IMAGENET1K_V1 con cabeza MLP configurable y checkpoint recargable con mapa de clases y preprocesamiento (red `4590e71` → green `72b80aa`); `docs/modelo.md` | — |
+| 26 sep 2026 | Edith | T11 | `TrainingConfig` (contratos §3), loop por minibatches con semillas y registro del entorno, trabajo `train` en el worker con progreso por época (red `e6f3947` → green `fff1b14`; un batch final de 1 muestra se omite, `7fe6d93`). Worker con PyTorch, datos montados y GPU opcional (`9ce4ecf`) | MLflow y early stopping en T12 |
+| 26 sep 2026 | Edith | T32 | Medición en la RTX 4060 (≈ 13 s/época, cuello de botella en la carga de imágenes), `config/sweep.yaml` con 12 corridas (red `19fb858` → green `8d88dd2`), decisión 7 cerrada (`72056a6`) | — |

@@ -8,6 +8,7 @@ engine o la sesion ya construidos.
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from urllib.parse import quote_plus
 
 from pydantic import Field, SecretStr
@@ -25,6 +26,18 @@ class WorkerSettings(BaseSettings):
     db_user: str = Field(min_length=1)
     db_password: SecretStr
     poll_seconds: float = Field(default=2.0, gt=0, alias="P3_WORKER_POLL_SECONDS")
+    # Manifiestos y recortes (`Proyecto3/data` montado en el contenedor).
+    data_dir: Path = Field(default=Path("/data"), alias="P3_DATA_DIR")
+    # `cuda` si hay GPU visible, `cpu` si no; `P3_DEVICE` lo fuerza.
+    device: str | None = Field(default=None, alias="P3_DEVICE")
+    num_workers: int = Field(default=2, ge=0, le=16, alias="P3_NUM_WORKERS")
+
+    def resolved_device(self) -> str:
+        if self.device:
+            return self.device
+        import torch
+
+        return "cuda" if torch.cuda.is_available() else "cpu"
 
     @property
     def database_url(self) -> str:

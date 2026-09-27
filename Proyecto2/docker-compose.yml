@@ -244,6 +244,15 @@ services:
       DB_HOST: mariadb
       DB_PORT: "3306"
       MLFLOW_TRACKING_URI: http://mlflow:5000
+      P3_DATA_DIR: /data
+    volumes:
+      # Manifiestos (DVC) y recortes (`scripts/generate_crops.py`), solo lectura.
+      - ../Proyecto3/data:/data:ro
+    # Los DataLoader con varios procesos comparten memoria por /dev/shm; los
+    # 64 MB por defecto de Docker no alcanzan para lotes de imagenes.
+    shm_size: "2gb"
+    # Sin GPU entrena en CPU. Con NVIDIA, `scripts/up.py` agrega
+    # `docker-compose.gpu.yml`, que le reserva la GPU a este servicio.
     depends_on:
       mariadb:
         condition: service_healthy
