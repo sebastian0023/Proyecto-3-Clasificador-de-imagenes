@@ -134,3 +134,40 @@ def test_train_valido_se_encola_con_la_config_efectiva(
             "min_delta": 0.001,
             "monitor_metric": "val_accuracy",
         }
+
+
+def test_train_con_manifiesto_no_congelado_da_409_y_no_crea_trabajo(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    body = {"kind": "train", "manifest_id": "m-0.1.3-s7-1", "config": CONFIG_VALIDA}
+
+    response = client.post("/api/p3/training/jobs", json=body)
+
+    assert response.status_code == 409
+    assert "congelado" in response.json()["detail"]
+    assert _cuantos_trabajos(session_factory) == 0
+
+
+def test_get_incluye_el_run_de_mlflow(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    job_id = client.post("/api/p3/training/jobs", json={"kind": "dummy"}).json()["job_id"]
+    assert client.get(f"/api/p3/training/jobs/{job_id}").json()["mlflow_run_id"] is None
+    with session_factory.begin() as session:
+        jobs.set_mlflow_run_id(session, job_id, "run42")
+    assert client.get(f"/api/p3/training/jobs/{job_id}").json()["mlflow_run_id"] == "run42"
+
+
+def test_train_puede_ir_al_experimento_de_pruebas_y_nada_mas(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    base = {"kind": "train", "manifest_id": "m-0.1.3-s42-1", "config": CONFIG_VALIDA}
+
+    ok = client.post("/api/p3/training/jobs", json={**base, "experiment": "p3-pruebas"})
+    assert ok.status_code == 202
+    with session_factory() as session:
+        stored = jobs.get_job(session, ok.json()["job_id"])
+        assert stored is not None and stored.config["experiment"] == "p3-pruebas"
+
+    otro = client.post("/api/p3/training/jobs", json={**base, "experiment": "cualquiera"})
+    assert otro.status_code == 422

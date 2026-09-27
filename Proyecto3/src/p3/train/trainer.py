@@ -4,8 +4,12 @@ Por epoca: para cada minibatch de train, `forward -> loss -> backward ->
 optimizer.step()`; despues se evalua val sin gradientes. Si el ultimo
 minibatch de train tendria UNA sola muestra se omite (BatchNorm no puede
 entrenar con ella); como el orden se baraja cada epoca, la muestra omitida
-cambia de una epoca a otra. La historia guarda
-loss y accuracy de train y val por epoca.
+cambia de una epoca a otra. La historia guarda loss, accuracy y duracion de
+train y val por epoca.
+
+Early stopping (T12): tras cada epoca se vigila `config.monitor_metric` en
+validacion; con `patience` epocas sin mejorar mas de `min_delta` se detiene y el
+modelo que se devuelve es el de la MEJOR epoca, no el de la ultima.
 
 Reproducibilidad: `seed_everything` siembra `random`, `numpy` y `torch` (y
 CUDA) antes de construir el modelo, asi que la cabeza nueva, el orden del
@@ -22,6 +26,7 @@ from __future__ import annotations
 
 import platform
 import random
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -35,11 +40,13 @@ from torch import nn
 from p3.data.dataset import CropDataset, build_loader
 from p3.model.build import build_model
 from p3.train.config import TrainingConfig
+from p3.train.early_stopping import EarlyStopping
 
 SGD_MOMENTUM = 0.9
 
 EpochCallback = Callable[[dict[str, float]], None]
 BatchCallback = Callable[[torch.Tensor], None]
+ModelCallback = Callable[[nn.Module], None]
 
 
 @dataclass
@@ -48,6 +55,11 @@ class TrainResult:
     history: list[dict[str, float]] = field(default_factory=list)
     optimizer_steps: int = 0
     train_order: list[str] = field(default_factory=list)
+    best_epoch: int = 0
+    best_metrics: dict[str, float] = field(default_factory=dict)
+    # Ultima epoca entrenada; `early_stopped` dice si fue por early stopping.
+    stopped_epoch: int = 0
+    early_stopped: bool = False
 
 
 def seed_everything(seed: int) -> None:
@@ -124,9 +136,15 @@ def train(
     num_workers: int = 0,
     on_epoch: EpochCallback | None = None,
     on_batch: BatchCallback | None = None,
+    on_model: ModelCallback | None = None,
 ) -> TrainResult:
     seed_everything(config.seed)
     model = build_model_for(config, num_classes=num_classes, pretrained=pretrained).to(device)
+    if on_model is not None:
+        on_model(model)
+    stopper = EarlyStopping(
+        monitor=config.monitor_metric, patience=config.patience, min_delta=config.min_delta
+    )
     optimizer = build_optimizer(config, model)
     loss_fn = nn.CrossEntropyLoss()
     loader = build_loader(
@@ -140,6 +158,7 @@ def train(
     result = TrainResult(model=model)
 
     for epoch in range(1, config.max_epochs + 1):
+        started = time.perf_counter()
         model.train()
         running_loss, correct, seen = 0.0, 0, 0
         for images, labels, crop_ids in loader:
@@ -166,8 +185,18 @@ def train(
             "train_accuracy": correct / seen,
             "val_loss": val_loss,
             "val_accuracy": val_accuracy,
+            "epoch_seconds": time.perf_counter() - started,
         }
         result.history.append(metrics)
         if on_epoch is not None:
             on_epoch(metrics)
+        result.stopped_epoch = epoch
+        if stopper.step(epoch, metrics[config.monitor_metric], model.state_dict()):
+            result.early_stopped = True
+            break
+
+    assert stopper.best_state is not None and stopper.best_epoch is not None
+    model.load_state_dict(stopper.best_state)
+    result.best_epoch = stopper.best_epoch
+    result.best_metrics = dict(result.history[stopper.best_epoch - 1])
     return result

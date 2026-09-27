@@ -194,6 +194,23 @@ services:
   # dentro del volumen `mlflow_data`: sobreviven a `down`/`up` (solo `down -v`
   # los borra). `--serve-artifacts` hace que los clientes suban y bajen
   # artefactos por HTTP, sin credenciales de almacenamiento.
+  # Job de un solo uso: si el volumen de MLflow esta vacio y hay un snapshot
+  # (`Proyecto3/mlflow_snapshot`, versionado con DVC tras el barrido), lo copia.
+  # Asi un clon limpio con `dvc pull` ve las mismas corridas (criterios 3.1/3.2).
+  mlflow-restore:
+    image: ghcr.io/mlflow/mlflow:v3.16.1
+    container_name: p3_mlflow_restore
+    volumes:
+      - mlflow_data:/mlflow
+      - ../Proyecto3/mlflow_snapshot:/snapshot:ro
+    command:
+      - sh
+      - -c
+      - |
+        if [ -f /mlflow/mlflow.db ]; then echo "MLflow ya tiene datos; no se restaura."
+        elif [ -f /snapshot/mlflow.db ]; then cp -a /snapshot/. /mlflow/ && echo "Snapshot restaurado."
+        else echo "Sin snapshot: MLflow arranca vacio."; fi
+
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.16.1
     container_name: p3_mlflow
@@ -216,6 +233,9 @@ services:
       - "${MLFLOW_PORT:-5000}:5000"
     volumes:
       - mlflow_data:/mlflow
+    depends_on:
+      mlflow-restore:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -245,6 +265,9 @@ services:
       DB_PORT: "3306"
       MLFLOW_TRACKING_URI: http://mlflow:5000
       P3_DATA_DIR: /data
+      # Commit del codigo que entrena (lo exporta `scripts/up.py`); va a cada run.
+      P3_CODE_COMMIT: ${P3_CODE_COMMIT:-unknown}
+      P3_CODE_DIRTY: ${P3_CODE_DIRTY:-false}
     volumes:
       # Manifiestos (DVC) y recortes (`scripts/generate_crops.py`), solo lectura.
       - ../Proyecto3/data:/data:ro

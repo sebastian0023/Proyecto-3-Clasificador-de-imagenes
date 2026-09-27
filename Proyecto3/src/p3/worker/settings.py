@@ -31,6 +31,10 @@ class WorkerSettings(BaseSettings):
     # `cuda` si hay GPU visible, `cpu` si no; `P3_DEVICE` lo fuerza.
     device: str | None = Field(default=None, alias="P3_DEVICE")
     num_workers: int = Field(default=2, ge=0, le=16, alias="P3_NUM_WORKERS")
+    mlflow_tracking_uri: str = Field(default="http://mlflow:5000", alias="MLFLOW_TRACKING_URI")
+    # Commit del codigo que entrena; lo exporta `Proyecto2/scripts/up.py` al levantar.
+    code_commit: str = Field(default="unknown", alias="P3_CODE_COMMIT")
+    code_dirty: bool = Field(default=False, alias="P3_CODE_DIRTY")
 
     def resolved_device(self) -> str:
         if self.device:

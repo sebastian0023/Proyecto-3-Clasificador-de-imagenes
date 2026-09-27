@@ -64,6 +64,25 @@ def read_env() -> dict[str, str]:
     return values
 
 
+def export_code_commit() -> None:
+    """Commit y estado del arbol para las corridas del worker de P3 (tags de MLflow)."""
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True, cwd=REPO_ROOT
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=REPO_ROOT,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return
+    os.environ["P3_CODE_COMMIT"] = commit
+    os.environ["P3_CODE_DIRTY"] = "true" if dirty else "false"
+
+
 def export_host_identity() -> None:
     """Le pasa a compose el uid/gid del host, para que la app pueda escribir.
 
@@ -175,6 +194,7 @@ def main() -> None:
 
     require_docker()
     export_host_identity()
+    export_code_commit()
     ensure_env_file()
     env = read_env()
     app_port = env.get("APP_PORT", "8000")

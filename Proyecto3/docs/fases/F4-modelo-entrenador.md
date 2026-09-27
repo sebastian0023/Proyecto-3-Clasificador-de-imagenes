@@ -110,8 +110,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Prueba de secuencia controlada pasa
-- [ ] Un run en MLflow muestra todos los campos listados vía API (mlflow.search_runs)
+- [x] Prueba de secuencia controlada pasa → `tests/test_early_stopping.py::test_secuencia_controlada_para_en_la_6_y_se_queda_con_la_3` y `::test_el_entrenador_para_y_restaura_la_mejor_epoca` (pesos finales = los de la época 3; red `2081eac` → green `b28e37d`)
+- [x] Un run en MLflow muestra todos los campos listados vía API (mlflow.search_runs) → run `fd690ca2846447a088b8e1fe588bd974` (experimento `p3-pruebas`, trabajo `625f5de1…`, RTX 4060) consultado con `MlflowClient.search_runs` en `http://localhost:5000`: `FINISHED`; 11 parámetros efectivos con semilla; tags `manifest_id`, `manifest_hash`, `release_id`, `release_hash`, `dvc_md5`, `classes`, `code_commit` (`250bedc`, árbol limpio), `job_id`, `pretrained_weights` y `env.*`; `val_accuracy` y demás métricas por época; `best_epoch` 7, `stopped_epoch` 10, `early_stopped` 1; artefactos `curves.png`, `history.json`, `environment.json` y `checkpoint/model.pt`. El checkpoint recargado en un proceso limpio da val_acc 0.9384 = época 7 (la época 10 tenía 0.7226). Manifiesto no congelado → 409 por API y fallo en el worker
 
 **Entregables:** `src/p3/train/early_stopping.py`; Integración MLflow
 
@@ -151,3 +151,4 @@
 | 26 sep 2026 | Edith | T10 | `src/p3/model/build.py`: ResNet-18 IMAGENET1K_V1 con cabeza MLP configurable y checkpoint recargable con mapa de clases y preprocesamiento (red `4590e71` → green `72b80aa`); `docs/modelo.md` | — |
 | 26 sep 2026 | Edith | T11 | `TrainingConfig` (contratos §3), loop por minibatches con semillas y registro del entorno, trabajo `train` en el worker con progreso por época (red `e6f3947` → green `fff1b14`; un batch final de 1 muestra se omite, `7fe6d93`). Worker con PyTorch, datos montados y GPU opcional (`9ce4ecf`) | MLflow y early stopping en T12 |
 | 26 sep 2026 | Edith | T32 | Medición en la RTX 4060 (≈ 13 s/época, cuello de botella en la carga de imágenes), `config/sweep.yaml` con 12 corridas (red `19fb858` → green `8d88dd2`), decisión 7 cerrada (`72056a6`) | — |
+| 26 sep 2026 | Edith | T12 | `EarlyStopping` con restauración de la mejor época (red `2081eac` → green `b28e37d`); `p3.train.tracking` registra todo en MLflow; `p3.data.frozen` exige el manifiesto congelado (409 en la API); `mlflow_run_id` en el trabajo y timestamps con microsegundos (red `fb8e433` → green `7d80897`); experimento `p3-pruebas` para corridas de humo (`73b42f8` → `84b1313`). Snapshot de MLflow restaurable desde DVC y commit del código en cada corrida (`250bedc`); decisión 5 actualizada | `dvc add mlflow_snapshot` + push tras el barrido de F5 |

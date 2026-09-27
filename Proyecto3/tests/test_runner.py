@@ -79,8 +79,9 @@ def test_dummy_con_fail_simula_un_error(session_factory: sessionmaker[Session]) 
 
 
 def test_un_trabajo_train_reporta_progreso_por_epoca(
-    session_factory: sessionmaker[Session], tmp_path
+    session_factory: sessionmaker[Session], tmp_path, monkeypatch
 ) -> None:
+    import hashlib
     import json
 
     from PIL import Image
@@ -103,7 +104,24 @@ def test_un_trabajo_train_reporta_progreso_por_epoca(
             }
         )
         index.append({"crop_id": f"9.9.9:a{i}", "crop_path": f"c{i}.png"})
-    (manifest / "manifest.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    contenido = "".join(json.dumps(r) + "\n" for r in rows)
+    (manifest / "manifest.jsonl").write_text(contenido, newline="\n")
+    digest = hashlib.sha256(contenido.encode("utf-8")).hexdigest()
+    meta = {
+        "manifest_id": "m-prueba",
+        "manifest_hash": digest,
+        "release": {
+            "release_id": "9.9.9",
+            "dataset_fingerprint": "f" * 64,
+            "dvc_pointer": {"md5": "e" * 32 + ".dir"},
+        },
+        "classes": [
+            {"class_index": 0, "category_name": "cat"},
+            {"class_index": 1, "category_name": "dog"},
+            {"class_index": 2, "category_name": "person"},
+        ],
+    }
+    (manifest / "manifest.meta.json").write_text(json.dumps(meta))
     (crops / "crops.jsonl").write_text("".join(json.dumps(r) + "\n" for r in index))
     training = {
         "optimizer": "sgd",
@@ -119,7 +137,15 @@ def test_un_trabajo_train_reporta_progreso_por_epoca(
             session, kind="train", config={"manifest_id": "m-prueba", "training": training}
         )
 
-    handler = runner.make_train_handler(data_dir=tmp_path, device="cpu", pretrained=False)
+    monkeypatch.setenv("MLFLOW_ALLOW_FILE_STORE", "true")
+    handler = runner.make_train_handler(
+        data_dir=tmp_path,
+        device="cpu",
+        pretrained=False,
+        tracking_uri=(tmp_path / "mlruns").as_uri(),
+        code_commit="0" * 40,
+        frozen={"m-prueba": digest},
+    )
     runner.run_once(session_factory, "w1", {"train": handler})
 
     with session_factory() as session:
@@ -128,3 +154,31 @@ def test_un_trabajo_train_reporta_progreso_por_epoca(
         assert stored.status == jobs.JobStatus.SUCCEEDED, stored.error
         logs = " ".join(jobs.log_lines(stored))
         assert "epoca 1/2" in logs and "epoca 2/2" in logs
+        assert stored.mlflow_run_id is not None
+        assert stored.mlflow_run_id in logs
+
+    from mlflow.tracking import MlflowClient
+
+    run = MlflowClient((tmp_path / "mlruns").as_uri()).get_run(stored.mlflow_run_id)
+    esperado = hashlib.sha256((crops / "crops.jsonl").read_bytes()).hexdigest()
+    assert run.data.tags["crops_jsonl_sha256"] == esperado
+
+
+def test_train_con_manifiesto_no_congelado_falla_sin_entrenar(
+    session_factory: sessionmaker[Session], tmp_path
+) -> None:
+    (tmp_path / "manifests" / "m-otro").mkdir(parents=True)
+    (tmp_path / "manifests" / "m-otro" / "manifest.jsonl").write_text("{}\n")
+    with session_factory.begin() as session:
+        job = jobs.enqueue(session, kind="train", config={"manifest_id": "m-otro", "training": {}})
+
+    handler = runner.make_train_handler(
+        data_dir=tmp_path, device="cpu", pretrained=False, tracking_uri="", frozen={}
+    )
+    runner.run_once(session_factory, "w1", {"train": handler})
+
+    with session_factory() as session:
+        stored = jobs.get_job(session, job.id)
+        assert stored is not None
+        assert stored.status == jobs.JobStatus.FAILED
+        assert "no esta congelado" in (stored.error or "")
