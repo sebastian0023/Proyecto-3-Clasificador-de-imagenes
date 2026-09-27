@@ -30,8 +30,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Las 5 páginas accesibles desde la navegación existente
-- [ ] Build y chequeo de tipos limpios
+- [x] Las 5 páginas accesibles desde la navegación existente → Training, Experiments, Evaluation, Models e Inference agregadas a `PAGES` del router por hash en `Proyecto2/web/src/App.tsx` (commit `9a7beb0`). Prueba de componente `Proyecto2/web/tests/app-nav.test.tsx` (rojo `ef28491` → verde `9a7beb0`): las 5 aparecen en el menú y cada ruta renderiza su encabezado; `npm run test:unit` en verde (9/9).
+- [x] Build y chequeo de tipos limpios → `npm run build` (`tsc --noEmit && vite build`) en verde. Cliente API tipado en `Proyecto2/web/src/lib/api.ts` (`api.p3`, commit `ba7d9bf`) con tipos espejando `contratos.md`. Mock backend solo dev/pruebas (`VITE_P3_MOCK=1`), verificado ausente del bundle de producción (commit `a3d1d2a`).
 
 **Entregables:** Rutas y layout; Cliente API
 
@@ -88,3 +88,4 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 27 sep 2026 | Andrés | T03 | Rama `feat/fase-8-portal-training-experiments`. Tooling de pruebas de componente (Vitest + Testing Library + jsdom, `0c5ea6c`). 5 páginas de P3 en el router por hash existente de `Proyecto2/web` (`ef28491`→`9a7beb0`). Cliente API tipado `api.p3` espejando `contratos.md` (`a147395`→`ba7d9bf`). Mock backend de fetch solo dev/pruebas, fuera del build de prod (`2b6d17d`→`a3d1d2a`). `npm run test:unit` 9/9, `npm test` 5/5, `npm run build` en verde. | Conectar al backend real el lunes 28 (hoy corre contra mock/contrato). PR para revisión de Diego. |
