@@ -10,6 +10,7 @@ import json
 import threading
 from collections.abc import Iterator
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 from fastapi import FastAPI
@@ -19,9 +20,9 @@ from p3.inference import proxy
 
 
 class Upstream(http.server.BaseHTTPRequestHandler):
-    received: list[tuple[str, str, bytes]] = []
+    received: ClassVar[list[tuple[str, str, bytes]]] = []
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length)
         Upstream.received.append((self.path, self.headers.get("Content-Type", ""), body))
@@ -88,7 +89,7 @@ class P1(http.server.BaseHTTPRequestHandler):
     body = b""
     content_type = ""
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         P1.content_type = self.headers.get("Content-Type", "")
         P1.body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
         payload = json.dumps({"data": {"id": 91, "status": "pending"}}).encode()

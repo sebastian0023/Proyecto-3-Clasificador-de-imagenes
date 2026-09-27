@@ -7,12 +7,12 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-import test_inference as ti
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+import test_inference as ti
 from p3.inference import api, records, service
 
 
