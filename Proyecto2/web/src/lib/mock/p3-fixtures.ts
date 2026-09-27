@@ -1,0 +1,162 @@
+/**
+ * Datos de ejemplo para el mock backend de P3.
+ *
+ * Espejan `Proyecto3/docs/contratos.md` y el fixture de 3 clases
+ * (`tests/fixtures/p3/`: 10 cat, 9 dog, 9 person). Existen SOLO para que el
+ * portal se pueda construir y probar antes de que el backend real esté (regla
+ * de calendario de F8: se conecta al backend real el lunes). Nunca deben entrar
+ * al build de producción: se importan solo desde `backend.ts`, que a su vez se
+ * carga únicamente en desarrollo con `VITE_P3_MOCK=1` o desde las pruebas.
+ */
+
+import type {
+  ManifestMeta,
+  P3ReleaseDetail,
+  P3ReleaseSummary,
+  RunDetail,
+  RunSummary,
+  TrainingConfig,
+} from '../api';
+
+/** Marcador único: sirve para probar que estos datos NO están en el build de prod. */
+export const MOCK_MARKER = 'P3_MOCK_FIXTURE_DO_NOT_SHIP';
+
+export const RELEASE_ID = '0.1.3';
+export const MANIFEST_ID = 'm-0.1.3-s42-1';
+
+const RELEASE_HASH = '2200274dc6bbe6d0bc516e0136ae68651c0040bc6cab64a871794924fa39aa84';
+
+export const releaseSummary: P3ReleaseSummary = {
+  release_id: RELEASE_ID,
+  dataset_fingerprint: RELEASE_HASH,
+  quality_status: 'pass',
+  created_at: '2026-09-18T04:17:13Z',
+  counts: { images: 2045, annotations: 2120, categories: 5 },
+  storage_uri: 's3://dataset-quality-releases-750702272375/0.1.3/dataset.tar.zst',
+  published_in: ['dev', 'prod'],
+};
+
+export const releaseDetail: P3ReleaseDetail = {
+  ...releaseSummary,
+  quality_report_fingerprint: '4d6e64aa13c6f66b15801811c4bb84ebc265b07f538ae27982f79628b170631a',
+  archive_sha256: '787742988af1df41d9a58573b81b5c9b4fe7ab24a647b25f2e71d3eb323838b5',
+};
+
+export const manifestMeta: ManifestMeta = {
+  schema_version: 1,
+  manifest_id: MANIFEST_ID,
+  manifest_hash: 'b1a2c3d4e5f60718293a4b5c6d7e8f900112233445566778899aabbccddeeff0',
+  created_at: '2026-09-25T18:00:00Z',
+  code_commit: '0000000000000000000000000000000000000000',
+  release: {
+    release_id: RELEASE_ID,
+    dataset_fingerprint: RELEASE_HASH,
+    quality_status: 'pass',
+    quality_report_fingerprint: releaseDetail.quality_report_fingerprint,
+    archive_sha256: releaseDetail.archive_sha256,
+    p2_splits_fingerprint: '9a87e0de3fb3069f06686065f149d64787593c04d90265a3e0f667a170d66279',
+    dvc_pointer: {
+      path: 'Proyecto2/data/raw.dvc',
+      md5: 'ca56420c9992f8b75fdb10f2ece81704.dir',
+      nfiles: 2046,
+      size: 634490876,
+    },
+  },
+  seed: 42,
+  ratios: { train: 0.7, val: 0.2, test: 0.1 },
+  tolerance_pp: 5,
+  classes: [
+    { class_index: 0, category_id: 4, category_name: 'cat' },
+    { class_index: 1, category_id: 3, category_name: 'dog' },
+    { class_index: 2, category_id: 2, category_name: 'person' },
+  ],
+  excluded_categories: [
+    { category_id: 1, category_name: 'car' },
+    { category_id: 5, category_name: 'bicycle' },
+  ],
+  exclusions: [
+    { annotation_id: 77, source_image_id: 40, reason: 'degenerate_bbox' },
+    { annotation_id: 91, source_image_id: 52, reason: 'bbox_out_of_bounds' },
+    { annotation_id: 12, source_image_id: 9, reason: 'missing_image' },
+  ],
+  // Recortes válidos del fixture: 10 cat, 9 dog, 9 person = 28.
+  counts: {
+    crops: {
+      train: { cat: 7, dog: 6, person: 6 },
+      val: { cat: 2, dog: 2, person: 2 },
+      test: { cat: 1, dog: 1, person: 1 },
+    },
+    originals: {
+      train: { cat: 7, dog: 6, person: 6 },
+      val: { cat: 2, dog: 2, person: 2 },
+      test: { cat: 1, dog: 1, person: 1 },
+    },
+  },
+};
+
+/** La config efectiva que reportan las corridas (varía el learning_rate por corrida). */
+function paramsFor(index: number): Record<string, string> {
+  const optimizers = ['adamw', 'adam', 'sgd'];
+  const config: TrainingConfig = {
+    optimizer: (optimizers[index % 3] ?? 'adamw') as TrainingConfig['optimizer'],
+    batch_size: index % 2 === 0 ? 32 : 64,
+    max_epochs: 30,
+    learning_rate: Number((0.0001 * (1 + (index % 5))).toFixed(5)),
+    image_size: 224,
+    hidden_layers: index % 2 === 0 ? [256] : [512, 128],
+    dropout: 0.3,
+    seed: 42 + index,
+    patience: 5,
+    min_delta: 0.001,
+    monitor_metric: 'val_accuracy',
+  };
+  return Object.fromEntries(
+    Object.entries(config).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? JSON.stringify(value) : String(value),
+    ]),
+  );
+}
+
+/** 12 corridas FINISHED deterministas sobre el manifiesto, con accuracy variada. */
+export const runs: RunSummary[] = Array.from({ length: 12 }, (_, i) => {
+  const bestValAccuracy = Number((0.72 + (i % 6) * 0.035).toFixed(4));
+  const bestEpoch = 8 + (i % 7);
+  return {
+    run_id: `run${String(i + 1).padStart(4, '0')}${'0'.repeat(24)}`,
+    status: 'FINISHED',
+    manifest_id: MANIFEST_ID,
+    params: paramsFor(i),
+    best_epoch: bestEpoch,
+    stopped_epoch: bestEpoch + 5,
+    best_val_accuracy: bestValAccuracy,
+    best_val_loss: Number((0.9 - bestValAccuracy * 0.6).toFixed(4)),
+    commit: '0000000000000000000000000000000000000000',
+    start_time: `2026-09-28T1${i % 10}:00:00Z`,
+    end_time: `2026-09-28T1${i % 10}:20:00Z`,
+  };
+});
+
+/** Curvas por época derivadas del mejor accuracy: sube val, baja loss. */
+export function runDetail(run: RunSummary): RunDetail {
+  const epochs = run.stopped_epoch;
+  const history = Array.from({ length: epochs }, (_, e) => {
+    const t = (e + 1) / epochs;
+    const valAcc = Number((run.best_val_accuracy * (0.6 + 0.4 * t)).toFixed(4));
+    return {
+      epoch: e + 1,
+      train_loss: Number((1.1 * (1 - 0.8 * t)).toFixed(4)),
+      train_accuracy: Number(Math.min(0.99, valAcc + 0.05).toFixed(4)),
+      val_loss: Number((1.0 * (1 - 0.7 * t)).toFixed(4)),
+      val_accuracy: valAcc,
+    };
+  });
+  return {
+    ...run,
+    history,
+    artifacts: {
+      curves: `mlflow-artifacts:/${run.run_id}/curves.png`,
+      checkpoint: `mlflow-artifacts:/${run.run_id}/checkpoints/best.pt`,
+    },
+  };
+}
