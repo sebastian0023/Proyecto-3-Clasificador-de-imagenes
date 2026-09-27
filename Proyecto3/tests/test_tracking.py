@@ -25,6 +25,7 @@ CONTEXT = tracking.RunContext(
     release_id="9.9.9",
     release_hash="b" * 64,
     dvc_md5="c" * 32 + ".dir",
+    crops_sha256="e" * 64,
     class_names=("cat", "dog", "person"),
     code_commit="d" * 40,
     code_dirty=False,
@@ -97,6 +98,7 @@ def test_la_corrida_queda_finished_con_parametros_y_procedencia(datasets, tracki
     assert tags["release_id"] == "9.9.9"
     assert tags["release_hash"] == CONTEXT.release_hash
     assert tags["dvc_md5"] == CONTEXT.dvc_md5
+    assert tags["crops_jsonl_sha256"] == "e" * 64
     assert json.loads(tags["classes"]) == ["cat", "dog", "person"]
     assert tags["code_commit"] == CONTEXT.code_commit
     assert tags["code_dirty"] == "false"

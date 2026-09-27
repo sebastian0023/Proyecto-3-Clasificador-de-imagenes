@@ -157,6 +157,12 @@ def test_un_trabajo_train_reporta_progreso_por_epoca(
         assert stored.mlflow_run_id is not None
         assert stored.mlflow_run_id in logs
 
+    from mlflow.tracking import MlflowClient
+
+    run = MlflowClient((tmp_path / "mlruns").as_uri()).get_run(stored.mlflow_run_id)
+    esperado = hashlib.sha256((crops / "crops.jsonl").read_bytes()).hexdigest()
+    assert run.data.tags["crops_jsonl_sha256"] == esperado
+
 
 def test_train_con_manifiesto_no_congelado_falla_sin_entrenar(
     session_factory: sessionmaker[Session], tmp_path
