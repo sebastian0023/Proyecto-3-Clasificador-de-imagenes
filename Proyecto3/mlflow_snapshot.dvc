@@ -1,0 +1,6 @@
+outs:
+- md5: 3678f16cbc8f855c897171cb9f9a3e4d.dir
+  size: 592526210
+  nfiles: 54
+  hash: md5
+  path: mlflow_snapshot
