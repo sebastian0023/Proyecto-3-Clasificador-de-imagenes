@@ -83,6 +83,13 @@ def export_code_commit() -> None:
     os.environ["P3_CODE_DIRTY"] = "true" if dirty else "false"
 
 
+def export_aws_dir() -> None:
+    """Carpeta `~/.aws` para el servicio de inferencia de P3 (solo lectura, sin copiar llaves)."""
+    aws = Path.home() / ".aws"
+    if aws.is_dir():
+        os.environ.setdefault("P3_AWS_DIR", str(aws))
+
+
 def export_host_identity() -> None:
     """Le pasa a compose el uid/gid del host, para que la app pueda escribir.
 
@@ -195,6 +202,7 @@ def main() -> None:
     require_docker()
     export_host_identity()
     export_code_commit()
+    export_aws_dir()
     ensure_env_file()
     env = read_env()
     app_port = env.get("APP_PORT", "8000")
