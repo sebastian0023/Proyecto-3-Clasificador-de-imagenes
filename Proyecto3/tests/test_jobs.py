@@ -136,3 +136,32 @@ def test_recuperar_huerfanos_marca_failed_los_running(
         assert h.status == jobs.JobStatus.FAILED
         assert h.error is not None and "reinici" in h.error
         assert p.status == jobs.JobStatus.QUEUED
+
+
+def test_el_trabajo_guarda_el_run_de_mlflow(session_factory: sessionmaker[Session]) -> None:
+    with session_factory.begin() as session:
+        job = jobs.enqueue(session, kind="dummy", config={})
+    with session_factory.begin() as session:
+        jobs.set_mlflow_run_id(session, job.id, "abc123")
+    with session_factory() as session:
+        stored = jobs.get_job(session, job.id)
+        assert stored is not None and stored.mlflow_run_id == "abc123"
+
+
+def test_create_schema_agrega_la_columna_a_una_tabla_de_t02(tmp_path) -> None:
+    from sqlalchemy import create_engine, inspect, text
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'viejo.db'}")
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "CREATE TABLE p3_training_jobs (id VARCHAR(32) PRIMARY KEY, kind VARCHAR(64), "
+                "status VARCHAR(16), progress FLOAT, config JSON, logs TEXT, error TEXT, "
+                "worker_id VARCHAR(128), created_at DATETIME, started_at DATETIME, "
+                "finished_at DATETIME)"
+            )
+        )
+    jobs.create_schema(engine)
+    jobs.create_schema(engine)  # idempotente
+    columnas = {c["name"] for c in inspect(engine).get_columns("p3_training_jobs")}
+    assert "mlflow_run_id" in columnas
