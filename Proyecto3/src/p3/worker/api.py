@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from p3.data.frozen import FROZEN_MANIFESTS
 from p3.train.config import TrainingConfig
 from p3.worker import jobs
 
@@ -75,6 +76,7 @@ class JobView(BaseModel):
     created_at: datetime
     started_at: datetime | None
     finished_at: datetime | None
+    mlflow_run_id: str | None
 
     @classmethod
     def from_job(cls, job: jobs.TrainingJob) -> JobView:
@@ -90,11 +92,20 @@ class JobView(BaseModel):
             created_at=job.created_at,
             started_at=job.started_at,
             finished_at=job.finished_at,
+            mlflow_run_id=job.mlflow_run_id,
         )
 
 
 @router.post("/jobs", status_code=status.HTTP_202_ACCEPTED)
 def create_job(body: JobCreate, session: SessionDep) -> JobCreated:
+    if isinstance(body, TrainJobCreate) and body.manifest_id not in FROZEN_MANIFESTS:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"El manifiesto {body.manifest_id} no esta congelado; "
+                f"solo se entrena con {sorted(FROZEN_MANIFESTS)}."
+            ),
+        )
     job = jobs.enqueue(session, kind=body.kind, config=body.stored_config())
     return JobCreated(job_id=job.id, status=jobs.JobStatus.QUEUED)
 

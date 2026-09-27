@@ -16,13 +16,16 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Engine, Float, Index, String, Text, select
+from sqlalchemy import JSON, DateTime, Engine, Float, Index, String, Text, inspect, select, text
 from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 # TEXT de MySQL/MariaDB se queda en 64 KB; los logs de un entrenamiento largo
 # pueden pasarlo. En SQLite `Text` no tiene limite.
 LongText = Text().with_variant(mysql.MEDIUMTEXT(), "mysql", "mariadb")
+# DATETIME de MariaDB guarda segundos enteros: dos trabajos encolados en el mismo
+# segundo perdian su orden de llegada. Con microsegundos la cola es FIFO real.
+Timestamp = DateTime(timezone=True).with_variant(mysql.DATETIME(fsp=6), "mysql", "mariadb")
 
 ORPHAN_ERROR = "El worker se reinicio mientras el trabajo corria; vuelve a lanzarlo."
 
@@ -54,14 +57,35 @@ class TrainingJob(Base):
     logs: Mapped[str] = mapped_column(LongText, default="")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     worker_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(Timestamp, default=utcnow)
+    started_at: Mapped[datetime | None] = mapped_column(Timestamp, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(Timestamp, nullable=True)
+    # Run de MLflow de un trabajo `train` (F4 T12): el portal enlaza con el.
+    mlflow_run_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 def create_schema(engine: Engine) -> None:
-    """Crea las tablas de P3 que falten. Idempotente."""
+    """Crea las tablas de P3 que falten y actualiza la de T02. Idempotente.
+
+    `create_all` no altera tablas existentes, asi que la columna `mlflow_run_id`
+    y la precision de microsegundos se agregan a mano en la tabla ya creada.
+    """
     Base.metadata.create_all(engine)
+    columns = {column["name"] for column in inspect(engine).get_columns("p3_training_jobs")}
+    with engine.begin() as connection:
+        if "mlflow_run_id" not in columns:
+            connection.execute(
+                text("ALTER TABLE p3_training_jobs ADD COLUMN mlflow_run_id VARCHAR(64)")
+            )
+        if engine.dialect.name in ("mysql", "mariadb"):
+            for column, nullable in (
+                ("created_at", "NOT NULL"),
+                ("started_at", "NULL"),
+                ("finished_at", "NULL"),
+            ):
+                connection.execute(
+                    text(f"ALTER TABLE p3_training_jobs MODIFY {column} DATETIME(6) {nullable}")
+                )
 
 
 def log_lines(job: TrainingJob) -> list[str]:
@@ -140,6 +164,10 @@ def mark_succeeded(session: Session, job_id: str) -> None:
     job.progress = 1.0
     job.finished_at = utcnow()
     _append_log(job, "terminado")
+
+
+def set_mlflow_run_id(session: Session, job_id: str, run_id: str) -> None:
+    _require(session, job_id).mlflow_run_id = run_id
 
 
 def mark_failed(session: Session, job_id: str, error: str) -> None:

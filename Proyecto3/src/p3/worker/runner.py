@@ -4,9 +4,10 @@
 
 Cada tipo de trabajo (`kind`) tiene un handler `(config, report) -> None`.
 `report(progress, message)` escribe progreso y log en la BD en su propia
-transaccion, para que la pagina los vea mientras el trabajo corre. Si el
-handler lanza una excepcion, el trabajo queda `failed` con el mensaje y el
-worker sigue con el siguiente.
+transaccion, para que la pagina los vea mientras el trabajo corre; con
+`mlflow_run_id=...` ademas enlaza el trabajo con su run de MLflow. El handler
+recibe la config del trabajo mas su `job_id`. Si lanza una excepcion, el
+trabajo queda `failed` con el mensaje y el worker sigue con el siguiente.
 """
 
 from __future__ import annotations
@@ -16,13 +17,20 @@ import socket
 import time
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from sqlalchemy.orm import Session, sessionmaker
 
+from p3.data.frozen import FROZEN_MANIFESTS
 from p3.worker import jobs
 
-Report = Callable[[float, str], None]
+
+class Report(Protocol):
+    def __call__(
+        self, progress: float, message: str, *, mlflow_run_id: str | None = None
+    ) -> None: ...
+
+
 Handler = Callable[[dict[str, Any], Report], None]
 
 logger = logging.getLogger("p3.worker")
@@ -43,32 +51,52 @@ HANDLERS: Mapping[str, Handler] = {"dummy": run_dummy}
 
 
 def make_train_handler(
-    *, data_dir: Path, device: str, pretrained: bool = True, num_workers: int = 0
+    *,
+    data_dir: Path,
+    device: str,
+    tracking_uri: str,
+    pretrained: bool = True,
+    num_workers: int = 0,
+    code_commit: str = "unknown",
+    code_dirty: bool = False,
+    frozen: Mapping[str, str] = FROZEN_MANIFESTS,
 ) -> Handler:
-    """Handler de `kind: "train"`: entrena sobre un manifiesto y reporta cada epoca.
+    """Handler de `kind: "train"`: entrena sobre el manifiesto congelado y lo registra.
 
-    `data_dir` contiene `manifests/<manifest_id>/manifest.jsonl` y
-    `crops/<release_id>/crops.jsonl` (salidas de F3 y de `generate_crops.py`).
-    PyTorch se importa aqui para que la app de P2, que importa este paquete, no
-    lo necesite.
+    `data_dir` contiene `manifests/<manifest_id>/` (puntero DVC congelado, F3) y
+    `crops/<release_id>/crops.jsonl` (`generate_crops.py`). Antes de tocar datos
+    comprueba que el manifiesto sea exactamente el congelado. PyTorch y MLflow se
+    importan aqui para que la app de P2, que importa este paquete, no los necesite.
     """
 
     def run_train(config: dict[str, Any], report: Report) -> None:
         from p3.data import dataset
-        from p3.train import trainer
+        from p3.data.frozen import verify_frozen
+        from p3.train import tracking
         from p3.train.config import TrainingConfig
 
+        manifest_dir = data_dir / "manifests" / config["manifest_id"]
+        meta = verify_frozen(manifest_dir, frozen)
         training = TrainingConfig.model_validate(config["training"])
-        rows = dataset.load_manifest(
-            data_dir / "manifests" / config["manifest_id"] / "manifest.jsonl"
-        )
-        releases = {row["release_id"] for row in rows}
-        if len(releases) != 1:
-            raise ValueError(f"El manifiesto mezcla releases: {sorted(releases)}")
-        crop_index = dataset.load_crop_index(data_dir / "crops" / releases.pop())
+        rows = dataset.load_manifest(manifest_dir / "manifest.jsonl")
+        release = meta["release"]
+        crop_index = dataset.load_crop_index(data_dir / "crops" / release["release_id"])
         datasets = dataset.build_datasets(rows, crop_index, image_size=training.image_size)
-        num_classes = len({row["class_index"] for row in rows})
-        report(0.0, f"entorno: {trainer.environment_info(device)}")
+        classes = sorted(meta["classes"], key=lambda c: c["class_index"])
+        context = tracking.RunContext(
+            manifest_id=config["manifest_id"],
+            manifest_hash=meta["manifest_hash"],
+            release_id=release["release_id"],
+            release_hash=release["dataset_fingerprint"],
+            dvc_md5=release["dvc_pointer"]["md5"],
+            class_names=tuple(c["category_name"] for c in classes),
+            code_commit=code_commit,
+            code_dirty=code_dirty,
+            job_id=config.get("job_id"),
+        )
+
+        def on_start(run_id: str) -> None:
+            report(0.0, f"mlflow_run_id={run_id} en {device}", mlflow_run_id=run_id)
 
         def on_epoch(metrics: dict[str, float]) -> None:
             epoch = int(metrics["epoch"])
@@ -76,18 +104,27 @@ def make_train_handler(
                 epoch / training.max_epochs,
                 f"epoca {epoch}/{training.max_epochs} "
                 f"train_loss={metrics['train_loss']:.4f} train_acc={metrics['train_accuracy']:.4f} "
-                f"val_loss={metrics['val_loss']:.4f} val_acc={metrics['val_accuracy']:.4f}",
+                f"val_loss={metrics['val_loss']:.4f} val_acc={metrics['val_accuracy']:.4f} "
+                f"({metrics['epoch_seconds']:.1f} s)",
             )
 
-        trainer.train(
+        result, run_id = tracking.run_training(
             training,
-            train_set=datasets["train"],
-            val_set=datasets["val"],
-            num_classes=num_classes,
-            pretrained=pretrained,
+            datasets=datasets,
+            context=context,
             device=device,
+            pretrained=pretrained,
+            tracking_uri=tracking_uri,
             num_workers=num_workers,
             on_epoch=on_epoch,
+            on_start=on_start,
+        )
+        motivo = "early stopping" if result.early_stopped else "max_epochs"
+        report(
+            1.0,
+            f"fin por {motivo} en la epoca {result.stopped_epoch}; mejor epoca "
+            f"{result.best_epoch} val_acc={result.best_metrics['val_accuracy']:.4f} "
+            f"(run {run_id})",
         )
 
     return run_train
@@ -103,15 +140,17 @@ def run_once(
             return False
         job_id, kind, config = job.id, job.kind, dict(job.config)
 
-    def report(progress: float, message: str) -> None:
+    def report(progress: float, message: str, *, mlflow_run_id: str | None = None) -> None:
         with session_factory.begin() as session:
             jobs.report_progress(session, job_id, progress, message)
+            if mlflow_run_id is not None:
+                jobs.set_mlflow_run_id(session, job_id, mlflow_run_id)
 
     handler = handlers.get(kind)
     try:
         if handler is None:
             raise LookupError(f"No hay handler para el tipo de trabajo '{kind}'")
-        handler(config, report)
+        handler({**config, "job_id": job_id}, report)
     except Exception as error:
         logger.exception("El trabajo %s fallo", job_id)
         with session_factory.begin() as session:
@@ -134,7 +173,10 @@ def main() -> None:
         "train": make_train_handler(
             data_dir=settings.data_dir,
             device=settings.resolved_device(),
+            tracking_uri=settings.mlflow_tracking_uri,
             num_workers=settings.num_workers,
+            code_commit=settings.code_commit,
+            code_dirty=settings.code_dirty,
         ),
     }
 
