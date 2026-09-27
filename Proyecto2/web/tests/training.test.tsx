@@ -32,9 +32,10 @@ describe('Página Training — release y manifiesto', () => {
     expect(await screen.findByText('cat')).toBeInTheDocument();
     expect(await screen.findByText('dog')).toBeInTheDocument();
     expect(await screen.findByText('person')).toBeInTheDocument();
-    // Y las tres particiones del split.
-    expect(await screen.findByText(/train/i)).toBeInTheDocument();
-    expect(await screen.findByText(/val/i)).toBeInTheDocument();
-    expect(await screen.findByText(/test/i)).toBeInTheDocument();
+    // Y las tres particiones del split, como columnas de la tabla de conteos.
+    // (Se consultan por rol para no colisionar con el encabezado "Training".)
+    expect(await screen.findByRole('columnheader', { name: 'train' })).toBeInTheDocument();
+    expect(await screen.findByRole('columnheader', { name: 'val' })).toBeInTheDocument();
+    expect(await screen.findByRole('columnheader', { name: 'test' })).toBeInTheDocument();
   });
 });
