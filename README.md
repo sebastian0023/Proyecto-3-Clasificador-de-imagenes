@@ -48,6 +48,25 @@ python -m venv .venv
 
 El release de origen y su verificación están en [`Proyecto3/docs/decisiones.md`](Proyecto3/docs/decisiones.md).
 
+## Manifiesto, recortes y corridas de MLflow (Proyecto 3)
+
+Desde `Proyecto3/`, con el mismo perfil de AWS (usa el `dvc` del venv de Proyecto2):
+
+```bash
+../Proyecto2/.venv/Scripts/dvc remote modify --local prod profile <tu-perfil>
+../Proyecto2/.venv/Scripts/dvc pull                 # manifiesto congelado y snapshot de MLflow
+```
+
+Los recortes se regeneran desde el release (idénticos byte a byte, ver `Proyecto3/docs/verificacion_recortes.md`). Desde `Proyecto2/`:
+
+```bash
+PYTHONPATH="../Proyecto3/src;src" .venv/Scripts/python ../Proyecto3/scripts/generate_crops.py --release 0.1.3 --profile <tu-perfil>
+```
+
+Con el snapshot descargado, `python scripts/up.py` carga las corridas en MLflow (`http://localhost:5000`) si su volumen está vacío.
+
+Si la máquina tiene GPU NVIDIA (Docker Desktop con WSL2 o NVIDIA Container Toolkit), `up.py` se la asigna al worker; si no, entrena en CPU. `P3_GPU=0` o `P3_GPU=1` fuerzan la elección.
+
 ## Comprobar el worker
 
 ```bash
