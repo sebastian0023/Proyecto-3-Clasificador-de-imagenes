@@ -80,10 +80,17 @@ def test_el_optimizador_y_el_learning_rate_son_los_de_la_config(nombre, clase) -
     assert optimizer.param_groups[0]["lr"] == 0.02
 
 
-@pytest.mark.parametrize("batch_size", [2, 3, 5])
+@pytest.mark.parametrize("batch_size", [2, 4, 5])
 def test_un_paso_del_optimizador_por_minibatch(datasets, batch_size) -> None:
     result = _train(datasets, _config(batch_size=batch_size, max_epochs=2))
     assert result.optimizer_steps == 2 * math.ceil(N_TRAIN / batch_size)
+
+
+def test_un_minibatch_final_de_una_sola_muestra_se_descarta(datasets) -> None:
+    # 10 = 3 + 3 + 3 + 1: BatchNorm no puede entrenar con 1 muestra; se omite ese batch.
+    result = _train(datasets, _config(batch_size=3, max_epochs=2))
+    assert result.optimizer_steps == 2 * 3
+    assert len(result.train_order) == 2 * 9
 
 
 def test_max_epochs_define_cuantas_epocas_se_entrenan(datasets) -> None:
