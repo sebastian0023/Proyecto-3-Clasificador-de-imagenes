@@ -264,6 +264,178 @@ export interface CopilotToolCall {
   error: string | null;
 }
 
+// ============================================================================
+// Proyecto 3 — clasificador de imágenes (contratos en `Proyecto3/docs/contratos.md`)
+//
+// Estos tipos espejan los esquemas CONGELADOS de P3. La API vive bajo `/api/p3/`
+// y la sirve la misma app de P2. Cambiar la forma de cualquiera exige avisar al
+// equipo (regla 11 de AGENTS.md); mantener este archivo alineado con el contrato.
+// ============================================================================
+
+// --- releases (contrato §4) -------------------------------------------------
+export interface P3ReleaseSummary {
+  release_id: string;
+  dataset_fingerprint: string;
+  quality_status: 'pass' | 'fail';
+  created_at: string;
+  counts: { images: number; annotations: number; categories: number };
+  /** `null` si el release no está publicado en el remote `prod`. */
+  storage_uri: string | null;
+  published_in: string[];
+}
+
+/** Procedencia completa de un release aprobado (`GET /releases/{id}`). */
+export interface P3ReleaseDetail extends P3ReleaseSummary {
+  quality_report_fingerprint: string;
+  archive_sha256: string;
+}
+
+export interface P3ReleasesResponse {
+  releases: P3ReleaseSummary[];
+}
+
+// --- TrainingConfig (contrato §3) -------------------------------------------
+export type P3Optimizer = 'sgd' | 'adam' | 'adamw';
+export type P3MonitorMetric = 'val_accuracy' | 'val_loss';
+
+/** Config de entrenamiento. Los rangos válidos están en `contratos.md §3`. */
+export interface TrainingConfig {
+  optimizer: P3Optimizer;
+  batch_size: number;
+  max_epochs: number;
+  learning_rate: number;
+  image_size: number;
+  hidden_layers: number[];
+  dropout: number;
+  seed: number;
+  patience: number;
+  min_delta: number;
+  monitor_metric: P3MonitorMetric;
+}
+
+// --- manifiesto (contrato §2) -----------------------------------------------
+/** Conteos por clase en una partición, p. ej. `{cat: 7, dog: 6, person: 6}`. */
+export type ClassCounts = Record<string, number>;
+
+export interface ManifestCounts {
+  crops: Record<SplitName, ClassCounts>;
+  originals: Record<SplitName, ClassCounts>;
+}
+
+export interface ManifestClass {
+  class_index: number;
+  category_id: number;
+  category_name: string;
+}
+
+export interface ManifestExclusion {
+  annotation_id: number;
+  source_image_id: number;
+  reason: string;
+}
+
+export interface ManifestMeta {
+  schema_version: number;
+  manifest_id: string;
+  manifest_hash: string;
+  created_at: string;
+  code_commit: string;
+  release: {
+    release_id: string;
+    dataset_fingerprint: string;
+    quality_status: string;
+    quality_report_fingerprint: string;
+    archive_sha256: string;
+    p2_splits_fingerprint: string;
+    dvc_pointer: Record<string, unknown>;
+  };
+  seed: number;
+  ratios: Record<SplitName, number>;
+  tolerance_pp: number;
+  classes: ManifestClass[];
+  excluded_categories: { category_id: number; category_name: string }[];
+  exclusions: ManifestExclusion[];
+  counts: ManifestCounts;
+}
+
+/** Respuesta de `POST /manifests` (201). */
+export interface ManifestCreated {
+  manifest_id: string;
+  manifest_hash: string;
+  counts: ManifestCounts;
+}
+
+// --- trabajos de entrenamiento (contrato §4) --------------------------------
+export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+
+export interface TrainingJob {
+  job_id: string;
+  kind: 'train' | 'dummy';
+  status: JobStatus;
+  progress: number;
+  config: Record<string, unknown>;
+  logs: string[];
+  error: string | null;
+  worker_id: string | null;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  /** Se agrega en F4; `null` mientras el run de MLflow no arranca. */
+  mlflow_run_id?: string | null;
+}
+
+/** Respuesta de `POST /training/jobs` (202). */
+export interface JobCreated {
+  job_id: string;
+  status: JobStatus;
+}
+
+export interface CreateTrainJobRequest {
+  kind: 'train';
+  manifest_id: string;
+  config: TrainingConfig;
+}
+
+// --- corridas de MLflow (contrato §4) ---------------------------------------
+export interface RunSummary {
+  run_id: string;
+  status: string;
+  manifest_id: string;
+  params: Record<string, string>;
+  best_epoch: number;
+  stopped_epoch: number;
+  best_val_accuracy: number;
+  best_val_loss: number;
+  commit: string;
+  start_time: string;
+  end_time: string;
+}
+
+/** Un punto por época de las curvas train/val. */
+export interface RunEpoch {
+  epoch: number;
+  train_loss: number;
+  train_accuracy: number;
+  val_loss: number;
+  val_accuracy: number;
+}
+
+export interface RunDetail extends RunSummary {
+  history: RunEpoch[];
+  artifacts: Record<string, string>;
+}
+
+export interface RunsResponse {
+  runs: RunSummary[];
+}
+
+export interface RunsQuery {
+  manifest_id?: string;
+  status?: string;
+  order_by?: string;
+  desc?: boolean;
+}
+
 /** Error que conserva el mensaje de la API, no un `fetch failed` generico. */
 export class ApiError extends Error {
   constructor(
@@ -348,7 +520,50 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question }),
     }),
+
+  /** Endpoints del clasificador (Proyecto 3), todos bajo `/api/p3/`. */
+  p3: {
+    /** Releases; con `approved` solo los que pasaron la compuerta. */
+    releases: (approved = true) =>
+      request<P3ReleasesResponse>(`/api/p3/releases?approved=${approved}`),
+    /** Procedencia de un release aprobado. 409 si la compuerta falló, 404 si no existe. */
+    release: (releaseId: string) =>
+      request<P3ReleaseDetail>(`/api/p3/releases/${encodeURIComponent(releaseId)}`),
+    /** Genera un manifiesto 70/20/10 desde un release aprobado. */
+    createManifest: (releaseId: string, seed: number) =>
+      request<ManifestCreated>('/api/p3/manifests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ release_id: releaseId, seed }),
+      }),
+    manifest: (manifestId: string) =>
+      request<ManifestMeta>(`/api/p3/manifests/${encodeURIComponent(manifestId)}`),
+    /** Encola un entrenamiento. 422 (config inválida) o 409 (manifiesto) antes de crearlo. */
+    createTrainingJob: (body: CreateTrainJobRequest) =>
+      request<JobCreated>('/api/p3/training/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    /** Estado, progreso, logs y error de un trabajo (persisten en el servidor). */
+    trainingJob: (jobId: string) =>
+      request<TrainingJob>(`/api/p3/training/jobs/${encodeURIComponent(jobId)}`),
+    /** Corridas de MLflow, filtrables por manifiesto/estado y ordenables. */
+    runs: (query: RunsQuery = {}) => request<RunsResponse>(`/api/p3/runs${runsQuery(query)}`),
+    run: (runId: string) => request<RunDetail>(`/api/p3/runs/${encodeURIComponent(runId)}`),
+  },
 };
+
+/** Arma el query string de `GET /runs` omitiendo lo que no se especificó. */
+function runsQuery(query: RunsQuery): string {
+  const params = new URLSearchParams();
+  if (query.manifest_id) params.set('manifest_id', query.manifest_id);
+  if (query.status) params.set('status', query.status);
+  if (query.order_by) params.set('order_by', query.order_by);
+  if (query.desc !== undefined) params.set('desc', String(query.desc));
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
 
 /**
  * Formatea una metrica segun lo que representa.
