@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import TrainingConfigForm from '../components/TrainingConfigForm';
 import { Card, Pill } from '../components/ui';
 import {
   api,
@@ -34,6 +35,7 @@ export default function Training() {
   const [manifest, setManifest] = useState<ManifestCreated | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [launchedJobId, setLaunchedJobId] = useState<string | null>(null);
 
   // Releases aprobados: la lista de la que se puede elegir.
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function Training() {
     let cancelled = false;
     setProvenance(null);
     setManifest(null);
+    setLaunchedJobId(null);
     api.p3
       .release(selectedId)
       .then((detail) => {
@@ -234,6 +237,22 @@ export default function Training() {
           </>
         )}
       </Card>
+
+      {manifest && (
+        <Card
+          title="Configuración y lanzamiento"
+          hint="Los rangos válidos son los de contratos.md §3; un valor fuera de rango se avisa aquí y bloquea el lanzamiento."
+        >
+          {launchedJobId ? (
+            <p className="state">
+              Trabajo lanzado: <span className="mono">{launchedJobId}</span>. El seguimiento por
+              época y los logs llegan en el siguiente slice de T19.
+            </p>
+          ) : (
+            <TrainingConfigForm manifestId={manifest.manifest_id} onLaunched={setLaunchedJobId} />
+          )}
+        </Card>
+      )}
     </>
   );
 }
