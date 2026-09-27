@@ -118,6 +118,7 @@ def make_train_handler(
             num_workers=num_workers,
             on_epoch=on_epoch,
             on_start=on_start,
+            experiment=config.get("experiment", tracking.EXPERIMENT),
         )
         motivo = "early stopping" if result.early_stopped else "max_epochs"
         report(

@@ -51,9 +51,15 @@ class TrainJobCreate(BaseModel):
     # Forma fija: el worker arma una ruta con este id.
     manifest_id: str = Field(pattern=r"^m-[0-9A-Za-z.]+-s[0-9]+-[0-9]+$")
     config: TrainingConfig
+    # `p3-pruebas` para corridas de humo: no entran al barrido ni a la seleccion.
+    experiment: Literal["p3-clasificador", "p3-pruebas"] = "p3-clasificador"
 
     def stored_config(self) -> dict[str, Any]:
-        return {"manifest_id": self.manifest_id, "training": self.config.model_dump(mode="json")}
+        return {
+            "manifest_id": self.manifest_id,
+            "experiment": self.experiment,
+            "training": self.config.model_dump(mode="json"),
+        }
 
 
 JobCreate = Annotated[DummyJobCreate | TrainJobCreate, Field(discriminator="kind")]

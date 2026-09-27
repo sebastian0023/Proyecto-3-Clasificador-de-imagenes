@@ -32,6 +32,8 @@ from p3.train.config import TrainingConfig
 from p3.train.trainer import EpochCallback, TrainResult, environment_info, train
 
 EXPERIMENT = "p3-clasificador"
+# Corridas de humo y de medicion: nunca se mezclan con el barrido ni con la seleccion.
+EXPERIMENTS = (EXPERIMENT, "p3-pruebas")
 CURVAS = ("loss", "accuracy")
 
 
@@ -88,16 +90,19 @@ def run_training(
     num_workers: int = 0,
     on_epoch: EpochCallback | None = None,
     on_start: Callable[[str], None] | None = None,
+    experiment: str = EXPERIMENT,
 ) -> tuple[TrainResult, str]:
     """Entrena con train/val y registra la corrida; devuelve el resultado y el `run_id`."""
     import mlflow
 
+    if experiment not in EXPERIMENTS:
+        raise ValueError(f"Experimento desconocido {experiment!r}; validos: {EXPERIMENTS}")
     mlflow.set_tracking_uri(tracking_uri)
-    experiment = mlflow.set_experiment(EXPERIMENT)
+    mlflow_experiment = mlflow.set_experiment(experiment)
     environment = environment_info(device)
 
     with mlflow.start_run(
-        experiment_id=experiment.experiment_id, run_name=context.job_id or None
+        experiment_id=mlflow_experiment.experiment_id, run_name=context.job_id or None
     ) as run:
         run_id = run.info.run_id
         if on_start is not None:
