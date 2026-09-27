@@ -8,12 +8,20 @@
 import { useEffect, useState } from 'react';
 import Analyzers from './pages/Analyzers';
 import Copilot from './pages/Copilot';
+import Evaluation from './pages/Evaluation';
+import Experiments from './pages/Experiments';
 import Exploration from './pages/Exploration';
+import Inference from './pages/Inference';
+import Models from './pages/Models';
 import Overview from './pages/Overview';
 import Settings from './pages/Settings';
 import Splits from './pages/Splits';
+import Training from './pages/Training';
 import Versions from './pages/Versions';
 
+// Las páginas de P3 (clasificador) se suman a la navegación de P2: es el mismo
+// portal. Van agrupadas tras las de calidad y antes de Settings, que queda al
+// final. El router por hash de más abajo no cambia: solo crece esta lista.
 const PAGES = [
   { id: 'overview', label: 'Overview', glyph: '◴', element: <Overview /> },
   { id: 'analyzers', label: 'Analyzers', glyph: '◫', element: <Analyzers /> },
@@ -21,6 +29,11 @@ const PAGES = [
   { id: 'versions', label: 'Versions', glyph: '↻', element: <Versions /> },
   { id: 'copilot', label: 'Copilot', glyph: '✦', element: <Copilot /> },
   { id: 'exploration', label: 'Exploración', glyph: '⁘', element: <Exploration /> },
+  { id: 'training', label: 'Training', glyph: '⚡', element: <Training /> },
+  { id: 'experiments', label: 'Experiments', glyph: '⚗', element: <Experiments /> },
+  { id: 'evaluation', label: 'Evaluation', glyph: '✓', element: <Evaluation /> },
+  { id: 'models', label: 'Models', glyph: '◆', element: <Models /> },
+  { id: 'inference', label: 'Inference', glyph: '➤', element: <Inference /> },
   { id: 'settings', label: 'Settings', glyph: '⚙', element: <Settings /> },
 ] as const;
 
