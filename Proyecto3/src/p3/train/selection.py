@@ -59,6 +59,7 @@ class RunSummary:
     artifact_uri: str
     params: dict[str, str] = field(default_factory=dict)
     tags: dict[str, str] = field(default_factory=dict)
+    start_time: int | None = None
 
     @classmethod
     def from_rest(cls, run: dict[str, Any]) -> RunSummary:
@@ -83,6 +84,7 @@ class RunSummary:
             artifact_uri=info["artifact_uri"],
             params={p["key"]: p["value"] for p in data.get("params", [])},
             tags=tags,
+            start_time=info.get("start_time"),
         )
 
 
