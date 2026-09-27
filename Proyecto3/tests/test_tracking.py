@@ -152,3 +152,11 @@ def test_una_corrida_que_falla_queda_failed(datasets, tracking_uri) -> None:
         [MlflowClient(tracking_uri).get_experiment_by_name(tracking.EXPERIMENT).experiment_id]
     )
     assert [r.info.status for r in runs] == ["FAILED"]
+
+
+def test_las_corridas_de_prueba_van_a_otro_experimento(datasets, tracking_uri) -> None:
+    _, run_id = _run(datasets, tracking_uri, config=_config(max_epochs=1), experiment="p3-pruebas")
+    client = MlflowClient(tracking_uri)
+    experiment = client.get_experiment(client.get_run(run_id).info.experiment_id)
+    assert experiment.name == "p3-pruebas"
+    assert client.get_experiment_by_name(tracking.EXPERIMENT) is None
