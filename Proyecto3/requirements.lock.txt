@@ -1,29 +1,163 @@
+#
+# Lockfile de Proyecto 3: la version EXACTA de cada paquete. Se regenera SIEMPRE
+# dentro de `python:3.12-slim` (la imagen del worker), nunca desde un venv local:
+#
+#    python scripts/lock_requirements.py
+#
+# Los paquetes de CUDA solo existen para Linux x86_64; llevan marcador para que
+# este mismo archivo se instale tambien en Windows y macOS (torch de CPU).
+#
 annotated-doc==0.0.5
+    # via fastapi
 annotated-types==0.8.0
+    # via pydantic
 anyio==4.15.1
+    # via
+    #   httpx
+    #   starlette
 certifi==2026.7.22
-colorama==0.4.6
+    # via
+    #   httpcore
+    #   httpx
+cuda-bindings==13.4.3 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via torch
+cuda-pathfinder==1.8.2 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via cuda-bindings
+cuda-toolkit==13.0.3.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via torch
 fastapi==0.141.1
+    # via p3 (pyproject.toml)
+filelock==4.0.4
+    # via torch
+fsspec==2026.9.0
+    # via torch
 greenlet==3.5.6
+    # via sqlalchemy
 h11==0.16.0
+    # via httpcore
 httpcore==1.0.9
+    # via httpx
 httpx==0.28.1
+    # via p3 (pyproject.toml)
 idna==3.20
+    # via
+    #   anyio
+    #   httpx
 iniconfig==2.3.0
+    # via pytest
+jinja2==3.1.6
+    # via torch
+markupsafe==3.0.3
+    # via jinja2
+mpmath==1.3.0
+    # via sympy
+networkx==3.7
+    # via torch
+numpy==2.5.3
+    # via torchvision
+nvidia-cublas==13.1.1.3 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via
+    #   cuda-toolkit
+    #   nvidia-cudnn-cu13
+    #   nvidia-cusolver
+nvidia-cuda-cupti==13.0.85 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via cuda-toolkit
+nvidia-cuda-nvrtc==13.0.88 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via
+    #   cuda-toolkit
+    #   nvidia-cublas
+nvidia-cuda-runtime==13.0.96 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via cuda-toolkit
+nvidia-cudnn-cu13==9.24.0.43 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via torch
+nvidia-cufft==12.0.0.61 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via cuda-toolkit
+nvidia-cufile==1.15.1.6 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via cuda-toolkit
+nvidia-curand==10.4.0.35 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via cuda-toolkit
+nvidia-cusolver==12.0.4.66 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via cuda-toolkit
+nvidia-cusparse==12.6.3.3 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via
+    #   cuda-toolkit
+    #   nvidia-cusolver
+nvidia-cusparselt-cu13==0.8.1 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via torch
+nvidia-nccl-cu13==2.30.7 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via torch
+nvidia-nvjitlink==13.4.92 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via
+    #   cuda-toolkit
+    #   nvidia-cufft
+    #   nvidia-cusolver
+    #   nvidia-cusparse
+nvidia-nvshmem-cu13==3.4.5 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via torch
+nvidia-nvtx==13.0.85 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via cuda-toolkit
 packaging==26.3
+    # via pytest
 pillow==12.3.0
+    # via
+    #   p3 (pyproject.toml)
+    #   torchvision
 pluggy==1.6.0
-pydantic-settings==2.15.0
+    # via pytest
 pydantic==2.13.5
-pydantic_core==2.46.5
-Pygments==2.21.0
-PyMySQL==1.2.3
+    # via
+    #   fastapi
+    #   p3 (pyproject.toml)
+    #   pydantic-settings
+pydantic-core==2.46.5
+    # via pydantic
+pydantic-settings==2.15.0
+    # via p3 (pyproject.toml)
+pygments==2.21.0
+    # via pytest
+pymysql==1.2.3
+    # via p3 (pyproject.toml)
 pytest==9.1.1
+    # via p3 (pyproject.toml)
 python-dotenv==1.2.3
-PyYAML==6.0.3
+    # via pydantic-settings
+pyyaml==6.0.3
+    # via p3 (pyproject.toml)
 ruff==0.16.8
-SQLAlchemy==2.0.54
+    # via p3 (pyproject.toml)
+sqlalchemy==2.0.54
+    # via p3 (pyproject.toml)
 starlette==1.6.0
+    # via
+    #   fastapi
+    #   p3 (pyproject.toml)
+sympy==1.14.0
+    # via torch
+torch==2.14.0
+    # via
+    #   p3 (pyproject.toml)
+    #   torchvision
+torchvision==0.29.0
+    # via p3 (pyproject.toml)
+triton==3.8.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+    # via torch
+typing-extensions==4.16.0
+    # via
+    #   anyio
+    #   fastapi
+    #   pydantic
+    #   pydantic-core
+    #   sqlalchemy
+    #   starlette
+    #   torch
+    #   typing-inspection
 typing-inspection==0.4.4
-typing_extensions==4.16.0
+    # via
+    #   fastapi
+    #   pydantic
+    #   pydantic-settings
 zstandard==0.25.0
+    # via p3 (pyproject.toml)
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools

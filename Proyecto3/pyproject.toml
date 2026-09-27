@@ -25,6 +25,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Entrenamiento e inferencia (F4). Aparte de `dependencies` porque la app de
+# Proyecto2 monta `p3` para sus routers y no debe arrastrar PyTorch.
+train = [
+    "torch==2.14.0",
+    "torchvision==0.29.0",
+]
 dev = [
     "httpx==0.28.1",
     "pytest==9.1.1",
