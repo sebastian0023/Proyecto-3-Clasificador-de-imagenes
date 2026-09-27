@@ -65,7 +65,7 @@ def test_solo_cuentan_finished_del_manifiesto_congelado() -> None:
 
 
 def test_con_menos_de_diez_corridas_validas_no_se_elige() -> None:
-    runs = _diez()[:9] + [_run("fallida", 1.0, 0.0, 1, status="FAILED")]
+    runs = [*_diez()[:9], _run("fallida", 1.0, 0.0, 1, status="FAILED")]
     with pytest.raises(selection.NotEnoughRunsError, match="9"):
         selection.select(runs, manifest_hash=HASH)
 
