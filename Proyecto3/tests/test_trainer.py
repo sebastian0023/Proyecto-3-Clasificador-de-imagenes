@@ -134,7 +134,12 @@ def test_entrenar_cambia_los_pesos(datasets) -> None:
 def test_misma_semilla_misma_corrida(datasets) -> None:
     a = _train(datasets, _config(seed=11))
     b = _train(datasets, _config(seed=11))
-    assert a.history == b.history
+
+    def sin_duracion(history):
+        # La duracion de cada epoca depende del reloj, no de la semilla.
+        return [{k: v for k, v in fila.items() if k != "epoch_seconds"} for fila in history]
+
+    assert sin_duracion(a.history) == sin_duracion(b.history)
     assert a.train_order == b.train_order
     for (k, va), (_, vb) in zip(
         a.model.state_dict().items(), b.model.state_dict().items(), strict=True
