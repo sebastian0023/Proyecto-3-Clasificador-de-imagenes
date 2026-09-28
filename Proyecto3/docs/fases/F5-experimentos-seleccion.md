@@ -30,9 +30,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] ≥10 runs FINISHED con resultados distintos
-- [ ] Cada uno de los 7 parámetros tiene ≥2 valores
-- [ ] Todos con el mismo hash de manifiesto
+- [x] ≥10 runs FINISHED con resultados distintos → [corridas.md](../corridas.md): 12 corridas FINISHED en `p3-clasificador`, val_acc de 0.9384 a 0.9966, todas con early stopping; las 2 interrumpidas por cortes de luz quedan como no válidas y se relanzaron
+- [x] Cada uno de los 7 parámetros tiene ≥2 valores → [corridas.md](../corridas.md#comprobación-31): optimizer 3, batch_size 2, max_epochs 2, learning_rate 5, image_size 3, hidden_layers 3, dropout 3; `tests/test_sweep_config.py`
+- [x] Todos con el mismo hash de manifiesto → tag `manifest_hash` = `45600f29…` en las 12 (el worker exige el manifiesto congelado); también `dvc_md5` `ca56420c…` y `crops_jsonl_sha256` `d3d61f35…`
 
 **Entregables:** `config/p3/sweep.yaml`; `docs/corridas.md`
 
@@ -50,8 +50,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] selection.json commiteado con fecha anterior a la evaluación
-- [ ] El run seleccionado tiene la mejor val_accuracy de docs/corridas.md
+- [x] selection.json commiteado con fecha anterior a la evaluación → [`selection.json`](../selection.json) en `6bd9101` (2026-09-26 21:40 -06:00); todavía no existe ninguna evaluación en test (F6). `POST /api/p3/selection` responde 409 si se intenta elegir otra vez
+- [x] El run seleccionado tiene la mejor val_accuracy de docs/corridas.md → r10 `9f9b62c2…` con 0.9966, empatada con r08; gana por menor val_loss (0.0243 vs 0.0435), como fija decisiones.md §4. Checkpoint `e4acca42…` verificado de forma independiente
 
 **Entregables:** `docs/selection.json`; Endpoint de selección
 
@@ -66,3 +66,5 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 26 sep 2026 | Edith | T13 | Lanzador `scripts/launch_sweep.py` (red `1364329` → green `23ef512`); 12 corridas por el worker en la RTX 4060; dos cortes de luz interrumpieron r03 y r05, que quedaron `failed` por la recuperación de huérfanos y se relanzaron. `docs/corridas.md`, `reports/sweep/launched.json`, tag verificable del hash de recortes y snapshot de MLflow en DVC (`655be99`) | — |
+| 26 sep 2026 | Edith | T14 | Regla de decisiones.md §4 en `p3.train.selection` y `POST/GET /api/p3/selection` (red `a68e0f1` → green `4cda351`); seleccionado r10 `9f9b62c2…` (val_acc 0.9966) y `docs/selection.json` commiteado (`6bd9101`) | Avisar a Diego para F6 |

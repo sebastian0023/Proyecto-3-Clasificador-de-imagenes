@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from p3.data.api import router as p3_releases_router
 from p3.inference.proxy import router as p3_inference_router
+from p3.train.selection import router as p3_selection_router
 from p3.worker.api import router as p3_training_router
 
 from dataset_quality import __version__
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(p3_training_router)
     app.include_router(p3_releases_router)
     app.include_router(p3_inference_router)
+    app.include_router(p3_selection_router)
 
     # El build de Vite (si existe). En desarrollo puede no estar compilado
     # todavia: la API sigue respondiendo y /docs tambien.
