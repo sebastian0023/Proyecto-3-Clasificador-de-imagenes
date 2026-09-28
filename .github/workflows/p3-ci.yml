@@ -47,6 +47,33 @@ jobs:
       - name: pytest
         run: pytest
 
+  p3-e2e:
+    name: P3 · E2E (integración)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: Proyecto3/requirements.lock.txt
+
+      - name: Instalar dependencias (fijadas)
+        run: pip install -r requirements.lock.txt
+
+      - name: Instalar el paquete
+        run: pip install --no-deps -e .
+
+      # Job separado (T26 paso 4). `-s` deja la cadena de IDs en el log como
+      # evidencia. Hoy cubre release -> manifiesto; el flujo completo (F4-F7) se
+      # activa solo cuando esas fases estén en main.
+      - name: E2E de integración
+        run: pytest tests/test_e2e.py -v -s
+
   secrets:
     name: gitleaks (secretos)
     runs-on: ubuntu-latest
