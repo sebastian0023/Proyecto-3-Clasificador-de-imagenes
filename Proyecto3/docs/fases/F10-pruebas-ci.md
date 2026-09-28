@@ -52,10 +52,10 @@ Además, atendiendo el feedback del equipo en el PR #10, la CI del portal (`ci.y
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] La prueba E2E pasa en CI
-- [ ] Las mutaciones documentadas hacen fallar la suite
+- [ ] La prueba E2E pasa en CI → **parcial**: `Proyecto3/tests/test_e2e.py` recorre y verifica el tramo que ya está en `main` (release → recortes → manifiesto 70/20/10 sin fuga, con cadena de IDs trazable) y está cableada como job separado `p3-e2e` en `p3-ci.yml` (commit `f649a45`); pasa local (`1 passed`, imprime la cadena). El tramo entrenamiento→MLflow→selección→evaluación→S3→inferencia queda en `test_e2e_flujo_completo`, marcado `skip`, hasta que **F4–F7** estén en `main`.
+- [x] Las mutaciones documentadas hacen fallar la suite → `docs/mutaciones.md` documenta dos mutaciones reales sobre el split de F3 (M-A: un grupo de casi duplicados se parte entre train y test; M-B: `check_manifest` deja de ver la fuga) con la salida de `pytest` que las detecta; ambas revertidas con `git checkout` (commit `f649a45`). Verificado local: sin mutación, 144 passed / 2 skipped.
 
-**Entregables:** `tests/p3/test_e2e.py`; `docs/mutaciones.md`
+**Entregables:** `tests/test_e2e.py`; `docs/mutaciones.md`
 
 ## Bloque T28 — Ensayo de arranque desde clon limpio (M1)
 
@@ -72,8 +72,8 @@ Además, atendiendo el feedback del equipo en el PR #10, la CI del portal (`ci.y
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Arranque completo sin pasos inventados
-- [ ] Las 5 páginas funcionan con datos reales
+- [ ] Arranque completo sin pasos inventados → **parcial**: `docs/ensayo_arranque.md` registra el ensayo en seco de lo que no depende del stack (pruebas de P3 144/2, portal 31/31, build) y las observaciones del README. El arranque completo con `up.py` se ejecuta en el ensayo del **30** (necesita Docker y el stack).
+- [ ] Las 5 páginas funcionan con datos reales → **pendiente**: hoy corren contra el mock/contrato; con datos reales cuando **F4–F7** estén en `main` (Evaluation/Models/Inference además son de F9).
 
 **Entregables:** README corregido; `docs/ensayo_arranque.md`
 
@@ -89,4 +89,5 @@ Además, atendiendo el feedback del equipo en el PR #10, la CI del portal (`ci.y
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
 | 27 sep 2026 | Andrés | T25 | Rama `feat/fase-10-pruebas-ci`. Nuevo `.github/workflows/p3-ci.yml`: job `p3-python` (instala el lockfile de Proyecto3 + `ruff check`/`ruff format --check`/`pytest`, sin `continue-on-error`) y job `secrets` (gitleaks sobre el historial del PR). `.gitignore` de P3 agrega `*.onnx`. Verificado local: ruff limpio, pytest 143/1, y un error de ruff inyectado pone el gate en rojo (exit 1). Aparte, en la rama F8 se añadió `npm run test:unit` a `ci.yml` (feedback del PR #10). Commit `f8def1a`. | Confirmar rojo→verde y gitleaks en la primera corrida de CI del PR. |
-| 27 sep 2026 | Andrés | T26/T28 | **Bloqueados por dependencias.** La E2E (release→manifiesto→train→MLflow→selección→evaluación→S3→inferencia) y el ensayo desde clon limpio necesitan el stack completo (F4–F7: entrenador, MLflow, evaluación, publicación en S3), que aún no está en `main`. Por calendario ambos son del miércoles 30. | Retomar T26 y T28 cuando F4–F7 estén en `main`. |
+| 27 sep 2026 | Andrés | T26 | E2E `tests/test_e2e.py`: recorre release→recortes→manifiesto sin fuga con cadena de IDs (pasa local), cableada como job `p3-e2e`; el flujo completo va marcado `skip` hasta F4–F7. `docs/mutaciones.md`: dos mutaciones reales sobre el split (M-A grupo partido, M-B `check_manifest` ciego) que la suite detecta, verificadas y revertidas. Commit `f649a45`. | Completar la E2E (train→…→inferencia) y confirmar que pasa en CI cuando F4–F7 estén en `main`. |
+| 27 sep 2026 | Andrés | T28 | `docs/ensayo_arranque.md`: bitácora del ensayo. Verificado en seco lo que no depende del stack (pytest 144/2, portal 31/31, build) y anotadas observaciones del README. Commit posterior. | Ensayo completo con `up.py` + 5 páginas con datos reales + M4 el miércoles 30 (necesita F4–F7). |
