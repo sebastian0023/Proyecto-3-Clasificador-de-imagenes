@@ -65,7 +65,8 @@ def workspace(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     )
     manifest_dir = root / "manifests" / "m-0.0.0-s42-1"
     manifest_dir.mkdir(parents=True)
-    (manifest_dir / "manifest.jsonl").write_text(split.manifest_jsonl(rows), encoding="utf-8")
+    # En bytes: `write_text` convierte los finales de linea en Windows y el hash cambiaria.
+    (manifest_dir / "manifest.jsonl").write_bytes(split.manifest_jsonl(rows).encode("utf-8"))
     manifest_hash = split.manifest_hash(rows)
     (manifest_dir / "manifest.meta.json").write_text(
         json.dumps({"manifest_id": "m-0.0.0-s42-1", "manifest_hash": manifest_hash}),
