@@ -24,6 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -180,6 +181,19 @@ class MlflowRest:
             token = page.get("next_page_token")
             if not token:
                 return runs
+
+    def get_run(self, run_id: str) -> RunSummary:
+        try:
+            found = self._call("GET", f"/api/2.0/mlflow/runs/get?run_id={run_id}")
+        except urllib.error.HTTPError as error:
+            raise LookupError(run_id) from error
+        return RunSummary.from_rest(found["run"])
+
+    def metric_history(self, run_id: str, key: str) -> list[tuple[int, float]]:
+        found = self._call(
+            "GET", f"/api/2.0/mlflow/metrics/get-history?run_id={run_id}&metric_key={key}"
+        )
+        return [(int(m.get("step", 0)), float(m["value"])) for m in found.get("metrics", [])]
 
     def set_tag(self, run_id: str, key: str, value: str) -> None:
         self._call(
