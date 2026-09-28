@@ -282,6 +282,55 @@ services:
       mlflow:
         condition: service_healthy
 
+  # Inferencia con el modelo publicado (F4 T24): unico servicio HTTP con
+  # PyTorch. No se publica al host; la app le reenvia `/api/p3/inference`.
+  # Lee el registro y los pesos de S3 con el perfil de AWS de quien levanta el
+  # stack (`~/.aws`, solo lectura, lo exporta `scripts/up.py`).
+  p3-inference:
+    build:
+      context: ../Proyecto3
+      dockerfile: docker/Dockerfile
+    container_name: p3_inference
+    restart: unless-stopped
+    command: ["uvicorn", "p3.inference.app:app", "--host", "0.0.0.0", "--port", "8010"]
+    env_file:
+      - .env
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      AWS_CONFIG_FILE: /aws/config
+      AWS_SHARED_CREDENTIALS_FILE: /aws/credentials
+      P3_AWS_PROFILE: ${P3_AWS_PROFILE:-}
+      P3_MODELS_BUCKET: ${P3_MODELS_BUCKET:-dataset-quality-releases-750702272375}
+      P3_MODELS_PREFIX: ${P3_MODELS_PREFIX:-models/clasificador}
+      # Vacias en uso normal (AWS S3). Solo para probar con MinIO antes de F7.
+      P3_S3_ENDPOINT: ${P3_S3_ENDPOINT:-}
+      P3_S3_ACCESS_KEY: ${P3_S3_ACCESS_KEY:-}
+      P3_S3_SECRET_KEY: ${P3_S3_SECRET_KEY:-}
+      # Cola de anotacion: la API de P1 corriendo en el host.
+      P3_ANNOTATION_URL: ${P3_ANNOTATION_URL:-http://host.docker.internal:3000}
+    volumes:
+      # Sin `~/.aws` se monta una carpeta sin credenciales: el servicio arranca y
+      # responde 409 hasta que haya un modelo accesible.
+      - ${P3_AWS_DIR:-../Proyecto3/docker}:/aws:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          sys.exit(0 if urllib.request.urlopen("http://localhost:8010/health", timeout=5).status == 200 else 1)
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
 volumes:
   mariadb_data:
   minio_data:

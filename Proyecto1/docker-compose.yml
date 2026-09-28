@@ -19,8 +19,11 @@ services:
       - mariadb_data:/var/lib/mysql
 
   minio:
-    # Imagen oficial desde quay.io: el repo minio/minio ya no esta publicado en Docker Hub.
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # MinIO dejo de publicar sus imagenes (al 24 sep 2026 quay.io y Docker Hub
+    # responden "no such manifest") y un clon limpio ya no arrancaba. Mismo
+    # reemplazo que Proyecto2: `pgsty/minio`, build comunitario del mismo codigo,
+    # multi-arquitectura y con `mc` incluido para el healthcheck.
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: annotation_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -30,6 +33,13 @@ services:
     ports:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    # `npm run up` espera con `--wait`: sin healthcheck solo esperaba a que el
+    # contenedor existiera, no a que MinIO aceptara conexiones.
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     volumes:
       - minio_data:/data
 

@@ -149,8 +149,8 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 | `GET /api/p3/evaluation` | evaluación final en test | contrato (F6) |
 | `GET /api/p3/models` | versiones de modelo | contrato (F7) |
 | `POST /api/p3/models/{version}/activate` | elige la versión para inferencia | contrato (F7) |
-| `POST /api/p3/inference` | predice una imagen | contrato (F4, F9) |
-| `POST /api/p3/inference/{inference_id}/send-to-annotation` | crea el elemento en la cola de anotación | contrato (F9) |
+| `POST /api/p3/inference` | predice una imagen | **implementado** (F4 T24); página en F9 |
+| `POST /api/p3/inference/{inference_id}/send-to-annotation` | crea el elemento en la cola de anotación | **implementado** (F4 T24); página en F9 |
 
 ### `GET /api/p3/releases?approved=true`
 
@@ -249,6 +249,17 @@ Aplica la regla de [decisiones.md §4](decisiones.md#4-métrica-de-selección-de
 {"run_id": "…", "manifest_id": "…", "test_size": 0, "accuracy": 0.0, "f1_macro": 0.0, "per_class": [{"class": "cat", "precision": 0.0, "recall": 0.0, "support": 0}], "confusion_matrix": {"labels": ["cat", "dog", "person"], "rows_true_cols_pred": [[0, 0, 0], [0, 0, 0], [0, 0, 0]]}, "majority_baseline": 0.0, "predictions_uri": "…/predictions.jsonl"}
 ```
 
+### `predictions_test.csv` (F6) — cambio aditivo de F4 T24
+
+Una fila por recorte de test, en el orden del manifiesto, con estas columnas (`scripts/verify_inference.py` las usa para comparar el portal con la evaluación):
+
+```text
+crop_id,clase_real,clase_predicha,prob_cat,prob_dog,prob_person
+0.1.3:a1234,dog,dog,0.0213,0.9701,0.0086
+```
+
+Las probabilidades salen del mismo `build_eval_transform` y del checkpoint de `selection.json`, y suman 1.
+
 ### `GET /api/p3/models` y `POST /api/p3/models/{version}/activate`
 
 ```json
@@ -259,20 +270,27 @@ Aplica la regla de [decisiones.md §4](decisiones.md#4-métrica-de-selección-de
 
 ### `POST /api/p3/inference`
 
-- Request: `multipart/form-data` con `file` (JPEG o PNG de hasta 10 MB) y, opcionalmente, `bbox_xywh` para recortar antes de predecir.
+**Implementado (F4 T24).** Lo atiende el servicio `p3-inference` (el único con PyTorch); la app del portal le reenvía la petición.
+
+- Request: `multipart/form-data` con `file` (JPEG o PNG de hasta 10 MB) y, opcionalmente, `bbox_xywh` como texto JSON `[x, y, ancho, alto]` en píxeles de la imagen tal como se ve (rotación EXIF aplicada), para recortar antes de predecir.
+- Usa **la versión activa del registro** (sección 6): descarga su `model.pt` de S3, comprueba el SHA-256 registrado y aplica `build_eval_transform`, el mismo preprocesamiento de validación y prueba. Nunca usa un checkpoint local.
+- Cada inferencia se guarda (tabla `p3_inferences`) con la imagen, la versión y el SHA-256 del modelo.
 - Responde **200**:
 
 ```json
-{"inference_id": "…", "model_version": "1.0.0", "predicted_class": "dog", "probabilities": {"cat": 0.05, "dog": 0.9, "person": 0.05}}
+{"inference_id": "…", "model_version": "1.0.0", "model_sha256": "…", "run_id": "…", "predicted_class": "dog", "probabilities": {"cat": 0.05, "dog": 0.9, "person": 0.05}}
 ```
 
-- Las probabilidades suman 1 (±1e-6).
-- **415** si el tipo no es válido; **413** si el archivo pasa de 10 MB; **409** si no hay una versión activa.
+- Las probabilidades suman 1 (±1e-4).
+- **415** si el tipo no es válido; **413** si el archivo pasa de 10 MB; **422** si `bbox_xywh` no es válido o no cabe en la imagen; **409** si no hay versión activa, su objeto no existe o su SHA-256 no coincide; **503** si el servicio no responde.
 
 ### `POST /api/p3/inference/{inference_id}/send-to-annotation`
 
-- **201** `{"annotation_queue_item": {"image_id": 0, "status": "pending"}}`: crea la imagen en el flujo de P1 (`POST /api/images/upload`).
-- **404** si la inferencia no existe.
+**Implementado (F4 T24).** Sube la misma imagen de la inferencia a la cola de anotación de P1 (`POST {P3_ANNOTATION_URL}/api/images/upload`, campo `file`), que la crea en estado `pending`.
+
+- **201** `{"annotation_queue_item": {"image_id": 91, "status": "pending"}}`.
+- **200** con el mismo elemento si ya se había enviado: no se duplica.
+- **404** si la inferencia no existe; **502** si P1 no responde o rechaza la imagen.
 
 ## 5. `selection.json` — contrato (F5)
 
@@ -310,13 +328,30 @@ Carpeta `s3://dataset-quality-releases-750702272375/models/clasificador/<version
   "release_id": "0.1.3",
   "selection_sha256": "<sha256 de selection.json>",
   "test_metrics": {"accuracy": 0.0, "f1_macro": 0.0},
-  "preprocessing": {"image_size": 224, "resize": "shorter_side_then_center_crop", "mean": [0.485, 0.456, 0.406], "std": [0.229, 0.224, 0.225]},
+  "preprocessing": {"image_size": 224, "resize": "resize_to_square", "mean": [0.485, 0.456, 0.406], "std": [0.229, 0.224, 0.225]},
   "files": {"model.pt": {"sha256": "…", "s3_version_id": "…"}},
   "created_at": "…"
 }
 ```
 
 La versión es semántica y propia del modelo; no se confunde con la versión del dataset (`release_id`).
+
+### Registro de versiones (cambio de F4 T24, aditivo)
+
+En la misma carpeta de modelos vive `s3://dataset-quality-releases-750702272375/models/clasificador/registry.json`. Lo escribe F7 al publicar y lo lee el servicio de inferencia en cada predicción, así que activar otra versión cambia el modelo sin reiniciar nada:
+
+```json
+{
+  "schema_version": 1,
+  "active_version": "1.0.0",
+  "versions": [
+    {"version": "1.0.0", "run_id": "9f9b62c2…", "manifest_id": "m-0.1.3-s42-1", "key": "models/clasificador/1.0.0/model.pt", "sha256": "<sha256 de model.pt>", "s3_version_id": "…"}
+  ]
+}
+```
+
+- `model.pt` es el checkpoint de `p3.model.build.save_checkpoint`: pesos, arquitectura, `class_names` y `preprocessing` (`resize_to_square`, ver `docs/modelo.md`).
+- `active_version` debe estar en `versions`, o ser `null` si no hay ninguna activa. `POST /api/p3/models/{version}/activate` (F7) solo la cambia si el objeto existe y su SHA-256 coincide.
 
 ## 7. Fixture de pruebas — implementado
 

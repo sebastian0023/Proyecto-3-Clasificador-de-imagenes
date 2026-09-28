@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 import torch
 from torch import nn
@@ -79,8 +79,10 @@ def save_checkpoint(
     )
 
 
-def load_checkpoint(path: Path, map_location: str = "cpu") -> tuple[nn.Module, dict[str, Any]]:
-    """Reconstruye el modelo en modo `eval` y devuelve sus metadatos."""
+def load_checkpoint(
+    path: Path | BinaryIO, map_location: str = "cpu"
+) -> tuple[nn.Module, dict[str, Any]]:
+    """Reconstruye el modelo en modo `eval` y devuelve sus metadatos (ruta o bytes)."""
     checkpoint = torch.load(path, map_location=map_location, weights_only=True)
     arch = checkpoint["architecture"]
     if arch["name"] != ARCHITECTURE:
