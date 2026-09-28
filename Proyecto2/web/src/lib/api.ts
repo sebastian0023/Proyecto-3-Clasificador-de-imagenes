@@ -399,6 +399,8 @@ export interface CreateTrainJobRequest {
 // --- corridas de MLflow (contrato §4) ---------------------------------------
 export interface RunSummary {
   run_id: string;
+  /** Experimento de MLflow al que pertenece la corrida (para enlazar a su UI). */
+  experiment_id: string;
   status: string;
   manifest_id: string;
   params: Record<string, string>;

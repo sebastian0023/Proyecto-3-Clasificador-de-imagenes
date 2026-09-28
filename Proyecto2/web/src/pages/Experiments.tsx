@@ -18,7 +18,8 @@ type SortKey = 'best_val_accuracy' | 'best_val_loss' | 'best_epoch';
 
 /** Dónde vive la UI de MLflow para enlazar a un run (configurable por entorno). */
 const MLFLOW_URL = import.meta.env.VITE_MLFLOW_URL ?? 'http://localhost:5000';
-const mlflowRunUrl = (runId: string): string => `${MLFLOW_URL}/#/experiments/0/runs/${runId}`;
+const mlflowRunUrl = (experimentId: string, runId: string): string =>
+  `${MLFLOW_URL}/#/experiments/${experimentId}/runs/${runId}`;
 
 const fmt = (n: number): string => n.toFixed(3);
 const shortId = (id: string): string => id.slice(0, 8);
@@ -296,7 +297,14 @@ export default function Experiments() {
         >
           <div className="row">
             <span>MLflow</span>
-            <a href={mlflowRunUrl(openRunId)} target="_blank" rel="noreferrer">
+            <a
+              href={mlflowRunUrl(
+                detail?.experiment_id ?? runs?.find((r) => r.run_id === openRunId)?.experiment_id ?? '0',
+                openRunId,
+              )}
+              target="_blank"
+              rel="noreferrer"
+            >
               Abrir en MLflow ({shortId(openRunId)})
             </a>
           </div>

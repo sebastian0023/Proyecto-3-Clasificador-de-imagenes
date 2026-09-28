@@ -34,7 +34,8 @@ describe('Experiments — comparación y detalle de corridas', () => {
     await user.click(detailButtons[0] as HTMLElement);
 
     const link = await screen.findByRole('link', { name: /mlflow/i });
-    expect(link.getAttribute('href') ?? '').toMatch(/\/runs\/run\d+/);
+    // El enlace usa el experiment_id real de la corrida (1 en el fixture), no 0.
+    expect(link.getAttribute('href') ?? '').toMatch(/\/experiments\/1\/runs\/run\d+/);
 
     expect(await screen.findByRole('img', { name: /curvas de accuracy/i })).toBeInTheDocument();
   });

@@ -126,6 +126,7 @@ export const runs: RunSummary[] = Array.from({ length: 12 }, (_, i) => {
   const bestEpoch = 8 + (i % 7);
   return {
     run_id: `run${String(i + 1).padStart(4, '0')}${'0'.repeat(24)}`,
+    experiment_id: '1',
     status: 'FINISHED',
     manifest_id: MANIFEST_ID,
     params: paramsFor(i),
