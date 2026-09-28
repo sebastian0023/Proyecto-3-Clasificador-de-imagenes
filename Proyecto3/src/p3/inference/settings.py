@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Any
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,7 +44,13 @@ def get_settings() -> InferenceSettings:
 
 
 class S3ObjectStore:
-    """`ObjectStore` sobre boto3 (AWS S3 o MinIO), solo lectura."""
+    """`ObjectStore` sobre boto3 (AWS S3 o MinIO), solo lectura.
+
+    Los usuarios IAM del equipo tienen `s3:GetObject` pero no
+    `s3:GetObjectVersion`. Si leer por `VersionId` da AccessDenied, se lee la
+    version actual y solo se acepta si su `VersionId` es el registrado; el
+    servicio ademas exige el SHA-256 del registro.
+    """
 
     def __init__(self, settings: InferenceSettings) -> None:
         import boto3
@@ -61,14 +68,34 @@ class S3ObjectStore:
             session = boto3.Session(profile_name=settings.aws_profile or None)
             self._client = session.client("s3", region_name=settings.aws_region)
 
+    @classmethod
+    def from_client(cls, client: Any) -> S3ObjectStore:
+        store = cls.__new__(cls)
+        store._client = client
+        return store
+
     def get_bytes(self, bucket: str, key: str, version_id: str | None = None) -> bytes:
         from botocore.exceptions import BotoCoreError, ClientError
 
-        extra = {"VersionId": version_id} if version_id else {}
         try:
-            return self._client.get_object(Bucket=bucket, Key=key, **extra)["Body"].read()
+            if version_id:
+                try:
+                    return self._client.get_object(Bucket=bucket, Key=key, VersionId=version_id)[
+                        "Body"
+                    ].read()
+                except ClientError as error:
+                    if error.response.get("Error", {}).get("Code") not in ("AccessDenied", "403"):
+                        raise
+            obj = self._client.get_object(Bucket=bucket, Key=key)
         except (ClientError, BotoCoreError) as error:
             raise ModelUnavailableError(f"No se pudo leer s3://{bucket}/{key}: {error}") from error
+        current = obj.get("VersionId")
+        if version_id and current != version_id:
+            raise ModelUnavailableError(
+                f"s3://{bucket}/{key} esta en la version {current}; el registro dice {version_id} "
+                "y estas credenciales no pueden leer versiones anteriores."
+            )
+        return obj["Body"].read()
 
 
 @lru_cache
