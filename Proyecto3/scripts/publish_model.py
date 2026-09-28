@@ -28,7 +28,6 @@ import sqlite3
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 PROYECTO3 = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROYECTO3 / "src"))
@@ -37,52 +36,12 @@ import yaml  # noqa: E402
 
 from p3.registry.package import build_package  # noqa: E402
 from p3.registry.publish import list_versions, publish_version  # noqa: E402
+from p3.registry.s3 import S3Store  # noqa: E402
 from p3.train.selection import MlflowRest, RunSummary  # noqa: E402
 
 BUCKET = "dataset-quality-releases-750702272375"
 PREFIX = "models/clasificador"
 CHECKPOINT = "checkpoint/model.pt"
-
-
-class S3Store:
-    """`ObjectStore` sobre boto3, con el perfil de `~/.aws` (bucket versionado)."""
-
-    def __init__(self, profile: str, region: str = "us-east-1") -> None:
-        import boto3
-
-        self.client = boto3.Session(profile_name=profile).client("s3", region_name=region)
-
-    def put_bytes(self, bucket: str, key: str, data: bytes) -> str | None:
-        return self.client.put_object(Bucket=bucket, Key=key, Body=data).get("VersionId")
-
-    def head(self, bucket: str, key: str) -> dict[str, Any] | None:
-        from botocore.exceptions import ClientError
-
-        try:
-            found = self.client.head_object(Bucket=bucket, Key=key)
-        except ClientError as error:
-            if error.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
-                return None
-            raise
-        return {"version_id": found.get("VersionId"), "size": found["ContentLength"]}
-
-    def get_bytes(self, bucket: str, key: str, version_id: str | None = None) -> bytes:
-        """Descarga la version actual y exige que sea `version_id`.
-
-        La politica del equipo no incluye `s3:GetObjectVersion` (solo la del
-        evaluador), asi que no se pide una version concreta: se descarga la
-        actual y se compara su `VersionId`. Cada version del modelo tiene su
-        propia carpeta y nunca se sobrescribe, asi que la actual es la
-        registrada; si alguien la sobrescribiera, esto falla en vez de servir
-        otro archivo.
-        """
-        response = self.client.get_object(Bucket=bucket, Key=key)
-        if version_id is not None and response.get("VersionId") != version_id:
-            raise RuntimeError(
-                f"s3://{bucket}/{key} tiene VersionId {response.get('VersionId')}, "
-                f"no el registrado {version_id}."
-            )
-        return response["Body"].read()
 
 
 class SnapshotRuns:
@@ -218,7 +177,7 @@ def main() -> None:
     if args.dry_run:
         return
 
-    store = S3Store(args.profile)
+    store = S3Store.from_profile(args.profile)
     publish_version(
         store,
         bucket=args.bucket,
