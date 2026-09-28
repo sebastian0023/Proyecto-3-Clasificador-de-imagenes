@@ -1,0 +1,63 @@
+name: P3 CI
+
+# CI del Proyecto 3 (clasificador). El portal de P3 vive en `Proyecto2/web` y ya
+# lo cubre `ci.yml` (job `web`: pruebas de componente + build/typecheck). Este
+# workflow cubre lo que faltaba (hallazgo 7 del inventario): el paquete Python de
+# P3 (`Proyecto3/src/p3`, worker e inferencia) y el escaneo de secretos.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  p3-python:
+    name: P3 · Ruff + pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: Proyecto3/requirements.lock.txt
+
+      # Desde el lockfile, no desde los rangos de `pyproject.toml`: el árbol de
+      # dependencias es el MISMO que corre dentro de la app de P2. Sin esto, una
+      # versión nueva de una dependencia indirecta podría mover la CI sin que
+      # nadie tocara el repositorio.
+      - name: Instalar dependencias (fijadas)
+        run: pip install -r requirements.lock.txt
+
+      # `--no-deps` para que no vuelva a resolver y deshaga los pines.
+      - name: Instalar el paquete
+        run: pip install --no-deps -e .
+
+      # El build DEBE fallar si el lint o las pruebas fallan: sin `continue-on-error`.
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Ruff (formato)
+        run: ruff format --check .
+
+      - name: pytest
+        run: pytest
+
+  secrets:
+    name: gitleaks (secretos)
+    runs-on: ubuntu-latest
+    steps:
+      # `fetch-depth: 0` para que gitleaks pueda revisar el historial del PR, no
+      # solo el último commit.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
