@@ -67,8 +67,22 @@ class S3Store:
         return {"version_id": found.get("VersionId"), "size": found["ContentLength"]}
 
     def get_bytes(self, bucket: str, key: str, version_id: str | None = None) -> bytes:
-        extra = {"VersionId": version_id} if version_id else {}
-        return self.client.get_object(Bucket=bucket, Key=key, **extra)["Body"].read()
+        """Descarga la version actual y exige que sea `version_id`.
+
+        La politica del equipo no incluye `s3:GetObjectVersion` (solo la del
+        evaluador), asi que no se pide una version concreta: se descarga la
+        actual y se compara su `VersionId`. Cada version del modelo tiene su
+        propia carpeta y nunca se sobrescribe, asi que la actual es la
+        registrada; si alguien la sobrescribiera, esto falla en vez de servir
+        otro archivo.
+        """
+        response = self.client.get_object(Bucket=bucket, Key=key)
+        if version_id is not None and response.get("VersionId") != version_id:
+            raise RuntimeError(
+                f"s3://{bucket}/{key} tiene VersionId {response.get('VersionId')}, "
+                f"no el registrado {version_id}."
+            )
+        return response["Body"].read()
 
 
 class SnapshotRuns:
