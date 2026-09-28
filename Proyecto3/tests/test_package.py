@@ -113,6 +113,7 @@ def inputs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
 def package(inputs: dict[str, Any], **overrides: Any) -> dict[str, bytes]:
     kwargs = {
         "checkpoint": inputs["checkpoint"],
+        "run": inputs["selection"],
         "selection": json.dumps(inputs["selection"]).encode("utf-8"),
         "metrics": inputs["metrics"],
         "run_params": inputs["run_params"],
@@ -243,3 +244,38 @@ def test_el_paquete_se_carga_en_un_proceso_nuevo_e_infiere(inputs, tmp_path: Pat
         probs = torch.softmax(model(tensor), dim=1)[0]
     assert meta["class_names"] == list(CLASSES)
     assert float(probs.sum()) == pytest.approx(1.0, abs=1e-6)
+
+
+# --- Version no seleccionada (0.9.0 = r08): sin metricas de test --------------------------
+
+
+def test_version_no_seleccionada_sin_metricas_de_test(inputs) -> None:
+    run = inputs["selection"] | {"run_id": "r08run", "val_accuracy": 0.9965753424657534}
+    files = package(inputs, run=run, selection=None, metrics=None, version="0.9.0")
+    mv = json.loads(files["model_version.json"])
+    assert mv["selected"] is False
+    assert mv["test_metrics"] is None
+    assert mv["selection_sha256"] is None
+    assert mv["run_id"] == "r08run"
+    card = files["MODEL_CARD.md"].decode("utf-8")
+    assert "No seleccionada" in card
+    assert "sin evaluación en test" in card
+    assert "0.9966" in card  # val_accuracy de su corrida
+    assert "Accuracy top-1" not in card
+
+
+def test_metricas_de_test_sin_seleccion_se_rechazan(inputs) -> None:
+    run = inputs["selection"] | {"run_id": "r10run"}
+    with pytest.raises(PackageError, match="seleccion"):
+        package(inputs, run=run, selection=None, version="0.9.0")
+
+
+def test_la_corrida_debe_ser_la_de_selection_json(inputs) -> None:
+    run = inputs["selection"] | {"run_id": "r08run"}
+    with pytest.raises(PackageError, match="r08run"):
+        package(inputs, run=run)
+
+
+def test_version_seleccionada_marca_selected(inputs) -> None:
+    mv = json.loads(package(inputs)["model_version.json"])
+    assert mv["selected"] is True
