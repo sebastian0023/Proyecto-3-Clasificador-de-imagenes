@@ -279,3 +279,14 @@ def test_auditoria_detecta_un_csv_alterado(workspace, evaluated, tmp_path: Path)
     csv_path.write_text("\n".join(lineas) + "\n", encoding="utf-8")
     resultado = _run(workspace, copia, audit=True)
     assert resultado["audit_matches"] is False
+
+
+def test_procedencia_extra_queda_en_metrics(workspace, tmp_path: Path) -> None:
+    record = _run(
+        workspace,
+        tmp_path / "out",
+        provenance={"code_commit": "abc1234", "crops_jsonl_sha256": "d3d61f35"},
+    )
+    metrics = json.loads((tmp_path / "out" / "metrics.json").read_text(encoding="utf-8"))
+    assert metrics["code_commit"] == record["code_commit"] == "abc1234"
+    assert metrics["crops_jsonl_sha256"] == "d3d61f35"
