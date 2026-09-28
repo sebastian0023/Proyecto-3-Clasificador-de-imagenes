@@ -166,7 +166,10 @@ def run_evaluation(
     crops_dir: Path,
     out_dir: Path,
     audit: bool = False,
+    provenance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """`provenance`: datos que conoce quien llama (commit del codigo, hash de los
+    recortes) y que se guardan tal cual en `metrics.json`."""
     selection = load_selection(selection_path)
     if (out_dir / METRICS).exists() and not audit:
         raise EvaluationAlreadyDoneError(
@@ -221,6 +224,7 @@ def run_evaluation(
         "selected_at": selection.get("selected_at"),
         "evaluated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "predictions_sha256": hashlib.sha256(csv_text.encode("utf-8")).hexdigest(),
+        **(provenance or {}),
     }
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / PREDICTIONS).write_text(csv_text, encoding="utf-8", newline="\n")
