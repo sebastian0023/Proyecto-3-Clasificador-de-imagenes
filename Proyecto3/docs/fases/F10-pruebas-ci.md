@@ -30,8 +30,10 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Workflow en rojo ante un error inyectado y verde tras corregir
-- [ ] gitleaks corre en CI
+- [x] Workflow en rojo ante un error inyectado y verde tras corregir → `.github/workflows/p3-ci.yml` corre `ruff check`, `ruff format --check` y `pytest` sin `continue-on-error` (commit `f8def1a`). Evidencia local del gate: un `import os` sin usar pone `ruff check` en **exit 1** (`F401`) y al revertir vuelve a **exit 0**; `pytest` local 143 passed / 1 skipped. _Confirmación de rojo→verde en la propia CI: en la primera corrida del PR de F10._
+- [ ] gitleaks corre en CI → job `secrets` cableado en `p3-ci.yml` (gitleaks sobre el historial del PR). _Pendiente: evidencia de la primera corrida en CI (no ejecutable localmente)._
+
+Además, atendiendo el feedback del equipo en el PR #10, la CI del portal (`ci.yml`, job `web`) ahora corre `npm run test:unit` junto a `npm test` y `build` (rama F8, commit `ee53384`).
 
 **Entregables:** `.github/workflows/p3-ci.yml`; `.gitignore`
 
@@ -86,3 +88,5 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 27 sep 2026 | Andrés | T25 | Rama `feat/fase-10-pruebas-ci`. Nuevo `.github/workflows/p3-ci.yml`: job `p3-python` (instala el lockfile de Proyecto3 + `ruff check`/`ruff format --check`/`pytest`, sin `continue-on-error`) y job `secrets` (gitleaks sobre el historial del PR). `.gitignore` de P3 agrega `*.onnx`. Verificado local: ruff limpio, pytest 143/1, y un error de ruff inyectado pone el gate en rojo (exit 1). Aparte, en la rama F8 se añadió `npm run test:unit` a `ci.yml` (feedback del PR #10). Commit `f8def1a`. | Confirmar rojo→verde y gitleaks en la primera corrida de CI del PR. |
+| 27 sep 2026 | Andrés | T26/T28 | **Bloqueados por dependencias.** La E2E (release→manifiesto→train→MLflow→selección→evaluación→S3→inferencia) y el ensayo desde clon limpio necesitan el stack completo (F4–F7: entrenador, MLflow, evaluación, publicación en S3), que aún no está en `main`. Por calendario ambos son del miércoles 30. | Retomar T26 y T28 cuando F4–F7 estén en `main`. |
