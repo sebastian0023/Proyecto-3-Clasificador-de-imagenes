@@ -146,7 +146,9 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 | `GET /api/p3/runs` | corridas de MLflow | contrato (F5) |
 | `GET /api/p3/runs/{run_id}` | una corrida con curvas | contrato (F5) |
 | `POST /api/p3/selection` | fija el candidato | contrato (F5) |
-| `GET /api/p3/evaluation` | evaluación final en test | contrato (F6) |
+| `GET /api/p3/evaluation` | evaluación final en test | **implementado** (F6) |
+| `GET /api/p3/evaluation/predictions` | `predictions_test.csv` por muestra | **implementado** (F6) |
+| `GET /api/p3/evaluation/examples` | aciertos y errores de test (`errors.json`) | **implementado** (F6) |
 | `GET /api/p3/models` | versiones de modelo | contrato (F7) |
 | `POST /api/p3/models/{version}/activate` | elige la versión para inferencia | contrato (F7) |
 | `POST /api/p3/inference` | predice una imagen | **implementado** (F4 T24); página en F9 |
@@ -242,12 +244,18 @@ Aplica la regla de [decisiones.md §4](decisiones.md#4-métrica-de-selección-de
 
 ### `GET /api/p3/evaluation`
 
-- **409** `{"detail": "La selección del modelo no está cerrada"}` mientras no exista `selection.json` commiteado. El test no se revela antes (criterio 6.3).
-- Después:
+Lee de MLflow la corrida `selected=true` y sus artefactos `evaluation/` (los registra `scripts/log_evaluation_mlflow.py`), para que portal, API y MLflow muestren las mismas cifras.
+
+- **409** `{"detail": "La selección del modelo no está cerrada"}` mientras ninguna corrida esté seleccionada. El test no se revela antes (criterio 6.3).
+- **404** si la corrida seleccionada todavía no tiene la evaluación final.
+- **200**:
 
 ```json
-{"run_id": "…", "manifest_id": "…", "test_size": 0, "accuracy": 0.0, "f1_macro": 0.0, "per_class": [{"class": "cat", "precision": 0.0, "recall": 0.0, "support": 0}], "confusion_matrix": {"labels": ["cat", "dog", "person"], "rows_true_cols_pred": [[0, 0, 0], [0, 0, 0], [0, 0, 0]]}, "majority_baseline": 0.0, "predictions_uri": "…/predictions.jsonl"}
+{"run_id": "9f9b62c2…", "manifest_id": "m-0.1.3-s42-1", "test_size": 145, "accuracy": 0.9793103448275862, "passes_threshold": true, "threshold": 0.85, "f1_macro": 0.9743519475145314, "per_class": [{"class": "cat", "precision": 1.0, "recall": 0.9375, "f1": 0.9677, "support": 32}], "confusion_matrix": {"labels": ["cat", "dog", "person"], "rows_true_cols_pred": [[30, 2, 0], [0, 38, 0], [0, 1, 74]]}, "majority_baseline": 0.5172413793103449, "majority_class": "person", "most_confused": {"true": "cat", "predicted": "dog", "count": 2}, "evaluated_at": "2026-09-28T02:25:07Z", "predictions_uri": "/api/p3/evaluation/predictions", "examples_uri": "/api/p3/evaluation/examples"}
 ```
+
+- **Cambios F6 (aditivos):** `f1` en `per_class`, `passes_threshold`, `threshold`, `majority_class`, `most_confused`, `evaluated_at` y `examples_uri`. `predictions_uri` apunta a `GET /api/p3/evaluation/predictions`, que devuelve el CSV de abajo (`text/csv`), no un `predictions.jsonl`.
+- `GET /api/p3/evaluation/examples`: `{"correct": [...], "errors": [...]}`. Cada ejemplo trae `crop_id`, `crop_path` (relativo a `data/crops/<release>/`), `true`, `predicted` y `probability`; todos son de `test`.
 
 ### `predictions_test.csv` (F6) — cambio aditivo de F4 T24
 
