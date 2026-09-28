@@ -40,8 +40,9 @@ class PackageError(ValueError):
 def build_package(
     *,
     checkpoint: bytes,
-    selection: bytes,
-    metrics: Mapping[str, Any],
+    run: Mapping[str, Any],
+    selection: bytes | None,
+    metrics: Mapping[str, Any] | None,
     run_params: Mapping[str, str],
     run_tags: Mapping[str, str],
     classes: Sequence[Mapping[str, Any]],
@@ -49,20 +50,38 @@ def build_package(
     requirements: str,
     created_at: str,
 ) -> dict[str, bytes]:
+    """`run`: `run_id`, `manifest_id`, `manifest_hash`, `checkpoint_sha256`,
+    `crops_jsonl_sha256`, `val_accuracy` y `best_epoch` de la corrida empaquetada.
+
+    Con `selection` es la version seleccionada: la corrida debe ser la de
+    `selection.json` y `metrics` son las de la evaluacion final en test. Sin
+    `selection` es una version no seleccionada y NUNCA lleva metricas de test.
+    """
     if not SEMVER.match(version):
         raise PackageError(f"version {version!r} no es semantica (MAYOR.MENOR.PARCHE).")
-    chosen = json.loads(selection)
     checkpoint_sha = hashlib.sha256(checkpoint).hexdigest()
-    if checkpoint_sha != chosen["checkpoint_sha256"]:
+    if checkpoint_sha != run["checkpoint_sha256"]:
         raise PackageError(
-            f"SHA-256 del checkpoint {checkpoint_sha} no es el seleccionado "
-            f"({chosen['checkpoint_sha256']})."
+            f"SHA-256 del checkpoint {checkpoint_sha} no es el de la corrida "
+            f"({run['checkpoint_sha256']})."
         )
-    if metrics["run_id"] != chosen["run_id"]:
-        raise PackageError(
-            f"Las metricas son del run_id {metrics['run_id']}, no del seleccionado "
-            f"{chosen['run_id']}."
-        )
+    if selection is None:
+        if metrics is not None:
+            raise PackageError(
+                "Metricas de test sin seleccion: solo la version de selection.json "
+                "se evalua en test."
+            )
+    else:
+        chosen = json.loads(selection)
+        if (run["run_id"], checkpoint_sha) != (chosen["run_id"], chosen["checkpoint_sha256"]):
+            raise PackageError(
+                f"La corrida {run['run_id']} no es la de selection.json ({chosen['run_id']})."
+            )
+        if metrics is None or metrics["run_id"] != chosen["run_id"]:
+            got = None if metrics is None else metrics["run_id"]
+            raise PackageError(
+                f"Las metricas son del run_id {got}, no del seleccionado {chosen['run_id']}."
+            )
 
     loaded = torch.load(io.BytesIO(checkpoint), map_location="cpu", weights_only=True)
     architecture = dict(loaded["architecture"])
@@ -91,7 +110,7 @@ def build_package(
     }
     files["MODEL_CARD.md"] = _card(
         version=version,
-        selection=chosen,
+        run=run,
         metrics=metrics,
         run_tags=run_tags,
         training=training,
@@ -103,13 +122,17 @@ def build_package(
     model_version = {
         "schema_version": 1,
         "version": version,
+        "selected": selection is not None,
         "architecture": architecture["name"],
         "pretrained_weights": PRETRAINED_ORIGIN,
-        "run_id": chosen["run_id"],
-        "manifest_id": chosen["manifest_id"],
+        "run_id": run["run_id"],
+        "manifest_id": run["manifest_id"],
         "release_id": run_tags["release_id"],
-        "selection_sha256": hashlib.sha256(selection).hexdigest(),
-        "test_metrics": {"accuracy": metrics["accuracy"], "f1_macro": metrics["f1_macro"]},
+        "selection_sha256": hashlib.sha256(selection).hexdigest() if selection else None,
+        "test_metrics": (
+            {"accuracy": metrics["accuracy"], "f1_macro": metrics["f1_macro"]} if metrics else None
+        ),
+        "val_metrics": {"accuracy": run.get("val_accuracy"), "best_epoch": run.get("best_epoch")},
         "preprocessing": preprocessing,
         # `s3_version_id` lo asigna S3 al subir; queda en `registry.json` (T18).
         "files": {
@@ -142,8 +165,8 @@ def _json(data: Any) -> bytes:
 def _card(
     *,
     version: str,
-    selection: Mapping[str, Any],
-    metrics: Mapping[str, Any],
+    run: Mapping[str, Any],
+    metrics: Mapping[str, Any] | None,
     run_tags: Mapping[str, str],
     training: Mapping[str, Any],
     architecture: Mapping[str, Any],
@@ -151,6 +174,59 @@ def _card(
     preprocessing: Mapping[str, Any],
     checkpoint_sha: str,
 ) -> str:
+    values = {
+        "version": version,
+        "status": (
+            "**Versión seleccionada** por validación (`selection.json`) y evaluada una sola "
+            "vez en test."
+            if metrics
+            else "**No seleccionada:** corrida candidata del barrido, sin evaluación en test. "
+            "Se publica como versión anterior recuperable; la seleccionada es la que se usa."
+        ),
+        "classes": ", ".join(
+            f"`{c['category_name']}` (índice {c['class_index']}, category_id {c['category_id']})"
+            for c in class_map["classes"]
+        ),
+        "arch_name": architecture["name"],
+        "arch_hidden": architecture["hidden_layers"],
+        "arch_dropout": architecture["dropout"],
+        "arch_classes": architecture["num_classes"],
+        "pretrained": PRETRAINED_ORIGIN,
+        "run_id": run["run_id"],
+        "best_epoch": run.get("best_epoch"),
+        "val_accuracy": f"{run.get('val_accuracy', 0):.4f}",
+        "code_commit": run_tags.get("code_commit", ""),
+        "checkpoint_sha": checkpoint_sha,
+        "training": json.dumps(dict(training), ensure_ascii=False),
+        "release_id": run_tags["release_id"],
+        "release_hash": run_tags["release_hash"],
+        "dvc_md5": run_tags.get("dvc_md5", ""),
+        "manifest_id": run["manifest_id"],
+        "manifest_hash": run["manifest_hash"],
+        "crops_sha": run.get("crops_jsonl_sha256", ""),
+        "test_section": _test_section(metrics, run["run_id"]),
+        "test_size_note": (
+            f"El test tiene {metrics['test_size']} recortes: una diferencia de pocos puntos "
+            "puede no ser significativa."
+            if metrics
+            else "Sin evaluación en test: su desempeño fuera de validación no está medido."
+        ),
+        "size": preprocessing["image_size"],
+        "resize": preprocessing["resize"],
+        "mean": preprocessing["mean"],
+        "std": preprocessing["std"],
+    }
+    return CARD_TEMPLATE.read_text(encoding="utf-8").format(**values)
+
+
+def _test_section(metrics: Mapping[str, Any] | None, run_id: str) -> str:
+    if metrics is None:
+        return (
+            "## Desempeño\n\n"
+            "Esta versión **no se evaluó en test** (sin evaluación en test, a propósito): solo "
+            "la versión de `selection.json` se evalúa, una vez, para que el test no sirva para "
+            "comparar modelos. Su referencia es la `val_accuracy` de arriba."
+        )
     matrix = metrics["confusion_matrix"]["rows_true_cols_pred"]
     labels = metrics["confusion_matrix"]["labels"]
     correct = sum(matrix[i][i] for i in range(len(matrix)))
@@ -171,44 +247,36 @@ def _card(
         if confused
         else "No hubo errores en test."
     )
-    values = {
-        "version": version,
-        "classes": ", ".join(
-            f"`{c['category_name']}` (índice {c['class_index']}, category_id {c['category_id']})"
-            for c in class_map["classes"]
-        ),
-        "arch_name": architecture["name"],
-        "arch_hidden": architecture["hidden_layers"],
-        "arch_dropout": architecture["dropout"],
-        "arch_classes": architecture["num_classes"],
-        "pretrained": PRETRAINED_ORIGIN,
-        "run_id": selection["run_id"],
-        "best_epoch": selection.get("best_epoch"),
-        "val_accuracy": f"{selection.get('val_accuracy', 0):.4f}",
-        "code_commit": run_tags.get("code_commit", ""),
-        "checkpoint_sha": checkpoint_sha,
-        "training": json.dumps(dict(training), ensure_ascii=False),
-        "release_id": run_tags["release_id"],
-        "release_hash": run_tags["release_hash"],
-        "dvc_md5": run_tags.get("dvc_md5", ""),
-        "manifest_id": selection["manifest_id"],
-        "manifest_hash": selection["manifest_hash"],
-        "crops_sha": selection.get("crops_jsonl_sha256", ""),
-        "test_size": metrics["test_size"],
-        "evaluated_at": metrics.get("evaluated_at", ""),
-        "accuracy": f"{metrics['accuracy']:.4f}",
-        "correct": correct,
-        "f1_macro": f"{metrics['f1_macro']:.4f}",
-        "baseline_class": baseline["class"],
-        "baseline_accuracy": f"{baseline['accuracy']:.4f}",
-        "rows_class": rows_class,
-        "labels": " | ".join(labels),
-        "label_rules": "---:|" * len(labels),
-        "rows_matrix": rows_matrix,
-        "confused_text": confused_text,
-        "size": preprocessing["image_size"],
-        "resize": preprocessing["resize"],
-        "mean": preprocessing["mean"],
-        "std": preprocessing["std"],
-    }
-    return CARD_TEMPLATE.read_text(encoding="utf-8").format(**values)
+    accuracy_row = (
+        f"| Accuracy top-1 | **{metrics['accuracy']:.4f}** ({correct} / {metrics['test_size']}) |"
+    )
+    return "\n".join(
+        [
+            "## Desempeño en test",
+            "",
+            f"Evaluación **única** sobre el test congelado ({metrics['test_size']} recortes), "
+            "después de la selección por validación "
+            f"(`evaluated_at` {metrics.get('evaluated_at', '')}).",
+            "",
+            "| Métrica | Valor |",
+            "|---|---|",
+            accuracy_row,
+            f"| F1 macro | {metrics['f1_macro']:.4f} |",
+            f"| Baseline de clase mayoritaria (`{baseline['class']}`, mismo test) "
+            f"| {baseline['accuracy']:.4f} |",
+            "",
+            "| Clase | Precisión | Recall | F1 | Support |",
+            "|---|---:|---:|---:|---:|",
+            rows_class,
+            "",
+            "Matriz de confusión (filas = real, columnas = predicho):",
+            "",
+            f"| real \\ pred | {' | '.join(labels)} |",
+            f"|---|{'---:|' * len(labels)}",
+            rows_matrix,
+            "",
+            f"{confused_text} Predicciones por muestra: "
+            f"`reports/evaluation/{run_id}/predictions_test.csv` y "
+            "`GET /api/p3/evaluation/predictions`.",
+        ]
+    )

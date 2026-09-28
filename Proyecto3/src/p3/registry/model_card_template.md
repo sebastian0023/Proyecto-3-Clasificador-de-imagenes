@@ -1,6 +1,8 @@
 # Tarjeta del modelo — clasificador `{version}`
 
-Generada automáticamente a partir de `selection.json`, la evaluación final en test (F6) y la corrida de MLflow. Describe exactamente el `model.pt` de este paquete.
+Generada automáticamente a partir de la corrida de MLflow, `selection.json` y la evaluación final en test (F6). Describe exactamente el `model.pt` de este paquete.
+
+{status}
 
 ## Propósito
 
@@ -30,27 +32,7 @@ Configuración de entrenamiento: `{training}`.
 | Recortes | `crops.jsonl` con SHA-256 `{crops_sha}` |
 | Clases excluidas | las que no llegan a 300 originales en el release (`car`, `bicycle`); ver `docs/clases.md` |
 
-## Desempeño en test
-
-Evaluación **única** sobre el test congelado ({test_size} recortes), después de la selección por validación (`evaluated_at` {evaluated_at}).
-
-| Métrica | Valor |
-|---|---|
-| Accuracy top-1 | **{accuracy}** ({correct} / {test_size}) |
-| F1 macro | {f1_macro} |
-| Baseline de clase mayoritaria (`{baseline_class}`, mismo test) | {baseline_accuracy} |
-
-| Clase | Precisión | Recall | F1 | Support |
-|---|---:|---:|---:|---:|
-{rows_class}
-
-Matriz de confusión (filas = real, columnas = predicho):
-
-| real \ pred | {labels} |
-|---|{label_rules}
-{rows_matrix}
-
-{confused_text} Predicciones por muestra: `reports/evaluation/{run_id}/predictions_test.csv` y `GET /api/p3/evaluation/predictions`.
+{test_section}
 
 ## Preprocesamiento
 
@@ -62,7 +44,7 @@ El mismo en validación, test e inferencia: la imagen en RGB con la rotación EX
 - Clasifica recortes, no imágenes completas: si dos objetos se enciman, el recorte de uno incluye al otro y domina el que ocupa más espacio (en test, una persona cargando un perro se predijo como `dog`).
 - Los gatos oscuros, a contraluz o sin rostro visible son los casos que más confunde con `dog`.
 - El 10.9 % de las cajas del release son muy pequeñas (menos del 2 % del área de su imagen); se conservaron en entrenamiento, pero su calidad visual es baja.
-- El test tiene {test_size} recortes: una diferencia de pocos puntos entre versiones puede no ser significativa.
+- {test_size_note}
 
 ## Cómo cargarlo
 
