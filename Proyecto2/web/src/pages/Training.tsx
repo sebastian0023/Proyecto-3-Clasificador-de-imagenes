@@ -1,14 +1,15 @@
 /**
  * Training (P3): elegir un release aprobado, ver su procedencia y el split
- * 70/20/10, y (en T19) configurar y lanzar un entrenamiento.
+ * 70/20/10, configurar los parámetros y lanzar/seguir un entrenamiento (T19).
  *
- * Slice A (este archivo): selector de release aprobado, panel de procedencia y
- * generación/vista del manifiesto con la tabla de conteos por clase y partición.
- * El formulario de parámetros y el seguimiento del trabajo llegan en los
- * siguientes slices de T19.
+ * Selector de release aprobado y procedencia; generación del manifiesto 70/20/10
+ * con conteos por clase y partición; formulario de configuración con validación
+ * (TrainingConfigForm); y, tras lanzar, la vista de estado del trabajo, cuyo id
+ * se persiste en localStorage para que recargar la página lo reconstruya.
  */
 
 import { useEffect, useState } from 'react';
+import JobStatusView from '../components/JobStatusView';
 import TrainingConfigForm from '../components/TrainingConfigForm';
 import { Card, Pill } from '../components/ui';
 import {
@@ -18,10 +19,13 @@ import {
   type P3ReleaseSummary,
   type SplitName,
 } from '../lib/api';
+import { launchBlockReason } from '../lib/training-config';
 
 const SPLITS: SplitName[] = ['train', 'val', 'test'];
 /** Semilla por defecto del manifiesto (contrato §3: seed por defecto 42). */
 const SEED = 42;
+/** Dónde se recuerda el trabajo en curso para sobrevivir a un recargado. */
+const JOB_STORAGE_KEY = 'p3.training.jobId';
 
 /** Suma los conteos de una clase en las tres particiones. */
 function totalPorClase(counts: ManifestCreated['counts'], className: string): number {
@@ -35,7 +39,10 @@ export default function Training() {
   const [manifest, setManifest] = useState<ManifestCreated | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [launchedJobId, setLaunchedJobId] = useState<string | null>(null);
+  // Un recargado reconstruye el trabajo en curso desde el id guardado.
+  const [launchedJobId, setLaunchedJobId] = useState<string | null>(() =>
+    localStorage.getItem(JOB_STORAGE_KEY),
+  );
 
   // Releases aprobados: la lista de la que se puede elegir.
   useEffect(() => {
@@ -62,7 +69,6 @@ export default function Training() {
     let cancelled = false;
     setProvenance(null);
     setManifest(null);
-    setLaunchedJobId(null);
     api.p3
       .release(selectedId)
       .then((detail) => {
@@ -89,8 +95,29 @@ export default function Training() {
     }
   }
 
+  function handleLaunched(jobId: string) {
+    localStorage.setItem(JOB_STORAGE_KEY, jobId);
+    setLaunchedJobId(jobId);
+  }
+
+  /** Olvida el trabajo en curso para volver a configurar otro. */
+  function clearJob() {
+    localStorage.removeItem(JOB_STORAGE_KEY);
+    setLaunchedJobId(null);
+  }
+
+  function onSelectRelease(releaseId: string) {
+    // Cambiar de release descarta el trabajo en curso: es de otro manifiesto.
+    clearJob();
+    setSelectedId(releaseId);
+  }
+
   const selected = releases?.find((r) => r.release_id === selectedId) ?? null;
   const classNames = manifest ? Object.keys(manifest.counts.crops.train) : [];
+  // Motivo por el que no se puede lanzar aún (compuerta o manifiesto sin congelar).
+  const blockReason = selected
+    ? launchBlockReason(selected.quality_status, manifest !== null)
+    : null;
 
   return (
     <>
@@ -119,7 +146,7 @@ export default function Training() {
                 <select
                   className="campo"
                   value={selectedId ?? ''}
-                  onChange={(e) => setSelectedId(e.target.value)}
+                  onChange={(e) => onSelectRelease(e.target.value)}
                 >
                   {releases.map((r) => (
                     <option key={r.release_id} value={r.release_id}>
@@ -238,21 +265,32 @@ export default function Training() {
         )}
       </Card>
 
-      {manifest && (
+      {launchedJobId ? (
+        <Card
+          title="Entrenamiento"
+          hint="Estado, avance, logs y error del trabajo. Se conserva al recargar la página."
+          aside={
+            <button type="button" className="ghost" onClick={clearJob}>
+              Configurar otro
+            </button>
+          }
+        >
+          <JobStatusView jobId={launchedJobId} />
+        </Card>
+      ) : selected ? (
         <Card
           title="Configuración y lanzamiento"
-          hint="Los rangos válidos son los de contratos.md §3; un valor fuera de rango se avisa aquí y bloquea el lanzamiento."
+          hint="Los rangos válidos son los de contratos.md §3; un valor fuera de rango se avisa junto al campo y bloquea el lanzamiento."
         >
-          {launchedJobId ? (
+          {blockReason || !manifest ? (
             <p className="state">
-              Trabajo lanzado: <span className="mono">{launchedJobId}</span>. El seguimiento por
-              época y los logs llegan en el siguiente slice de T19.
+              {blockReason ?? 'Genera el manifiesto 70/20/10 antes de lanzar un entrenamiento.'}
             </p>
           ) : (
-            <TrainingConfigForm manifestId={manifest.manifest_id} onLaunched={setLaunchedJobId} />
+            <TrainingConfigForm manifestId={manifest.manifest_id} onLaunched={handleLaunched} />
           )}
         </Card>
-      )}
+      ) : null}
     </>
   );
 }

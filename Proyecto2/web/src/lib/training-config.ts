@@ -73,6 +73,19 @@ export function isConfigValid(errors: FieldErrors): boolean {
   return Object.keys(errors).length === 0;
 }
 
+/**
+ * Motivo por el que NO se puede lanzar un entrenamiento, o `null` si sí se puede
+ * (criterio T19: bloquear si la compuerta falló o el manifiesto no está
+ * congelado, mostrando el motivo).
+ */
+export function launchBlockReason(qualityStatus: string, hasFrozenManifest: boolean): string | null {
+  if (qualityStatus !== 'pass')
+    return 'El release no pasó la compuerta de calidad; no se puede entrenar sobre él.';
+  if (!hasFrozenManifest)
+    return 'Genera y congela el manifiesto 70/20/10 antes de lanzar un entrenamiento.';
+  return null;
+}
+
 /** Parsea el texto de `hidden_layers` ("256" o "512, 128") a una lista. */
 export function parseHiddenLayers(text: string): number[] {
   return text
