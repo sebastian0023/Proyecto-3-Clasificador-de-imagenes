@@ -15,6 +15,7 @@ import type {
   P3ReleaseSummary,
   RunDetail,
   RunSummary,
+  Selection,
   TrainingConfig,
 } from '../api';
 
@@ -118,9 +119,10 @@ function paramsFor(index: number): Record<string, string> {
   );
 }
 
-/** 12 corridas FINISHED deterministas sobre el manifiesto, con accuracy variada. */
+/** 12 corridas FINISHED deterministas sobre el manifiesto, con accuracy única. */
 export const runs: RunSummary[] = Array.from({ length: 12 }, (_, i) => {
-  const bestValAccuracy = Number((0.72 + (i % 6) * 0.035).toFixed(4));
+  // Valores únicos (0.70 … 0.92) para que el orden por val_accuracy sea estable.
+  const bestValAccuracy = Number((0.7 + i * 0.02).toFixed(2));
   const bestEpoch = 8 + (i % 7);
   return {
     run_id: `run${String(i + 1).padStart(4, '0')}${'0'.repeat(24)}`,
@@ -160,3 +162,26 @@ export function runDetail(run: RunSummary): RunDetail {
     },
   };
 }
+
+/** El candidato: la corrida de mayor val_accuracy (desempate por menor val_loss). */
+const bestRun = runs.reduce((best, run) =>
+  run.best_val_accuracy > best.best_val_accuracy ||
+  (run.best_val_accuracy === best.best_val_accuracy && run.best_val_loss < best.best_val_loss)
+    ? run
+    : best,
+);
+
+export const selection: Selection = {
+  schema_version: 1,
+  selected_at: '2026-09-29T18:00:00Z',
+  manifest_id: MANIFEST_ID,
+  manifest_hash: manifestMeta.manifest_hash,
+  rule: 'max val_accuracy; desempate min val_loss; luego end_time mas temprano',
+  candidates: runs.length,
+  run_id: bestRun.run_id,
+  checkpoint_uri: `mlflow-artifacts:/${bestRun.run_id}/checkpoints/best.pt`,
+  checkpoint_sha256: 'c0ffee00000000000000000000000000000000000000000000000000000000ab',
+  best_epoch: bestRun.best_epoch,
+  val_accuracy: bestRun.best_val_accuracy,
+  val_loss: bestRun.best_val_loss,
+};

@@ -14,7 +14,15 @@
  */
 
 import type { TrainingConfig, TrainingJob } from '../api';
-import { MANIFEST_ID, manifestMeta, releaseDetail, releaseSummary, runDetail, runs } from './p3-fixtures';
+import {
+  MANIFEST_ID,
+  manifestMeta,
+  releaseDetail,
+  releaseSummary,
+  runDetail,
+  runs,
+  selection,
+} from './p3-fixtures';
 
 type FetchArgs = Parameters<typeof fetch>;
 type FetchInput = FetchArgs[0];
@@ -206,6 +214,11 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
   if (runMatch && method === 'GET') {
     const run = runs.find((r) => r.run_id === runMatch[1]);
     return run ? json(runDetail(run)) : detail('El run no existe', 404);
+  }
+
+  // Candidato seleccionado (lectura). Adición propuesta a coordinar con F5.
+  if (pathname === '/api/p3/selection' && method === 'GET') {
+    return json(selection);
   }
 
   return detail(`Ruta mock no implementada: ${method} ${pathname}`, 404);

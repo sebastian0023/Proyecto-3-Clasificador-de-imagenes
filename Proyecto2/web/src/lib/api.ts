@@ -436,6 +436,23 @@ export interface RunsQuery {
   desc?: boolean;
 }
 
+// --- selección del candidato (contrato §5) ----------------------------------
+/** `selection.json`: el candidato elegido por validación. Sin métricas de test. */
+export interface Selection {
+  schema_version: number;
+  selected_at: string;
+  manifest_id: string;
+  manifest_hash: string;
+  rule: string;
+  candidates: number;
+  run_id: string;
+  checkpoint_uri: string;
+  checkpoint_sha256: string;
+  best_epoch: number;
+  val_accuracy: number;
+  val_loss: number;
+}
+
 /** Error que conserva el mensaje de la API, no un `fetch failed` generico. */
 export class ApiError extends Error {
   constructor(
@@ -551,6 +568,13 @@ export const api = {
     /** Corridas de MLflow, filtrables por manifiesto/estado y ordenables. */
     runs: (query: RunsQuery = {}) => request<RunsResponse>(`/api/p3/runs${runsQuery(query)}`),
     run: (runId: string) => request<RunDetail>(`/api/p3/runs/${encodeURIComponent(runId)}`),
+    /**
+     * Lectura del candidato seleccionado (`selection.json`).
+     * NOTA: `contratos.md §4` solo define `POST /selection` (crear); este GET es
+     * una adición propuesta para que Experiments muestre el candidato. Coordinar
+     * con Edith (F5) antes de congelarlo (regla 11 de AGENTS.md).
+     */
+    selection: () => request<Selection>('/api/p3/selection'),
   },
 };
 

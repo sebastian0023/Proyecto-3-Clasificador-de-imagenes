@@ -611,6 +611,23 @@ tbody tr:last-child td {
   flex-wrap: wrap;
 }
 
+/* Encabezado de columna ordenable: el botón hereda el estilo del <th>. */
+.sort-th button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.sort-th button:hover {
+  color: var(--ink);
+}
+
 input:focus-visible,
 select:focus-visible,
 button:focus-visible {
