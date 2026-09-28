@@ -9,6 +9,8 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import tempfile
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -65,21 +67,22 @@ class FakeStore:
 def checkpoint_bytes(seed: int) -> bytes:
     torch.manual_seed(seed)
     model = build_model(num_classes=3, hidden_layers=[], dropout=0.0, pretrained=False)
-    buffer = io.BytesIO()
-    save_checkpoint(
-        buffer,  # type: ignore[arg-type]
-        model,
-        class_names=CLASSES,
-        hidden_layers=[],
-        dropout=0.0,
-        preprocessing={
-            "image_size": 32,
-            "resize": "resize_to_square",
-            "mean": [0.485, 0.456, 0.406],
-            "std": [0.229, 0.224, 0.225],
-        },
-    )
-    return buffer.getvalue()
+    with tempfile.TemporaryDirectory() as folder:
+        path = Path(folder) / "model.pt"
+        save_checkpoint(
+            path,
+            model,
+            class_names=CLASSES,
+            hidden_layers=[],
+            dropout=0.0,
+            preprocessing={
+                "image_size": 32,
+                "resize": "resize_to_square",
+                "mean": [0.485, 0.456, 0.406],
+                "std": [0.229, 0.224, 0.225],
+            },
+        )
+        return path.read_bytes()
 
 
 def package(version: str, checkpoint: bytes, run_id: str = "r10") -> dict[str, bytes]:
