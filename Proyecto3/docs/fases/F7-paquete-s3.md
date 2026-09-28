@@ -29,9 +29,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] La tarjeta describe exactamente el run de selection.json
-- [ ] La tarjeta incluye desempeño por clase, preprocesamiento y modo de carga
-- [ ] El paquete carga en venv limpio siguiendo solo la tarjeta
+- [x] La tarjeta describe exactamente el run de selection.json — `MODEL_CARD.md` de 1.0.0: run `9f9b62c2…`, SHA-256 `e4acca42…` (el de `selection.json`); `p3.registry.package` rechaza otro checkpoint u otra corrida ([publicacion_s3.md](../publicacion_s3.md))
+- [x] La tarjeta incluye desempeño por clase, preprocesamiento y modo de carga — generada desde `metrics.json` de F6 (plantilla `src/p3/registry/model_card_template.md`); `tests/test_package.py::test_la_tarjeta_usa_las_cifras_de_la_evaluacion`
+- [x] El paquete carga en venv limpio siguiendo solo la tarjeta — venv nuevo con `requirements.lock.txt` y el código de la sección "Cómo cargarlo" sobre los paquetes descargados de S3: 1.0.0 → `dog` 0.943828 en el recorte de val `a1330` ([publicacion_s3.md](../publicacion_s3.md#verificación-independiente-52))
 
 **Entregables:** `models/p3/<version>/ (ignorado en git salvo metadatos)`; `model_card.md`
 
@@ -51,9 +51,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] head-object muestra ambos objetos con VersionId
-- [ ] SHA-256 local coincide tras descargar
-- [ ] Inferencia exitosa con el modelo descargado
+- [x] head-object muestra ambos objetos con VersionId — `model.pt` y `MODEL_CARD.md` de 0.9.0 y 1.0.0 con su `VersionId` (CLI de AWS, solo lectura)
+- [x] SHA-256 local coincide tras descargar — `sha256sum` de los `model.pt` descargados: 0.9.0 `ab4d1f44…`, 1.0.0 `e4acca42…`, iguales a `registry.json` (y 1.0.0 a `selection.json`)
+- [x] Inferencia exitosa con el modelo descargado — en un venv nuevo, las dos versiones infieren; sus probabilidades difieren (1.0.0 `dog` 0.9438, 0.9.0 `dog` 0.8501): cambiar de versión cambia el modelo
 
 **Entregables:** `src/p3/registry/publish.py`; `docs/publicacion_s3.md (sin secretos)`
 
@@ -62,9 +62,11 @@
 - [ ] Todas las casillas de aceptación marcadas con evidencia real
 - [ ] PRs fusionados con review de Edith
 - [ ] CI en verde en `main`
-- [ ] Commits red → green visibles en el historial
+- [x] Commits red → green visibles en el historial — paquete `0117b49` → `9adbf86`; versión no seleccionada `60f0771` → `e374a23`; publicación `4dd9c0b` → `07ba8ed`; API de modelos `39c48e8` → `7d20d05`
 
 ## Registro de avance
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 27 sep 2026 | Diego | T17 | `src/p3/registry/package.py` + plantilla de tarjeta: paquete del contrato §6 con los mismos bytes del checkpoint seleccionado y tarjeta generada con las cifras de F6. Versión no seleccionada sin métricas de test. 9 mutaciones detectadas. | — |
+| 27 sep 2026 | Diego | T18 | `src/p3/registry/publish.py` (publicar, activar y listar con verificación de `head` y SHA-256), `s3.py`, `api.py` y `proxy.py` (`/api/p3/models`), `scripts/publish_model.py`. **Publicadas en S3** 0.9.0 (r08, sin evaluación en test) y **1.0.0 (r10, activa)**, con `VersionId` y SHA-256 verificados con la CLI y carga e inferencia en un venv nuevo. 8 mutaciones detectadas. | `s3:GetObjectVersion` en la política del equipo (lo usa la inferencia de F4); ver [publicacion_s3.md](../publicacion_s3.md) |

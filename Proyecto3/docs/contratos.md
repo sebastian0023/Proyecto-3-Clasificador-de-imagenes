@@ -149,8 +149,9 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 | `GET /api/p3/evaluation` | evaluación final en test | **implementado** (F6) |
 | `GET /api/p3/evaluation/predictions` | `predictions_test.csv` por muestra | **implementado** (F6) |
 | `GET /api/p3/evaluation/examples` | aciertos y errores de test (`errors.json`) | **implementado** (F6) |
-| `GET /api/p3/models` | versiones de modelo | contrato (F7) |
-| `POST /api/p3/models/{version}/activate` | elige la versión para inferencia | contrato (F7) |
+| `GET /api/p3/models` | versiones de modelo | **implementado** (F7) |
+| `GET /api/p3/models/{version}/card` | tarjeta de una versión | **implementado** (F7) |
+| `POST /api/p3/models/{version}/activate` | elige la versión para inferencia | **implementado** (F7) |
 | `POST /api/p3/inference` | predice una imagen | **implementado** (F4 T24); página en F9 |
 | `POST /api/p3/inference/{inference_id}/send-to-annotation` | crea el elemento en la cola de anotación | **implementado** (F4 T24); página en F9 |
 
@@ -274,7 +275,12 @@ Las probabilidades salen del mismo `build_eval_transform` y del checkpoint de `s
 {"active_version": "1.0.0", "models": [{"version": "1.0.0", "run_id": "…", "manifest_id": "…", "release_id": "0.1.3", "s3": {"uri": "s3://…/models/clasificador/1.0.0/model.pt", "version_id": "…", "sha256": "…", "exists": true}, "card_uri": "…/MODEL_CARD.md"}]}
 ```
 
-`activate` responde **200** con `{"active_version": "1.0.0"}`, o **409** si el objeto de S3 no existe o su SHA-256 no coincide.
+Viven en el servicio `p3-inference` (el que tiene el perfil de AWS); la app de P2 los reenvía (`p3.registry.proxy`), igual que la inferencia.
+
+- `GET /api/p3/models`: versiones de `registry.json`; `s3.exists` sale de `head-object`, no del registro. **Aditivo (F7):** `active` por versión.
+- `GET /api/p3/models/{version}/card`: la `MODEL_CARD.md` (`text/markdown`); **404** si la versión no está publicada.
+- `POST /api/p3/models/{version}/activate`: **200** con la misma forma que `GET /api/p3/models` (antes decía `{"active_version": …}`; ahora devuelve también la lista); **404** si la versión no está publicada; **409** si el objeto de S3 no existe o su SHA-256 no coincide; **422** si `version` no es semántica.
+- `registry.json` lo escribe `p3.registry.publish` con, por versión, además de los campos de la sección 6: `release_id`, `card_key` y `files` (SHA-256 y `s3_version_id` de cada archivo del paquete).
 
 ### `POST /api/p3/inference`
 
