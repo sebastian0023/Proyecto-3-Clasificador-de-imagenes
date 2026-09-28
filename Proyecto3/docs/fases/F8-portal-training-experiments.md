@@ -72,8 +72,10 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Cambiar un tag/métrica en un MLflow de prueba se refleja en la UI
-- [ ] Abrir un run lleva al mismo id y artefactos
+- [x] Cambiar un tag/métrica en un MLflow de prueba se refleja en la UI → la tabla se dibuja desde `GET /api/p3/runs` (ordenable por métricas de validación, filtrable por parámetros) en `Proyecto2/web/src/pages/Experiments.tsx` (commits `7a35885`, `852d879`); cambiar los datos de la fuente cambia la tabla. Prueba `Proyecto2/web/tests/experiments.test.tsx` (rojo `55f32e0` → verde `7a35885`). Nota: verificado contra el mock; con un MLflow de prueba real el lunes 28.
+- [x] Abrir un run lleva al mismo id y artefactos → el panel de detalle carga `GET /api/p3/runs/{id}`, dibuja las curvas train/val (loss y accuracy por época) y enlaza a MLflow con el mismo `run_id` (`mlflowRunUrl`), listando los artefactos. Prueba `Proyecto2/web/tests/experiments-detail.test.tsx` (rojo `00c8fc2` → verde `852d879`): el enlace apunta a `/runs/<run_id>` y las curvas se renderizan.
+
+Nota de contrato: para mostrar el candidato se añadió `GET /api/p3/selection` (lectura) al cliente y al mock; `contratos.md §4` solo define `POST /selection`. Es una adición propuesta a coordinar con Edith (F5) antes de congelarla (regla 11 de AGENTS.md).
 
 **Entregables:** Página Experiments; Endpoints de runs
 
@@ -90,3 +92,4 @@
 |---|---|---|---|---|
 | 27 sep 2026 | Andrés | T03 | Rama `feat/fase-8-portal-training-experiments`. Tooling de pruebas de componente (Vitest + Testing Library + jsdom, `0c5ea6c`). 5 páginas de P3 en el router por hash existente de `Proyecto2/web` (`ef28491`→`9a7beb0`). Cliente API tipado `api.p3` espejando `contratos.md` (`a147395`→`ba7d9bf`). Mock backend de fetch solo dev/pruebas, fuera del build de prod (`2b6d17d`→`a3d1d2a`). `npm run test:unit` 9/9, `npm test` 5/5, `npm run build` en verde. | Conectar al backend real el lunes 28 (hoy corre contra mock/contrato). PR para revisión de Diego. |
 | 27 sep 2026 | Andrés | T19 | Página Training completa: selector de release aprobado + procedencia + manifiesto 70/20/10 con conteos por clase/partición (`8968567`→`472aa0b`); formulario de 11 campos con validación cliente (`contratos.md §3`) y despliegue del 422 del servidor (`deb6792`→`0fa3621`); lanzamiento, `JobStatusView` con polling de `GET /training/jobs/{id}` (estado/avance/logs/error), persistencia del `job_id` en localStorage y bloqueo por compuerta/manifiesto (`e263c08`→`b626456`). `npm run test:unit` 26/26, `npm run build` en verde. | "Datos 100% del backend" y recarga real: contra backend real el lunes 28. PR para Diego. |
+| 27 sep 2026 | Andrés | T20 | Página Experiments: tabla de corridas de MLflow ordenable por métricas de validación y filtrable por parámetros, con tarjeta del candidato (`selection.json`) sin métricas de test (`55f32e0`→`7a35885`); comparación de 2+ corridas, panel de detalle con curvas train/val de loss y accuracy por época (`LineChart` nuevo) y enlace a MLflow con el mismo `run_id` (`00c8fc2`→`852d879`). Se añadió `GET /api/p3/selection` (lectura) al cliente y al mock. `npm run test:unit` 31/31, `npm run build` en verde. | Reflejo de MLflow real y "abrir run" real: contra backend el lunes 28. Coordinar con Edith (F5) el `GET /selection`. PR para Diego. |
