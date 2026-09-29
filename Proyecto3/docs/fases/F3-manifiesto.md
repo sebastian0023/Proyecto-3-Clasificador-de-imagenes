@@ -40,7 +40,7 @@
 
 ## Definición de terminado
 
-- [ ] Todas las casillas de aceptación marcadas con evidencia real
+- [x] Todas las casillas de aceptación marcadas con evidencia real — T07b y T08 completos, más `POST/GET /api/p3/manifests` (este PR)
 - [ ] PRs fusionados con review de Edith
 - [ ] CI en verde en `main`
 - [x] Commits red → green visibles en el historial — red `3a9cb14` → green `089ac4b`, prueba reforzada `c248087`
