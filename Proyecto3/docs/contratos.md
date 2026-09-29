@@ -139,8 +139,8 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 |---|---|---|
 | `GET /api/p3/releases?approved=true` | releases de P2 | **implementado** (F2 T05) |
 | `GET /api/p3/releases/{release_id}` | procedencia de un release aprobado | **implementado** (F2 T05) |
-| `POST /api/p3/manifests` | genera un manifiesto | contrato (F3) |
-| `GET /api/p3/manifests/{manifest_id}` | meta de un manifiesto | contrato (F3) |
+| `POST /api/p3/manifests` | manifiesto congelado de un release y una semilla | **implementado** (F3) |
+| `GET /api/p3/manifests/{manifest_id}` | meta de un manifiesto | **implementado** (F3) |
 | `POST /api/p3/training/jobs` | encola un trabajo | **implementado** para `kind: "dummy"` (T02); `kind: "train"` en F4 |
 | `GET /api/p3/training/jobs/{job_id}` | estado, progreso, logs y error | **implementado** (T02); `mlflow_run_id` en F4 |
 | `GET /api/p3/runs` | corridas de MLflow | contrato (F5) |
@@ -184,6 +184,10 @@ Leer el COCO del release (`p3.data.releases.open_release_archive`) exige que el 
 
 - **409** si el release no tiene `quality_status: "pass"`.
 - **404** si el release no existe.
+- **Implementado (F3):** no genera un manifiesto nuevo. El worker solo entrena con los congelados (`p3.data.frozen`), así que devuelve el congelado de ese release y esa semilla (`m-<release>-s<seed>-<n>`) después de comprobar que el SHA-256 de `manifest.jsonl` es el congelado y que el meta dice el mismo release y seed. Es idempotente y no escribe nada. Generar uno nuevo es `scripts/generate_manifest.py` (reproducible byte a byte) y congelarlo entra por PR.
+- **409** también si no hay congelado para ese release y esa semilla, o si los bytes en disco no son los congelados.
+- **503** si el congelado no está descargado (`dvc pull data/manifests/<id>.dvc`).
+- En Docker la app lee `Proyecto3/data/manifests` montado en solo lectura (`P3_MANIFESTS_DIR=/opt/p3/manifests`).
 
 ### `GET /api/p3/manifests/{manifest_id}`
 

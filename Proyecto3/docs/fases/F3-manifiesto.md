@@ -34,13 +34,13 @@
 - [x] Dos generaciones con la misma semilla producen archivos idénticos (mismo hash) — `generate_manifest.py --check`: `45600f29…`, escrito idéntico ([manifiesto.md](../manifiesto.md#reproducibilidad)); `tests/test_split.py::test_misma_semilla_mismo_manifiesto_y_mismo_hash`
 - [x] Intersecciones vacías demostradas por prueba — `tests/test_split.py::test_ningun_identificador_aparece_en_dos_particiones` y 0 en las 9 intersecciones del manifiesto real ([manifiesto.md](../manifiesto.md#evidencia-de-aislamiento-m3))
 - [x] Tabla por clase y partición en docs/manifiesto.md — recortes y originales por clase y partición ([manifiesto.md](../manifiesto.md#conteos-por-clase-y-partición))
-- [ ] Manifiesto versionado en DVC y etiquetado como congelado — puntero `data/manifests/m-0.1.3-s42-1.dvc` en Git (md5 `64eae7e5…`, con el puntero DVC de las imágenes en el meta); `dvc push` al remote `prod` hecho y comprobado con `dvc pull` desde una copia limpia (mismo hash `45600f29…`); falta la etiqueta de congelado al fusionar en `main`
+- [x] Manifiesto versionado en DVC y etiquetado como congelado — puntero `data/manifests/m-0.1.3-s42-1.dvc` en Git (md5 `64eae7e5…`, con el puntero DVC de las imágenes en el meta); `dvc push` al remote `prod` hecho y comprobado con `dvc pull` desde una copia limpia (mismo hash `45600f29…`); etiqueta `p3-manifiesto-congelado` sobre `567ea9d` en `main`, y la lista `p3.data.frozen` fija su SHA-256
 
 **Entregables:** `src/p3/data/split.py`; `manifiesto .dvc`; `docs/manifiesto.md`
 
 ## Definición de terminado
 
-- [ ] Todas las casillas de aceptación marcadas con evidencia real
+- [x] Todas las casillas de aceptación marcadas con evidencia real — T07b y T08 completos, más `POST/GET /api/p3/manifests` (este PR)
 - [ ] PRs fusionados con review de Edith
 - [ ] CI en verde en `main`
 - [x] Commits red → green visibles en el historial — red `3a9cb14` → green `089ac4b`, prueba reforzada `c248087`
@@ -50,3 +50,4 @@
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
 | 26 sep 2026 | Diego | T08 | `src/p3/data/split.py` (red `3a9cb14` → green `089ac4b`; prueba corregida `29d4042`; reforzada `c248087` tras 3 mutaciones sobrevivientes) y `scripts/generate_manifest.py` (`935159c`). Manifiesto real `m-0.1.3-s42-1`: 1459 recortes, 70.05/20.01/9.94 %, 0 en las 9 intersecciones, reproducible byte a byte; 0 grupos de casi duplicados (igual que el reporte de P2). DVC en `Proyecto3/` (`65f2d46`). `docs/manifiesto.md`. | Etiqueta de congelado, PR a Edith; `POST /api/p3/manifests` para Training |
+| 29 sep 2026 | Diego | T08 | `POST/GET /api/p3/manifests` para la página Training (F8): `src/p3/data/manifests_api.py`, montado en la app de P2 con `Proyecto3/data/manifests` en solo lectura. Devuelve el congelado de ese release y esa semilla tras comprobar sus bytes, idempotente; 404/409 del release, 409 sin congelado, 503 sin `dvc pull`. Red `deea0a0` → green `e9a8e17`, `dbaba82`. 7 mutaciones detectadas. Contra la app real: 0.1.3 + seed 42 → `m-0.1.3-s42-1` (`45600f29…`); 0.1.1 y 0.1.2 → 409. | Revisión de Edith |
