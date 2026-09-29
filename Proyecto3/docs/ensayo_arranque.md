@@ -23,7 +23,7 @@ no hay modelo real que cargar ni predicción real que hacer.
 | Recargar durante un trabajo corto conserva estado y logs | ⏳ pendiente | Mecanismo implementado y probado contra el mock (T19); recarga real contra el backend el 30. |
 | Cambiar la versión del modelo (Models) | ⏳ pendiente | Página Models es F9. |
 | Probar un archivo inválido (Inference) | ⏳ pendiente | Página Inference es F9. |
-| M4: cargar el checkpoint publicado en un proceso limpio e inferir | ⏳ pendiente | Necesita F4 (modelo) y F7 (S3). |
+| M4: cargar el checkpoint publicado en un proceso limpio e inferir | ✅ verificado in-process | El E2E (`tests/test_e2e.py::test_e2e_flujo_completo`) publica el checkpoint en un almacén S3 y `InferenceService` lo descarga, verifica su SHA-256, lo carga y predice. Falta repetirlo contra el bucket real (S3/MinIO) en el ensayo del 30. |
 
 ## Observaciones sobre el README (a confirmar/corregir en el ensayo del 30)
 

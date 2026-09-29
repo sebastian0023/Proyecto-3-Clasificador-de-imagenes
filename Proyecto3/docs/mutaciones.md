@@ -53,9 +53,11 @@ FAILED tests/test_split.py::test_check_manifest_detecta_un_original_en_dos_parti
 
 Revertido con `git checkout -- src/p3/data/split.py` → suite en verde.
 
-## Pendiente (con F6 en `main`)
+## Nota
 
-El criterio T26 también admite "alterar una predicción en la matriz de confusión".
-Esa mutación vive sobre la evaluación en test (F6), que aún no está en `main`; se
-añade aquí cuando la fase aterrice, junto a la E2E completa (ver
-[`tests/test_e2e.py`](../tests/test_e2e.py)).
+T26 pide "permitir un grupo duplicado en train y test **o** alterar una predicción
+en la matriz": M-A cubre la primera opción (con M-B como refuerzo de la red de
+seguridad). Con F4–F7 ya en `main`, el flujo completo se ejerce de punta a punta
+en [`tests/test_e2e.py`](../tests/test_e2e.py) (`test_e2e_flujo_completo`): una
+mutación adicional sobre la matriz de confusión de F6 (p. ej. en
+`p3/eval/metrics.py`) es una extensión natural para endurecer 7.1 más adelante.
