@@ -19,6 +19,7 @@ mlartifacts/
 *.pt
 *.pth
 *.ckpt
+*.onnx
 
 # Datos derivados: fuera de Git. Los recortes se regeneran desde el release
 # (scripts/generate_crops.py); los manifiestos viven en DVC y solo su puntero

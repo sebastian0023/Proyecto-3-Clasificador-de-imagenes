@@ -1,0 +1,98 @@
+name: P3 CI
+
+# CI del Proyecto 3 (clasificador). El portal de P3 vive en `Proyecto2/web` y ya
+# lo cubre `ci.yml` (job `web`: pruebas de componente + build/typecheck). Este
+# workflow cubre lo que faltaba (hallazgo 7 del inventario): el paquete Python de
+# P3 (`Proyecto3/src/p3`, worker e inferencia) y el escaneo de secretos.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  p3-python:
+    name: P3 · Ruff + pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: Proyecto3/requirements.lock.txt
+
+      # Desde el lockfile, no desde los rangos de `pyproject.toml`: el árbol de
+      # dependencias es el MISMO que corre dentro de la app de P2. Sin esto, una
+      # versión nueva de una dependencia indirecta podría mover la CI sin que
+      # nadie tocara el repositorio.
+      - name: Instalar dependencias (fijadas)
+        run: pip install -r requirements.lock.txt
+
+      # `--no-deps` para que no vuelva a resolver y deshaga los pines.
+      - name: Instalar el paquete
+        run: pip install --no-deps -e .
+
+      # El build DEBE fallar si el lint o las pruebas fallan: sin `continue-on-error`.
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Ruff (formato)
+        run: ruff format --check .
+
+      - name: pytest
+        run: pytest
+
+  p3-e2e:
+    name: P3 · E2E (integración)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: Proyecto3/requirements.lock.txt
+
+      - name: Instalar dependencias (fijadas)
+        run: pip install -r requirements.lock.txt
+
+      - name: Instalar el paquete
+        run: pip install --no-deps -e .
+
+      # Job separado (T26 paso 4). `-s` deja la cadena de IDs en el log como
+      # evidencia. Hoy cubre release -> manifiesto; el flujo completo (F4-F7) se
+      # activa solo cuando esas fases estén en main.
+      - name: E2E de integración
+        run: pytest tests/test_e2e.py -v -s
+
+  secrets:
+    name: gitleaks (secretos)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # Se usa el binario por CLI en vez de `gitleaks-action`: la action llama a
+      # la API de GitHub (para comentar en el PR) y falla con "Resource not
+      # accessible by integration" cuando el token del repo es de solo lectura.
+      # El binario escanea los archivos sin tocar la API: determinista y sin
+      # token. El binario se baja a /tmp para no escanearse a sí mismo.
+      - name: Instalar gitleaks
+        run: |
+          VERSION=8.18.4
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks version
+
+      - name: Escanear el árbol en busca de secretos
+        run: /tmp/gitleaks detect --no-git --source . --config .gitleaks.toml --redact --no-banner
