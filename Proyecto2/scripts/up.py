@@ -64,6 +64,32 @@ def read_env() -> dict[str, str]:
     return values
 
 
+def export_code_commit() -> None:
+    """Commit y estado del arbol para las corridas del worker de P3 (tags de MLflow)."""
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True, cwd=REPO_ROOT
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=REPO_ROOT,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return
+    os.environ["P3_CODE_COMMIT"] = commit
+    os.environ["P3_CODE_DIRTY"] = "true" if dirty else "false"
+
+
+def export_aws_dir() -> None:
+    """Carpeta `~/.aws` para el servicio de inferencia de P3 (solo lectura, sin copiar llaves)."""
+    aws = Path.home() / ".aws"
+    if aws.is_dir():
+        os.environ.setdefault("P3_AWS_DIR", str(aws))
+
+
 def export_host_identity() -> None:
     """Le pasa a compose el uid/gid del host, para que la app pueda escribir.
 
@@ -99,9 +125,21 @@ def require_docker() -> None:
         fail("`docker compose` no responde. Revisa que Docker Desktop este corriendo.")
 
 
+COMPOSE_FILES: list[str] = []
+
+
+def use_gpu() -> bool:
+    """GPU NVIDIA para el worker de P3: `P3_GPU=1/0` manda; si no, se detecta `nvidia-smi`."""
+    forced = os.environ.get("P3_GPU")
+    if forced is not None:
+        return forced == "1"
+    return shutil.which("nvidia-smi") is not None
+
+
 def compose(*args: str, check: bool = True) -> int:
     """Ejecuta `docker compose ...` mostrando la salida en vivo."""
-    command = ["docker", "compose", *args]
+    files = [flag for name in COMPOSE_FILES for flag in ("-f", name)]
+    command = ["docker", "compose", *files, *args]
     print(f"\033[90m$ {' '.join(command)}\033[0m", flush=True)
     result = subprocess.run(command, cwd=REPO_ROOT, check=False)
     if check and result.returncode != 0:
@@ -163,6 +201,8 @@ def main() -> None:
 
     require_docker()
     export_host_identity()
+    export_code_commit()
+    export_aws_dir()
     ensure_env_file()
     env = read_env()
     app_port = env.get("APP_PORT", "8000")
@@ -172,6 +212,12 @@ def main() -> None:
     if args.fresh:
         log("Borrando contenedores y volumenes previos (--fresh)...")
         compose("down", "-v", check=False)
+
+    if use_gpu():
+        COMPOSE_FILES.extend(["docker-compose.yml", "docker-compose.gpu.yml"])
+        log("GPU NVIDIA detectada: el worker de P3 entrenara con ella.")
+    else:
+        log("Sin GPU NVIDIA: el worker de P3 entrenara en CPU.")
 
     log("Levantando MariaDB + MinIO + app + MLflow + worker P3 y esperando healthchecks...")
     up_args = ["up", "-d", "--wait"]

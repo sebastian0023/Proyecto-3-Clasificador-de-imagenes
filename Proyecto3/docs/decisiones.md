@@ -8,9 +8,9 @@ Las 8 decisiones que la guía del curso pide cerrar antes del primer entrenamien
 | 2 | Clases incluidas y exclusiones | Diego | 25 sep 2026 | Cerrada ([clases.md](clases.md), `config/classes.yaml`) |
 | 3 | Framework y arquitectura | Edith | 24 sep 2026 | Cerrada |
 | 4 | Métrica de selección y desempate | Edith | 24 sep 2026 | Cerrada |
-| 5 | Servicio de MLflow | Edith | 24 sep 2026 | Cerrada |
+| 5 | Servicio de MLflow | Edith | 26 sep 2026 | Cerrada (snapshot en DVC, F4 T12) |
 | 6 | Destino S3 del modelo y permisos | Diego | 24 sep 2026 | Cerrada |
-| 7 | Presupuesto de cómputo | Edith | 24 sep 2026 | Pendiente de dato (medición real, vie 25) |
+| 7 | Presupuesto de cómputo | Edith | 26 sep 2026 | Cerrada (medición real, F4 T32) |
 | 8 | Custodio del test | Diego | 24 sep 2026 | Cerrada |
 
 ## 1. Release DVC de origen
@@ -80,13 +80,15 @@ Las 8 decisiones que la guía del curso pide cerrar antes del primer entrenamien
 
 ## 5. Servicio de MLflow
 
-**Decisión:** servidor MLflow como servicio del docker compose del stack, en `http://localhost:5000`.
+**Decisión:** servidor MLflow 3.16.1 como servicio del docker compose del stack, en `http://localhost:5000`.
 
-- **Registros (backend store):** SQLite dentro de un volumen Docker con nombre.
-- **Artefactos:** directorio en un volumen Docker con nombre, servido por el propio servidor (`--serve-artifacts`).
-- **Persistencia:** ambos sobreviven a `docker compose down` / `up`. Solo `down -v` los borra, y no se usa en el flujo normal.
+- **Registros (backend store):** SQLite dentro del volumen Docker `mlflow_data`.
+- **Artefactos:** en el mismo volumen, servidos por el propio servidor (`--serve-artifacts`); el worker los sube por HTTP, sin credenciales de almacenamiento.
+- **Persistencia:** sobreviven a `docker compose down` / `up`. Solo `down -v` los borra, y no se usa en el flujo normal.
+- **Visibles desde un clon limpio (actualizado el 26 sep, F4 T12):** tras el barrido, `Proyecto3/scripts/mlflow_snapshot.py` copia la base y los artefactos a `Proyecto3/mlflow_snapshot/`, que se versiona con DVC (`dvc add` + `dvc push`). Al levantar el stack, el servicio `mlflow-restore` carga ese snapshot si el volumen está vacío. El evaluador hace `dvc pull` y `python scripts/up.py` y consulta las mismas corridas por la API de MLflow (criterios 3.1 y 3.2).
+- **Experimentos:** `p3-clasificador` para el barrido y la selección; `p3-pruebas` para corridas de humo y mediciones, que nunca entran a la selección.
 
-**Por qué:** no depende de MinIO, cuyas imágenes fijadas en `Proyecto2/docker-compose.yml` dejaron de publicarse (hallazgo del 24 sep, se documenta en T01), y se prueba la persistencia en T02.
+**Por qué:** no depende de MinIO, cuyas imágenes fijadas en `Proyecto2/docker-compose.yml` dejaron de publicarse (hallazgo del 24 sep), ni de meter credenciales de AWS al contenedor de MLflow. La persistencia se probó en T02. El volumen local por sí solo no bastaba: el evaluador no vería las corridas desde su clon.
 
 ## 6. Destino S3 del modelo y permisos
 
@@ -100,19 +102,30 @@ Las 8 decisiones que la guía del curso pide cerrar antes del primer entrenamien
 
 ## 7. Presupuesto de cómputo
 
-**Decisión (estimada):** entrenamiento en la máquina de Edith.
+**Decisión (medida el 26 sep, F4 T32):** el barrido corre en el worker del stack (`p3-worker`) en la máquina de Edith, con la GPU reservada por `Proyecto2/docker-compose.gpu.yml`. Sin GPU NVIDIA el mismo worker entrena en CPU.
 
 | Recurso | Valor |
 |---|---|
-| GPU | NVIDIA GeForce RTX 4060, 8 GB |
+| GPU | NVIDIA GeForce RTX 4060, 8 GB (driver 610.88, CUDA 13.0 en el contenedor) |
 | CPU | AMD Ryzen 5 5500, 6 núcleos / 12 hilos |
 | RAM | 32 GB |
-| Reserva | 4 h de GPU entre el lun 28 y el mar 29: 12 a 15 corridas + 1 evaluación final en test |
+| Software | PyTorch 2.14.0+cu130, torchvision 0.29.0, Python 3.12 (imagen del worker) |
 
-**Estimación:** menos de 5 minutos por corrida (≈1,000 recortes de entrenamiento a 224 px con ResNet-18).
+**Medición real** (2 épocas, `adamw`, `batch_size` 32, `[256]`, dropout 0.3, `num_workers` 2, manifiesto `m-0.1.3-s42-1`: 1022 recortes de train y 292 de val). Trabajos `2f9e2c93…` y `494b7fdd…` lanzados por `POST /api/p3/training/jobs`:
 
-**Pendiente:** se actualiza el vie 25 con el tiempo real de una corrida medida.
+| `image_size` | Época 1 | Época 2 | Memoria de GPU del entrenamiento | Uso medio de GPU |
+|---|---:|---:|---:|---:|
+| 224 | 18 s (incluye arranque) | 13 s | ≈ 1.6 GB | ≈ 19 % |
+| 128 | 11 s | 11 s | menor | ≈ 19 % |
 
+El cuello de botella es la lectura y aumentación de las imágenes en CPU, no la GPU: 128 px tarda casi lo mismo que 224 px.
+
+**Calendario del barrido** ([`config/sweep.yaml`](../config/sweep.yaml), 12 corridas):
+
+- Suma de `max_epochs`: 300 épocas. A ≈ 13 s por época más ≈ 20 s de arranque por corrida: **≈ 70 min en el peor caso**; con early stopping (`patience` 5) se espera bastante menos.
+- Las corridas se encolan juntas y el worker las ejecuta una tras otra.
+- Ventana: se lanza el **lun 28 después de mediodía** (Control 2) y termina esa misma tarde. Queda margen para repetir corridas fallidas antes del mar 29 a mediodía, cuando se commitea `selection.json`.
+- Reserva: 2 h de GPU el lun 28 (barrido y repeticiones) + 15 min el mar 29 (evaluación final en test, F6).
 ## 8. Custodio del test
 
 **Decisión:** **Diego**. Guarda el orden "selección → evaluación": no se corre la evaluación final hasta que `selection.json` esté commiteado, y el test no se consulta para aumentación, early stopping ni hiperparámetros.

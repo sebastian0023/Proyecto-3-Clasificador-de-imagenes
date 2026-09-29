@@ -20,8 +20,8 @@ obligatoria y en ese orden.
 1. Clonar el repositorio y entrar a la carpeta:
 
    ```bash
-   git clone https://github.com/JGO-07/Proyecto_Identificacion_imagenes.git
-   cd Proyecto_Identificacion_imagenes
+   git clone https://github.com/sebastian0023/Proyecto-3-Clasificador-de-imagenes.git
+   cd Proyecto-3-Clasificador-de-imagenes/Proyecto1
    ```
 
 2. Instalar dependencias:

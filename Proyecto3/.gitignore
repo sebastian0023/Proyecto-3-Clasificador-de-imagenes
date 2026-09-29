@@ -26,3 +26,7 @@ mlartifacts/
 # `data/manifests/*.dvc` (y el .gitignore que escribe `dvc add`) entra a Git.
 /data/*
 !/data/manifests/
+
+# Snapshot de MLflow (scripts/mlflow_snapshot.py): vive en DVC, en Git solo
+# su puntero `mlflow_snapshot.dvc`.
+/mlflow_snapshot/

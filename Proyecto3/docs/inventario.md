@@ -91,3 +91,5 @@ P2 no tiene un endpoint que entregue el COCO completo ni las imágenes originale
 | 7 | CI | `.github/workflows/ci.yml` solo cubre `Proyecto2/` y Terraform; nada de P3. | 7.3 | Andrés (F10) |
 
 **Resueltos en T02 (24 sep):** 1 (`042295d`), 3, 5 y 6 (`d14f462`). Pendientes: 2 (Diego), 4 y 7 (Andrés).
+
+**Resuelto en F4 T24 (27 sep):** 4 — P1 usaba la misma imagen de MinIO que ya no existe y su README apuntaba al repositorio viejo.

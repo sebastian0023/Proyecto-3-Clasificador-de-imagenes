@@ -31,9 +31,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] La evaluación registra fecha posterior a selection.json
-- [ ] Matriz recalculada desde predictions_test.csv coincide con MLflow
-- [ ] Métricas por clase disponibles
+- [x] La evaluación registra fecha posterior a selection.json — `metrics.json`: `evaluated_at` 2026-09-28T02:25:07Z (27 sep 20:25 -06:00) y `selection_commit` `6bd9101` del 26 sep 21:40; `scripts/final_evaluation.py` exige `selection.json` versionado y sin cambios antes de correr ([analisis_errores.md](../analisis_errores.md#protocolo-y-cronología-41))
+- [x] Matriz recalculada desde predictions_test.csv coincide con MLflow — recalculada con código aparte: `[[30,2,0],[0,38,0],[0,1,74]]`, accuracy 142/145 = 0.9793103448275862, igual que `metrics.json`, que las métricas `test_*` de la corrida `9f9b62c2…` en MLflow (snapshot `723d7c5`) y que `GET /api/p3/evaluation`; `--audit` vuelve a predecir y da `audit_matches: true`
+- [x] Métricas por clase disponibles — precisión, recall, F1 y support por clase en `metrics.json`, en MLflow (`test_precision_*`, `test_recall_*`, `test_f1_*`) y en la API
 
 **Entregables:** `src/p3/eval/evaluate.py`; `predictions_test.csv`; Artefactos en MLflow
 
@@ -52,8 +52,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Baseline calculado y comparado
-- [ ] Ejemplos provienen solo de test (verificable por crop_id en el manifiesto)
+- [x] Baseline calculado y comparado — clase mayoritaria `person` en el mismo test: 75/145 = 0.5172 frente a 0.9793 ([analisis_errores.md](../analisis_errores.md#el-979--oculta-una-clase-débil-44))
+- [x] Ejemplos provienen solo de test (verificable por crop_id en el manifiesto) — `errors.json` (3 errores y 12 aciertos) solo con `crop_id` de `test`; lo protege `tests/test_evaluate.py::test_errores_y_aciertos_de_ejemplo_solo_de_test`
 
 **Entregables:** `errors.json`; `docs/analisis_errores.md`
 
@@ -62,9 +62,11 @@
 - [ ] Todas las casillas de aceptación marcadas con evidencia real
 - [ ] PRs fusionados con review de Edith
 - [ ] CI en verde en `main`
-- [ ] Commits red → green visibles en el historial
+- [x] Commits red → green visibles en el historial — métricas `82055bd` → `91331b0`; protocolo `1df6ab8` → `f34d2e5`; procedencia `9a3ba00` → `c0ffbda`; API `9599957` → `d7a1144`
 
 ## Registro de avance
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 27 sep 2026 | Diego | T15 | `src/p3/eval/metrics.py` y `evaluate.py` (una sola corrida, auditoría sin escritura), `scripts/final_evaluation.py`. **Evaluación única** de r10 (`3792f93`): accuracy **0.9793103448275862** (142/145) ≥ 0.85, F1 macro 0.9744. Recalculada de forma independiente; `--audit` idéntico. Registrada en MLflow (`scripts/log_evaluation_mlflow.py`) y snapshot nuevo en DVC (`723d7c5`). `GET /api/p3/evaluation` (+ `/predictions`, `/examples`) montado en P2 y probado contra el MLflow real. 17 mutaciones detectadas (7 en métricas, 10 en el protocolo). | — |
+| 27 sep 2026 | Diego | T16 | `docs/analisis_errores.md`: baseline 0.5172, par más confundido cat → dog, recall mínimo 0.9375 (cat); 3 errores leídos a ojo (2 gatos oscuros sin rostro, 1 recorte de persona dominado por un perro). `errors.json` para la página Evaluation. | Limitaciones a la tarjeta del modelo (F7) |

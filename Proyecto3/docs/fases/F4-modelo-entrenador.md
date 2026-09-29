@@ -30,8 +30,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Mismo seed -> mismo orden de muestras (prueba)
-- [ ] Transform aleatorio solo en train (prueba)
+- [x] Mismo seed -> mismo orden de muestras (prueba) → `tests/test_dataset.py::test_misma_semilla_mismo_orden_de_muestras` (red `7538b71` → green `0ddeba3`)
+- [x] Transform aleatorio solo en train (prueba) → `tests/test_dataset.py::test_la_aumentacion_aleatoria_solo_esta_en_train` y `::test_val_test_e_inferencia_comparten_el_mismo_preprocesamiento`; datos reales: 1022 / 292 / 145 recortes de `m-0.1.3-s42-1`
 
 **Entregables:** `src/p3/data/transforms.py`; `src/p3/data/dataset.py`; Pruebas
 
@@ -49,8 +49,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Prueba de cambio de pesos pasa
-- [ ] docs/modelo.md declara origen de pesos
+- [x] Prueba de cambio de pesos pasa → `tests/test_model.py::test_tres_pasos_del_optimizador_cambian_los_pesos` (red `4590e71` → green `72b80aa`) y `tests/test_trainer.py::test_entrenar_cambia_los_pesos`
+- [x] docs/modelo.md declara origen de pesos → [modelo.md](../modelo.md): `ResNet18_Weights.IMAGENET1K_V1` (`resnet18-f37072fd.pth`), todas las capas entrenables
 
 **Entregables:** `src/p3/model/build.py`; `docs/modelo.md`
 
@@ -70,8 +70,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Config inválida rechazada por API con 422
-- [ ] Corrida corta con mismo seed reproduce orden de muestras
+- [x] Config inválida rechazada por API con 422 → `tests/test_api.py::test_train_con_config_invalida_da_422_nombrando_el_campo_y_no_crea_trabajo`; en el stack real `batch_size: 0` responde 422 con `loc` `[body, train, config, batch_size]` y el conteo de `p3_training_jobs` no cambia (4 → 4)
+- [x] Corrida corta con mismo seed reproduce orden de muestras → `tests/test_trainer.py::test_misma_semilla_misma_corrida` (mismo orden, misma historia y mismos pesos en CPU; red `e6f3947` → green `fff1b14`)
 
 **Entregables:** `src/p3/train/config.py`; `src/p3/train/trainer.py`; Pruebas
 
@@ -90,8 +90,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Tiempo por época medido para al menos 2 tamaños de imagen
-- [ ] Calendario del barrido documentado y dentro de la ventana
+- [x] Tiempo por época medido para al menos 2 tamaños de imagen → trabajos `2f9e2c93…` (224 px: 18 s y 13 s) y `494b7fdd…` (128 px: 11 s y 11 s) en la RTX 4060 ([decisiones.md §7](../decisiones.md#7-presupuesto-de-cómputo))
+- [x] Calendario del barrido documentado y dentro de la ventana → [`config/sweep.yaml`](../../config/sweep.yaml) (12 corridas, protegido por `tests/test_sweep_config.py`): ≈ 70 min en el peor caso, lanzado el lun 28 después de mediodía
 
 **Entregables:** `docs/decisiones.md (decisión 7)`; `config/p3/sweep.yaml ajustado si hace falta`
 
@@ -110,8 +110,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Prueba de secuencia controlada pasa
-- [ ] Un run en MLflow muestra todos los campos listados vía API (mlflow.search_runs)
+- [x] Prueba de secuencia controlada pasa → `tests/test_early_stopping.py::test_secuencia_controlada_para_en_la_6_y_se_queda_con_la_3` y `::test_el_entrenador_para_y_restaura_la_mejor_epoca` (pesos finales = los de la época 3; red `2081eac` → green `b28e37d`)
+- [x] Un run en MLflow muestra todos los campos listados vía API (mlflow.search_runs) → run `fd690ca2846447a088b8e1fe588bd974` (experimento `p3-pruebas`, trabajo `625f5de1…`, RTX 4060) consultado con `MlflowClient.search_runs` en `http://localhost:5000`: `FINISHED`; 11 parámetros efectivos con semilla; tags `manifest_id`, `manifest_hash`, `release_id`, `release_hash`, `dvc_md5`, `classes`, `code_commit` (`250bedc`, árbol limpio), `job_id`, `pretrained_weights` y `env.*`; `val_accuracy` y demás métricas por época; `best_epoch` 7, `stopped_epoch` 10, `early_stopped` 1; artefactos `curves.png`, `history.json`, `environment.json` y `checkpoint/model.pt`. El checkpoint recargado en un proceso limpio da val_acc 0.9384 = época 7 (la época 10 tenía 0.7226). Manifiesto no congelado → 409 por API y fallo en el worker
 
 **Entregables:** `src/p3/train/early_stopping.py`; Integración MLflow
 
@@ -130,9 +130,9 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Una predicción sobre una imagen de test coincide con predictions_test.csv
-- [ ] El modelo usado se descargó de S3 y su SHA-256 coincide con el registro
-- [ ] El elemento enviado aparece en la cola de anotación
+- [ ] Una predicción sobre una imagen de test coincide con predictions_test.csv — **pendiente de F6 (Diego)**: `predictions_test.csv` lo genera la evaluación final. Listo del lado de F4: el servicio usa `build_eval_transform`, el mismo preprocesamiento de validación y prueba, y su predicción coincide al sexto decimal con el cálculo hecho aparte con el mismo checkpoint (recorte de val `0.1.3:a1330`: dog 0.943828) **Para cerrarla:** con F6 y F7 listas y el stack arriba, `python scripts/verify_inference.py --profile <perfil> --predictions <predictions_test.csv>` y pegar su salida aquí.
+- [ ] El modelo usado se descargó de S3 y su SHA-256 coincide con el registro — **pendiente de F7 (Diego)**: todavía no hay `registry.json` en S3 (el servicio llega al bucket real con el perfil del host y responde 409 `NoSuchKey`). Probado con un paquete de prueba en MinIO: versión `0.0.1` = checkpoint seleccionado (`e4acca42…`), SHA-256 verificado al descargar; `tests/test_inference.py` cubre el rechazo por SHA-256 distinto y el cambio de versión activa **Para cerrarla:** con F6 y F7 listas y el stack arriba, `python scripts/verify_inference.py --profile <perfil> --predictions <predictions_test.csv>` y pegar su salida aquí.
+- [x] El elemento enviado aparece en la cola de anotación → con P1 levantado desde su README (`npm run up`, tras arreglar su imagen de MinIO) y el portal en `:8000`: la inferencia `1294c24f…` se envió con `POST /api/p3/inference/{id}/send-to-annotation` → 201 `image_id` 9; `GET :3000/api/images/9` la muestra `pending` y su archivo tiene el mismo SHA-256 que la foto enviada (`0bbe9272…`); las imágenes pendientes de P1 pasaron de 8 a 9; un segundo envío devuelve 200 con el mismo id, sin duplicar
 
 **Entregables:** `src/p3/inference/service.py`; Endpoints; Pruebas
 
@@ -147,3 +147,10 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 26 sep 2026 | Edith | T09 | `src/p3/data/transforms.py` y `dataset.py`: preprocesamiento único para val/test/inferencia, aumentación solo en train, fuga revisada otra vez al construir, loader sembrado (red `7538b71` → green `0ddeba3`). Torch 2.14.0 y torchvision 0.29.0 en el extra `train`, lockfile generado en Linux (`8be9c15`) | — |
+| 26 sep 2026 | Edith | T10 | `src/p3/model/build.py`: ResNet-18 IMAGENET1K_V1 con cabeza MLP configurable y checkpoint recargable con mapa de clases y preprocesamiento (red `4590e71` → green `72b80aa`); `docs/modelo.md` | — |
+| 26 sep 2026 | Edith | T11 | `TrainingConfig` (contratos §3), loop por minibatches con semillas y registro del entorno, trabajo `train` en el worker con progreso por época (red `e6f3947` → green `fff1b14`; un batch final de 1 muestra se omite, `7fe6d93`). Worker con PyTorch, datos montados y GPU opcional (`9ce4ecf`) | MLflow y early stopping en T12 |
+| 26 sep 2026 | Edith | T32 | Medición en la RTX 4060 (≈ 13 s/época, cuello de botella en la carga de imágenes), `config/sweep.yaml` con 12 corridas (red `19fb858` → green `8d88dd2`), decisión 7 cerrada (`72056a6`) | — |
+| 26 sep 2026 | Edith | T12 | `EarlyStopping` con restauración de la mejor época (red `2081eac` → green `b28e37d`); `p3.train.tracking` registra todo en MLflow; `p3.data.frozen` exige el manifiesto congelado (409 en la API); `mlflow_run_id` en el trabajo y timestamps con microsegundos (red `fb8e433` → green `7d80897`); experimento `p3-pruebas` para corridas de humo (`73b42f8` → `84b1313`). Snapshot de MLflow restaurable desde DVC y commit del código en cada corrida (`250bedc`); decisión 5 actualizada | `dvc add mlflow_snapshot` + push tras el barrido de F5 |
+| 27 sep 2026 | Edith | T24 | Servicio de inferencia: registro de versiones y descarga verificada por SHA-256 (red `3bef15e` → green `52d8e96`); API con cada inferencia guardada, envío a P1 y proxy del portal (red `340ba4c` → green `e67e563`); servicio `p3-inference` en el compose (`670c3f9`). Probado en el stack contra un paquete de prueba en MinIO: 200 con probabilidades que suman 1, recorte opcional, 415, 413 y 422 | Casillas que dependen de F6 (`predictions_test.csv`), F7 (`registry.json` en S3) y de levantar P1 |
+| 27 sep 2026 | Edith | T24 | P1 arranca desde un clon limpio (imagen de MinIO y ruta del README) y la inferencia llega a su cola de anotación: imagen 9 `pending`, mismos bytes | Solo quedan las casillas de F6 y F7 |
