@@ -77,14 +77,22 @@ jobs:
   secrets:
     name: gitleaks (secretos)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      # `fetch-depth: 0` para que gitleaks pueda revisar el historial del PR, no
-      # solo el último commit.
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Se usa el binario por CLI en vez de `gitleaks-action`: la action llama a
+      # la API de GitHub (para comentar en el PR) y falla con "Resource not
+      # accessible by integration" cuando el token del repo es de solo lectura.
+      # El binario escanea los archivos sin tocar la API: determinista y sin
+      # token. El binario se baja a /tmp para no escanearse a sí mismo.
+      - name: Instalar gitleaks
+        run: |
+          VERSION=8.18.4
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks version
+
+      - name: Escanear el árbol en busca de secretos
+        run: /tmp/gitleaks detect --no-git --source . --config .gitleaks.toml --redact --no-banner
