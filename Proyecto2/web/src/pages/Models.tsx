@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, Pill } from '../components/ui';
-import { api, type ModelEntry } from '../lib/api';
+import { ApiError, api, type ModelEntry } from '../lib/api';
 
 const short = (s: string): string => (s.length > 12 ? `${s.slice(0, 12)}…` : s);
 
@@ -18,6 +18,7 @@ export default function Models() {
   const [models, setModels] = useState<ModelEntry[] | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [activating, setActivating] = useState<string | null>(null);
 
@@ -31,7 +32,14 @@ export default function Models() {
         setActive(res.active_version);
       })
       .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Error desconocido');
+        if (cancelled) return;
+        // 503 (fix #17): el backend no puede acceder a S3 (sin credenciales o el
+        // servicio caído). No es un error de la UI: se muestra como "no disponible".
+        if (e instanceof ApiError && e.status === 503) {
+          setUnavailable(e.message);
+        } else {
+          setError(e instanceof Error ? e.message : 'Error desconocido');
+        }
       });
     return () => {
       cancelled = true;
@@ -68,7 +76,12 @@ export default function Models() {
       {actionError && <div className="banner warn">{actionError}</div>}
 
       <Card title="Versiones publicadas">
-        {models === null ? (
+        {unavailable ? (
+          <p className="state">
+            Servicio de modelos no disponible ({unavailable}). No hay versiones que mostrar
+            hasta que el backend tenga acceso a S3.
+          </p>
+        ) : models === null ? (
           <p className="state">Cargando versiones…</p>
         ) : models.length === 0 ? (
           <p className="state">No hay versiones publicadas todavía.</p>
