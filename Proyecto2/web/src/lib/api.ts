@@ -503,6 +503,30 @@ export interface EvaluationExamples {
   errors: EvalExample[];
 }
 
+// --- versiones de modelo (contrato §4/§6, F7) --------------------------------
+export interface ModelS3 {
+  uri: string;
+  version_id: string | null;
+  sha256: string;
+  /** El objeto realmente existe en S3 con ese SHA-256. */
+  exists: boolean;
+}
+
+/** Una versión de modelo publicada. La versión es del MODELO, no del dataset. */
+export interface ModelEntry {
+  version: string;
+  run_id: string;
+  manifest_id: string;
+  release_id: string;
+  s3: ModelS3;
+  card_uri: string;
+}
+
+export interface ModelsResponse {
+  active_version: string | null;
+  models: ModelEntry[];
+}
+
 /** Error que conserva el mensaje de la API, no un `fetch failed` generico. */
 export class ApiError extends Error {
   constructor(
@@ -631,6 +655,17 @@ export const api = {
     evaluationExamples: () => request<EvaluationExamples>('/api/p3/evaluation/examples'),
     /** URL de descarga del CSV de predicciones (no es una petición: la usa un <a>). */
     evaluationPredictionsUrl: () => '/api/p3/evaluation/predictions',
+    /** Versiones de modelo publicadas y la versión activa. */
+    models: () => request<ModelsResponse>('/api/p3/models'),
+    /** URL de la tarjeta (MODEL_CARD.md) de una versión. La usa un `<a>`. */
+    modelCardUrl: (version: string) =>
+      `/api/p3/models/${encodeURIComponent(version)}/card`,
+    /** Marca una versión como activa para inferencia. 404/409/422 si no procede. */
+    activateModel: (version: string) =>
+      request<{ active_version: string }>(
+        `/api/p3/models/${encodeURIComponent(version)}/activate`,
+        { method: 'POST' },
+      ),
   },
 };
 

@@ -13,6 +13,7 @@ import type {
   EvaluationExamples,
   EvaluationReport,
   ManifestMeta,
+  ModelEntry,
   P3ReleaseDetail,
   P3ReleaseSummary,
   RunDetail,
@@ -230,3 +231,36 @@ export const evaluationExamples: EvaluationExamples = {
     { crop_id: '0.1.3:a39', crop_path: 'a39.png', true: 'dog', predicted: 'person', probability: 0.52 },
   ],
 };
+
+// Versiones de modelo publicadas. La versión es del MODELO (semver), distinta de
+// la del dataset (release_id). 0.8.0 tiene el objeto ausente en S3 a propósito
+// (para probar que no se puede activar). La activa por defecto es 1.0.0.
+const BUCKET_URI = 's3://dataset-quality-releases-750702272375/models/clasificador';
+export const DEFAULT_ACTIVE_VERSION = '1.0.0';
+
+export const modelVersions: ModelEntry[] = [
+  {
+    version: '0.9.0',
+    run_id: runs[8]?.run_id ?? 'run0009',
+    manifest_id: MANIFEST_ID,
+    release_id: RELEASE_ID,
+    s3: { uri: `${BUCKET_URI}/0.9.0/model.pt`, version_id: 'v0900', sha256: `a9${'0'.repeat(62)}`, exists: true },
+    card_uri: `${BUCKET_URI}/0.9.0/MODEL_CARD.md`,
+  },
+  {
+    version: '1.0.0',
+    run_id: bestRun.run_id,
+    manifest_id: MANIFEST_ID,
+    release_id: RELEASE_ID,
+    s3: { uri: `${BUCKET_URI}/1.0.0/model.pt`, version_id: 'v1000', sha256: `10${'0'.repeat(62)}`, exists: true },
+    card_uri: `${BUCKET_URI}/1.0.0/MODEL_CARD.md`,
+  },
+  {
+    version: '0.8.0',
+    run_id: runs[2]?.run_id ?? 'run0003',
+    manifest_id: MANIFEST_ID,
+    release_id: RELEASE_ID,
+    s3: { uri: `${BUCKET_URI}/0.8.0/model.pt`, version_id: null, sha256: `08${'0'.repeat(62)}`, exists: false },
+    card_uri: `${BUCKET_URI}/0.8.0/MODEL_CARD.md`,
+  },
+];

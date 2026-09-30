@@ -15,10 +15,12 @@
 
 import type { TrainingConfig, TrainingJob } from '../api';
 import {
+  DEFAULT_ACTIVE_VERSION,
   MANIFEST_ID,
   evaluation,
   evaluationExamples,
   manifestMeta,
+  modelVersions,
   releaseDetail,
   releaseSummary,
   runDetail,
@@ -106,6 +108,9 @@ function validateConfig(config: Partial<TrainingConfig> | undefined): Validation
 
 const jobs = new Map<string, TrainingJob>();
 let jobSeq = 0;
+
+// Versión de modelo activa (mutable): la puede cambiar POST /models/{v}/activate.
+let activeVersion: string = DEFAULT_ACTIVE_VERSION;
 
 function newJobId(): string {
   jobSeq += 1;
@@ -238,6 +243,30 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
     });
   }
 
+  // Versiones de modelo (F7).
+  if (pathname === '/api/p3/models' && method === 'GET') {
+    return json({ active_version: activeVersion, models: modelVersions });
+  }
+  const cardMatch = pathname.match(/^\/api\/p3\/models\/(.+)\/card$/);
+  if (cardMatch && method === 'GET') {
+    const entry = modelVersions.find((m) => m.version === cardMatch[1]);
+    return entry
+      ? new Response(`# Tarjeta ${entry.version}\n\nClasificador de imágenes (mock).\n`, {
+          status: 200,
+          headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+        })
+      : detail(`La version ${cardMatch[1]} no esta publicada`, 404);
+  }
+  const activateMatch = pathname.match(/^\/api\/p3\/models\/(.+)\/activate$/);
+  if (activateMatch && method === 'POST') {
+    const entry = modelVersions.find((m) => m.version === activateMatch[1]);
+    if (!entry) return detail(`La version ${activateMatch[1]} no esta publicada`, 404);
+    if (!entry.s3.exists)
+      return detail(`s3://.../${entry.version}/model.pt no existe: no se activa`, 409);
+    activeVersion = entry.version;
+    return json({ active_version: activeVersion });
+  }
+
   return detail(`Ruta mock no implementada: ${method} ${pathname}`, 404);
 }
 
@@ -261,6 +290,7 @@ export function uninstallP3Mock(): void {
   }
   jobs.clear();
   jobSeq = 0;
+  activeVersion = DEFAULT_ACTIVE_VERSION;
 }
 
 export function isP3MockActive(): boolean {
