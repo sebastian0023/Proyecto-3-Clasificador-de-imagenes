@@ -9,8 +9,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from p3.train import runs_api
-from p3.train.selection import RunSummary
+from p3.train import runs_api, selection
+from p3.train.selection import MlflowUnavailableError, RunSummary
 
 HASH = "45600f297d13f51685e051e0cbc4962beb1f7c6a4e03247cbf61a345e6fa4305"
 
@@ -43,13 +43,19 @@ class FakeMlflow:
             _run("fallida", 0.0, 9.0, status="FAILED", start=4),
             _run("otro", 0.91, 0.3, manifest_id="m-otro", start=5),
         ]
+        # Una corrida de otro experimento (p. ej. `p3-pruebas`): no es del barrido.
+        self.ajena = RunSummary(**{**_run("ajena", 0.5, 1.0).__dict__, "experiment_id": "7"})
+
+    def experiment_id(self, experiment: str) -> str:
+        assert experiment == "p3-clasificador"
+        return "3"
 
     def search_runs(self, experiment: str) -> list[RunSummary]:
         assert experiment == "p3-clasificador"
         return list(self.runs)
 
     def get_run(self, run_id: str) -> RunSummary:
-        for run in self.runs:
+        for run in [*self.runs, self.ajena]:
             if run.run_id == run_id:
                 return run
         raise LookupError(run_id)
@@ -132,3 +138,79 @@ def test_no_importa_torch_ni_mlflow() -> None:
 
     texto = Path(runs_api.__file__).read_text(encoding="utf-8")
     assert "import torch" not in texto and "import mlflow" not in texto
+
+
+def test_un_id_invalido_da_422(client: TestClient) -> None:
+    assert client.get("/api/p3/runs/a&b").status_code == 422
+    assert client.get("/api/p3/runs/" + "x" * 65).status_code == 422
+
+
+def test_un_run_de_otro_experimento_da_404(client: TestClient) -> None:
+    assert client.get("/api/p3/runs/ajena").status_code == 404
+
+
+def test_nunca_muestra_metricas_ni_tags_de_test() -> None:
+    # r10 tiene en MLflow las metricas y tags `test_*` de la evaluacion final (F6).
+    rest = {
+        "info": {
+            "run_id": "r10",
+            "experiment_id": "3",
+            "status": "FINISHED",
+            "start_time": 1,
+            "end_time": 2,
+            "artifact_uri": "mlflow-artifacts:/3/r10/artifacts",
+        },
+        "data": {
+            "metrics": [
+                {"key": "best_val_accuracy", "value": 0.99},
+                {"key": "best_val_loss", "value": 0.1},
+                {"key": "test_accuracy", "value": 0.98},
+                {"key": "test_f1_macro", "value": 0.97},
+            ],
+            "params": [{"key": "optimizer", "value": "sgd"}],
+            "tags": [
+                {"key": "manifest_id", "value": "m-0.1.3-s42-1"},
+                {"key": "selected", "value": "true"},
+                {"key": "test_evaluated_at", "value": "2026-09-27T00:00:00Z"},
+            ],
+        },
+    }
+    fake = FakeMlflow()
+    fake.runs = [RunSummary.from_rest(rest)]
+    app = FastAPI()
+    app.include_router(runs_api.router)
+    app.dependency_overrides[runs_api.get_mlflow] = lambda: fake
+    client = TestClient(app)
+    for url in ("/api/p3/runs", "/api/p3/runs/r10"):
+        answer = client.get(url)
+        assert answer.status_code == 200
+        assert "test_" not in answer.text, url
+
+
+def test_si_mlflow_falla_responde_502_y_no_404(client: TestClient) -> None:
+    def falla(run_id: str) -> RunSummary:
+        raise MlflowUnavailableError("MLflow respondio 500")
+
+    fake = FakeMlflow()
+    fake.get_run = falla  # type: ignore[method-assign]
+    app = FastAPI()
+    app.include_router(runs_api.router)
+    app.dependency_overrides[runs_api.get_mlflow] = lambda: fake
+    assert TestClient(app).get("/api/p3/runs/b").status_code == 502
+
+
+@pytest.mark.parametrize(
+    ("code", "esperado"), [(404, LookupError), (400, LookupError), (500, MlflowUnavailableError)]
+)
+def test_get_run_solo_traduce_400_y_404_a_inexistente(
+    monkeypatch: pytest.MonkeyPatch, code: int, esperado: type[Exception]
+) -> None:
+    import urllib.error
+
+    def call(*_args, **_kw):
+        raise urllib.error.HTTPError("http://mlflow", code, "error", {}, None)  # type: ignore[arg-type]
+
+    rest = selection.MlflowRest("http://mlflow:5000")
+    monkeypatch.setattr(rest, "_call", call)
+    with pytest.raises(esperado):
+        rest.get_run("abc")
