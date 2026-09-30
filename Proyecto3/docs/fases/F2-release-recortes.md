@@ -76,7 +76,7 @@
 
 - [x] classes.yaml y clases.md existen y citan el release — [`config/classes.yaml`](../../config/classes.yaml) y [`docs/clases.md`](../clases.md), release 0.1.3, huella `2200274d…`
 - [x] Cada clase incluida tiene ≥300 originales distintos según el script — `scripts/count_classes.py --release 0.1.3`: cat 312, dog 348, person 441; protegido por `tests/test_classes_config.py`
-- [ ] Commit fechado antes de la primera corrida en MLflow — commit `219fed3` del 2026-09-25 21:45 (-06:00); falta confirmar con Edith que MLflow no tiene corridas anteriores
+- [x] Commit fechado antes de la primera corrida en MLflow — commit `219fed3` del 2026-09-25 21:45 (-06:00); la primera corrida del clasificador (experimento `p3-clasificador`, 14 corridas) empezó el 2026-09-26 19:55 (-06:00), según `mlflow_snapshot/mlflow.db`. La única corrida anterior (2026-09-24, experimento `f1-t02-persistencia`) es la prueba de persistencia del worker de F1 y no entrena el clasificador
 
 **Entregables:** `config/p3/classes.yaml`; `docs/clases.md`; `scripts/p3/count_classes.py`
 
