@@ -8,7 +8,9 @@
   train/val) y las rutas de sus artefactos.
 
 Todo sale de la API de MLflow en vivo (`MlflowRest`), no de archivos locales.
-Nunca devuelve metricas de test. Solo libreria estandar, sin MLflow ni torch.
+Nunca devuelve metricas ni tags de test (`test_*`, F6): los campos se eligen uno por uno.
+`/runs/{run_id}` solo sirve corridas del experimento del barrido.
+Solo libreria estandar, sin MLflow ni torch.
 """
 
 from __future__ import annotations
@@ -18,7 +20,7 @@ from typing import Annotated, Any, Literal, Protocol
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
-from p3.train.selection import EXPERIMENT, RunSummary, get_mlflow
+from p3.train.selection import EXPERIMENT, MlflowUnavailableError, RunSummary, get_mlflow
 
 router = APIRouter(prefix="/api/p3/runs", tags=["p3-runs"])
 
@@ -38,6 +40,7 @@ ORDER_KEYS = {
 
 
 class RunsMlflow(Protocol):
+    def experiment_id(self, experiment: str) -> str: ...
     def search_runs(self, experiment: str) -> list[RunSummary]: ...
     def get_run(self, run_id: str) -> RunSummary: ...
     def metric_history(self, run_id: str, key: str) -> list[tuple[int, float]]: ...
@@ -98,6 +101,10 @@ def read_run(run_id: RunId, mlflow: MlflowDep) -> dict[str, Any]:
         run = mlflow.get_run(run_id)
     except LookupError as error:
         raise HTTPException(404, f"No existe el run {run_id}") from error
+    except MlflowUnavailableError as error:
+        raise HTTPException(502, str(error)) from error
+    if run.experiment_id != mlflow.experiment_id(EXPERIMENT):
+        raise HTTPException(404, f"El run {run_id} no es del experimento {EXPERIMENT}")
     series = {key: dict(mlflow.metric_history(run.run_id, key)) for key in HISTORY}
     epochs = sorted(set().union(*(s.keys() for s in series.values())))
     history = [

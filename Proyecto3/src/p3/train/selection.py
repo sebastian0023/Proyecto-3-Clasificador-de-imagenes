@@ -45,6 +45,10 @@ class NotEnoughRunsError(ValueError):
     """Menos de `MIN_RUNS` corridas validas: todavia no se puede elegir."""
 
 
+class MlflowUnavailableError(RuntimeError):
+    """MLflow fallo o no responde (no es lo mismo que "el run no existe")."""
+
+
 @dataclass(frozen=True)
 class RunSummary:
     run_id: str
@@ -165,11 +169,14 @@ class MlflowRest:
             raw = response.read()
         return json.loads(raw) if raw else {}
 
-    def search_runs(self, experiment: str) -> list[RunSummary]:
+    def experiment_id(self, experiment: str) -> str:
         found = self._call(
             "GET", f"/api/2.0/mlflow/experiments/get-by-name?experiment_name={experiment}"
         )
-        experiment_id = found["experiment"]["experiment_id"]
+        return found["experiment"]["experiment_id"]
+
+    def search_runs(self, experiment: str) -> list[RunSummary]:
+        experiment_id = self.experiment_id(experiment)
         runs: list[RunSummary] = []
         token = None
         while True:
@@ -186,7 +193,11 @@ class MlflowRest:
         try:
             found = self._call("GET", f"/api/2.0/mlflow/runs/get?run_id={run_id}")
         except urllib.error.HTTPError as error:
-            raise LookupError(run_id) from error
+            if error.code in (400, 404):
+                raise LookupError(run_id) from error
+            raise MlflowUnavailableError(f"MLflow respondio {error.code}") from error
+        except OSError as error:
+            raise MlflowUnavailableError(f"MLflow no responde: {error}") from error
         return RunSummary.from_rest(found["run"])
 
     def metric_history(self, run_id: str, key: str) -> list[tuple[int, float]]:
