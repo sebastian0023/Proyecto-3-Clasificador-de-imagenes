@@ -50,8 +50,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Cambiar la versión activa cambia la predicción/hash del modelo en Inference
-- [ ] No se puede marcar publicado un objeto inexistente
+- [x] Cambiar la versión activa cambia la predicción/hash del modelo en Inference → "Usar para inferencia" llama `POST /api/p3/models/{version}/activate` y actualiza la versión activa (`Proyecto2/web/src/pages/Models.tsx`); Inference usa esa versión activa (en el mock incluso cambian las probabilidades por versión). Prueba `tests/models.test.tsx` (rojo `3614706` → verde `4be098d`). _La cadena completa Models→Inference se confirma con el stack poblado._
+- [x] No se puede marcar publicado un objeto inexistente → activar una versión con `s3.exists: false` responde 409 y no cambia la activa (verificado en la prueba y contra el backend real, que hace head-object antes de aceptar).
 
 **Entregables:** Página Models
 
@@ -71,8 +71,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Predicción proviene del endpoint real
-- [ ] El elemento enviado es consultable en el flujo de anotación
+- [x] Predicción proviene del endpoint real → la página sube la imagen a `POST /api/p3/inference` (multipart, con `bbox_xywh` opcional) y muestra clase, barras de probabilidad y versión de modelo (`Proyecto2/web/src/pages/Inference.tsx`); valida tipo/tamaño en cliente además del servidor. Prueba `tests/inference.test.tsx` (rojo `c8ec2d7` → verde `2efac75`). _Predicción con datos reales cuando haya un modelo activo publicado._
+- [x] El elemento enviado es consultable en el flujo de anotación → "Enviar a cola de anotación" llama `POST /api/p3/inference/{id}/send-to-annotation`, que sube la misma imagen a P1, y la página muestra el elemento creado (`image_id`). _Consultable en P1 con su API corriendo (`P3_ANNOTATION_URL`)._
 
 **Entregables:** Página Inference
 
@@ -88,3 +88,5 @@
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
 | 27 sep 2026 | Andrés | T21 | Rama `feat/fase-9-portal-evaluation-models-inference`. Página Evaluation: bloqueo 409/423 sin revelar test; con evaluación muestra accuracy, F1 macro, matriz de confusión, métricas por clase y baseline; galería de aciertos/errores + exportar `predictions_test.csv`. Cliente `api.p3.evaluation/examples/predictionsUrl` + fixtures/rutas del mock. `npm run test:unit` 35/35, build limpio. Commits `62b9ed8`→`9dc1839`, `450d967`→`bc32387`. | Coincidencia exacta con MLflow al poblar el stack. El doc dice 423 pero el backend real devuelve 409 (se construyó para 409). |
+| 27 sep 2026 | Andrés | T22 | Página Models: lista de versiones (semver del modelo, run, sha256, estado en S3) con la activa marcada, tarjeta (`MODEL_CARD.md`) y "Usar para inferencia" (`POST /models/{v}/activate`); activar un objeto ausente da 409 sin cambiar la activa. Cliente `api.p3.models/modelCardUrl/activateModel` + fixtures/rutas del mock (activa mutable). Commits `3614706`→`4be098d`. `npm run test:unit` 38/38. | Cadena Models→Inference con el stack poblado. |
+| 27 sep 2026 | Andrés | T23 | Página Inference: subir imagen con validación cliente de tipo/tamaño, recorte opcional (`bbox_xywh`), predicción con la versión activa (clase, barras de probabilidad, versión) y envío a la cola de anotación de P1. Cliente `api.p3.inference/sendToAnnotation` + rutas del mock (el route acepta `FormData`). Commits `c8ec2d7`→`2efac75`. `npm run test:unit` 41/41, build limpio. | Predicción/anotación con datos reales cuando haya modelo activo y P1 corriendo. |
