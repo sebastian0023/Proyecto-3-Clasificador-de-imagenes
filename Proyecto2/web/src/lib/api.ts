@@ -455,6 +455,54 @@ export interface Selection {
   val_loss: number;
 }
 
+// --- evaluación en test (contrato §4, F6) ------------------------------------
+export interface EvalPerClass {
+  class: string;
+  precision: number;
+  recall: number;
+  f1: number;
+  support: number;
+}
+
+export interface ConfusionMatrix {
+  labels: string[];
+  /** Filas = clase real, columnas = clase predicha. */
+  rows_true_cols_pred: number[][];
+}
+
+/** Evaluación única en el test congelado. `GET /evaluation` da 409 sin selección. */
+export interface EvaluationReport {
+  run_id: string;
+  manifest_id: string;
+  test_size: number;
+  accuracy: number;
+  passes_threshold: boolean;
+  threshold: number;
+  f1_macro: number;
+  per_class: EvalPerClass[];
+  confusion_matrix: ConfusionMatrix;
+  majority_baseline: number;
+  majority_class: string;
+  most_confused?: unknown;
+  evaluated_at: string;
+  predictions_uri: string;
+  examples_uri: string;
+}
+
+/** Un recorte de test con su clase real, la predicha y la probabilidad. */
+export interface EvalExample {
+  crop_id: string;
+  crop_path: string;
+  true: string;
+  predicted: string;
+  probability: number;
+}
+
+export interface EvaluationExamples {
+  correct: EvalExample[];
+  errors: EvalExample[];
+}
+
 /** Error que conserva el mensaje de la API, no un `fetch failed` generico. */
 export class ApiError extends Error {
   constructor(
@@ -577,6 +625,12 @@ export const api = {
      * con Edith (F5) antes de congelarlo (regla 11 de AGENTS.md).
      */
     selection: () => request<Selection>('/api/p3/selection'),
+    /** Evaluación final en test. Lanza ApiError 409 si la selección no está cerrada. */
+    evaluation: () => request<EvaluationReport>('/api/p3/evaluation'),
+    /** Aciertos y errores de ejemplo del test (para la galería). */
+    evaluationExamples: () => request<EvaluationExamples>('/api/p3/evaluation/examples'),
+    /** URL de descarga del CSV de predicciones (no es una petición: la usa un <a>). */
+    evaluationPredictionsUrl: () => '/api/p3/evaluation/predictions',
   },
 };
 

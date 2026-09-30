@@ -16,6 +16,8 @@
 import type { TrainingConfig, TrainingJob } from '../api';
 import {
   MANIFEST_ID,
+  evaluation,
+  evaluationExamples,
   manifestMeta,
   releaseDetail,
   releaseSummary,
@@ -219,6 +221,21 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
   // Candidato seleccionado (lectura). Adición propuesta a coordinar con F5.
   if (pathname === '/api/p3/selection' && method === 'GET') {
     return json(selection);
+  }
+
+  // Evaluación en test (F6). El mock simula el estado "ya evaluado".
+  if (pathname === '/api/p3/evaluation' && method === 'GET') {
+    return json(evaluation);
+  }
+  if (pathname === '/api/p3/evaluation/examples' && method === 'GET') {
+    return json(evaluationExamples);
+  }
+  if (pathname === '/api/p3/evaluation/predictions' && method === 'GET') {
+    const csv = 'crop_id,clase_real,clase_predicha,prob_cat,prob_dog,prob_person\n0.1.3:a4,cat,cat,0.97,0.02,0.01\n';
+    return new Response(csv, {
+      status: 200,
+      headers: { 'Content-Type': 'text/csv; charset=utf-8' },
+    });
   }
 
   return detail(`Ruta mock no implementada: ${method} ${pathname}`, 404);
