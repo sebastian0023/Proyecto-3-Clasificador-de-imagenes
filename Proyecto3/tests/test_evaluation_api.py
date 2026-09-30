@@ -214,3 +214,14 @@ def test_mlflow_no_disponible_responde_503(error, on_artifacts: bool, path: str)
     response = client.get(f"/api/p3/evaluation{path}")
     assert response.status_code == 503
     assert "MLflow" in response.json()["detail"]
+
+
+def test_el_404_de_mlflow_sigue_siendo_sin_evaluacion_y_no_503() -> None:
+    import urllib.error
+
+    fake = DownMlflow(
+        urllib.error.HTTPError("http://mlflow", 404, "nf", {}, None), on_artifacts=True
+    )
+    response = client_with(fake).get("/api/p3/evaluation")
+    assert response.status_code == 404
+    assert "evaluación final" in response.json()["detail"]
