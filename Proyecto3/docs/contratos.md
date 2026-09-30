@@ -239,6 +239,8 @@ Leer el COCO del release (`p3.data.releases.open_release_archive`) exige que el 
 
 `GET /api/p3/runs/{run_id}` devuelve lo mismo más `history` (por época: `train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`) y `artifacts` (rutas de curvas y checkpoint). **404** si el run no existe.
 
+Si MLflow todavía no tiene el experimento `p3-clasificador` (clon limpio sin `dvc pull` de `mlflow_snapshot.dvc`), `GET /api/p3/runs` devuelve `{"runs": []}`, `/runs/{run_id}` **404**, `GET /api/p3/selection` **404** y `GET /api/p3/evaluation` **409**; nunca 500.
+
 **Cambio aditivo (F5):** cada corrida trae también `experiment_id` (para armar el enlace a MLflow, `/#/experiments/<experiment_id>/runs/<run_id>`) y `selected` (`true` en el candidato de `selection.json`). `order_by` acepta `val_accuracy`, `val_loss`, `start_time` y `end_time`; `artifacts` trae las URI `mlflow-artifacts:/…` de `checkpoint`, `curves`, `history` y `environment`. Nunca hay métricas de test.
 
 ### `POST /api/p3/selection`
@@ -255,6 +257,7 @@ Lee de MLflow la corrida `selected=true` y sus artefactos `evaluation/` (los reg
 
 - **409** `{"detail": "La selección del modelo no está cerrada"}` mientras ninguna corrida esté seleccionada. El test no se revela antes (criterio 6.3).
 - **404** si la corrida seleccionada todavía no tiene la evaluación final.
+- **503** si MLflow no responde o responde un error distinto de 404 (nunca 500).
 - **200**:
 
 ```json
@@ -285,6 +288,7 @@ Viven en el servicio `p3-inference` (el que tiene el perfil de AWS); la app de P
 
 - `GET /api/p3/models`: versiones de `registry.json`; `s3.exists` sale de `head-object`, no del registro. **Aditivo (F7):** `active` por versión.
 - `GET /api/p3/models/{version}/card`: la `MODEL_CARD.md` (`text/markdown`); **404** si la versión no está publicada.
+- **503** en los tres endpoints de modelos si S3 no está disponible (sin credenciales, perfil de AWS inexistente, sin red o acceso denegado), con el motivo y qué configurar; nunca 500.
 - `POST /api/p3/models/{version}/activate`: **200** con la misma forma que `GET /api/p3/models` (antes decía `{"active_version": …}`; ahora devuelve también la lista); **404** si la versión no está publicada; **409** si el objeto de S3 no existe o su SHA-256 no coincide; **422** si `version` no es semántica.
 - `registry.json` lo escribe `p3.registry.publish` con, por versión, además de los campos de la sección 6: `release_id`, `card_key` y `files` (SHA-256 y `s3_version_id` de cada archivo del paquete).
 
