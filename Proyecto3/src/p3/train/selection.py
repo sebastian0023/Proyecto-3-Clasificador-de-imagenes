@@ -176,18 +176,27 @@ class MlflowRest:
         return found["experiment"]["experiment_id"]
 
     def search_runs(self, experiment: str) -> list[RunSummary]:
-        experiment_id = self.experiment_id(experiment)
-        runs: list[RunSummary] = []
-        token = None
-        while True:
-            body: dict[str, Any] = {"experiment_ids": [experiment_id], "max_results": 1000}
-            if token:
-                body["page_token"] = token
-            page = self._call("POST", "/api/2.0/mlflow/runs/search", body)
-            runs += [RunSummary.from_rest(run) for run in page.get("runs", [])]
-            token = page.get("next_page_token")
-            if not token:
-                return runs
+        try:
+            experiment_id = self.experiment_id(experiment)
+            runs: list[RunSummary] = []
+            token = None
+            while True:
+                body: dict[str, Any] = {"experiment_ids": [experiment_id], "max_results": 1000}
+                if token:
+                    body["page_token"] = token
+                page = self._call("POST", "/api/2.0/mlflow/runs/search", body)
+                runs += [RunSummary.from_rest(run) for run in page.get("runs", [])]
+                token = page.get("next_page_token")
+                if not token:
+                    return runs
+        except urllib.error.HTTPError as error:
+            # El experimento aun no existe (nadie ha entrenado todavia): no hay
+            # corridas, no es un fallo. Un stack recien levantado cae aqui.
+            if error.code == 404:
+                return []
+            raise MlflowUnavailableError(f"MLflow respondio {error.code}") from error
+        except OSError as error:
+            raise MlflowUnavailableError(f"MLflow no responde: {error}") from error
 
     def get_run(self, run_id: str) -> RunSummary:
         try:

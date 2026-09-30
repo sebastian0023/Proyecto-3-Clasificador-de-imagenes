@@ -30,10 +30,15 @@ class S3Store:
         return self.client.put_object(Bucket=bucket, Key=key, Body=data).get("VersionId")
 
     def head(self, bucket: str, key: str) -> dict[str, Any] | None:
-        from botocore.exceptions import ClientError
+        from botocore.exceptions import ClientError, NoCredentialsError
 
         try:
             found = self.client.head_object(Bucket=bucket, Key=key)
+        except NoCredentialsError:
+            # Arranque local sin credenciales (sin `~/.aws` ni MinIO configurado):
+            # el registro no es accesible. Se trata como "no hay registro" para que
+            # `GET /api/p3/models` responda una lista vacia en vez de 500.
+            return None
         except ClientError as error:
             if error.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
                 return None
