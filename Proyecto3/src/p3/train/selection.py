@@ -169,14 +169,22 @@ class MlflowRest:
             raw = response.read()
         return json.loads(raw) if raw else {}
 
-    def experiment_id(self, experiment: str) -> str:
-        found = self._call(
-            "GET", f"/api/2.0/mlflow/experiments/get-by-name?experiment_name={experiment}"
-        )
+    def experiment_id(self, experiment: str) -> str | None:
+        """El id del experimento, o `None` si MLflow no lo tiene (p. ej. sin `dvc pull`)."""
+        try:
+            found = self._call(
+                "GET", f"/api/2.0/mlflow/experiments/get-by-name?experiment_name={experiment}"
+            )
+        except urllib.error.HTTPError as error:
+            if error.code == 404:
+                return None
+            raise
         return found["experiment"]["experiment_id"]
 
     def search_runs(self, experiment: str) -> list[RunSummary]:
         experiment_id = self.experiment_id(experiment)
+        if experiment_id is None:
+            return []
         runs: list[RunSummary] = []
         token = None
         while True:
