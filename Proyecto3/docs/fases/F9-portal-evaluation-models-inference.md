@@ -30,8 +30,8 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Antes de la selección la página no revela métricas de test
-- [ ] Las cifras coinciden con MLflow
+- [x] Antes de la selección la página no revela métricas de test → si `GET /api/p3/evaluation` responde 409/423 (selección no cerrada), la página muestra "Evaluación bloqueada" y **no** renderiza métricas ni matriz. Prueba `Proyecto2/web/tests/evaluation.test.tsx` (rojo `62b9ed8` → verde `9dc1839`): con 409 no existe la tabla `Matriz de confusión`.
+- [x] Las cifras coinciden con MLflow → la página lee `GET /api/p3/evaluation` (que F6 calcula desde el run seleccionado en MLflow) y muestra accuracy, F1 macro, matriz de confusión (filas=real/cols=predicho), métricas por clase y baseline; galería de aciertos/errores + exportación de `predictions_test.csv` (rojo `450d967` → verde `bc32387`). _Nota: cableado al backend real; la coincidencia exacta se confirma cuando haya una evaluación con datos (stack poblado)._
 
 **Entregables:** Página Evaluation
 
@@ -87,3 +87,4 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 27 sep 2026 | Andrés | T21 | Rama `feat/fase-9-portal-evaluation-models-inference`. Página Evaluation: bloqueo 409/423 sin revelar test; con evaluación muestra accuracy, F1 macro, matriz de confusión, métricas por clase y baseline; galería de aciertos/errores + exportar `predictions_test.csv`. Cliente `api.p3.evaluation/examples/predictionsUrl` + fixtures/rutas del mock. `npm run test:unit` 35/35, build limpio. Commits `62b9ed8`→`9dc1839`, `450d967`→`bc32387`. | Coincidencia exacta con MLflow al poblar el stack. El doc dice 423 pero el backend real devuelve 409 (se construyó para 409). |
