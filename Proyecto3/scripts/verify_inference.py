@@ -27,6 +27,7 @@ import uuid
 from pathlib import Path
 
 PROYECTO3 = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROYECTO3 / "src"))
 BUCKET = "dataset-quality-releases-750702272375"
 PREFIX = "models/clasificador"
 
@@ -74,9 +75,15 @@ def main() -> int:
         s3.get_object(Bucket=BUCKET, Key=f"{PREFIX}/registry.json")["Body"].read()
     )
     active = next(v for v in registry["versions"] if v["version"] == registry["active_version"])
-    extra = {"VersionId": active["s3_version_id"]} if active.get("s3_version_id") else {}
-    obj = s3.get_object(Bucket=BUCKET, Key=active["key"], **extra)
-    downloaded = hashlib.sha256(obj["Body"].read()).hexdigest()
+    # Mismo criterio que el servicio: por VersionId si las credenciales lo permiten; si no,
+    # la version actual, que debe ser la registrada.
+    from p3.inference.settings import S3ObjectStore
+
+    store = S3ObjectStore.from_client(s3)
+    downloaded = hashlib.sha256(
+        store.get_bytes(BUCKET, active["key"], active.get("s3_version_id"))
+    ).hexdigest()
+    obj = {"VersionId": active.get("s3_version_id")}
     selection = json.loads(args.selection.read_text(encoding="utf-8"))
     print(
         f"version activa {active['version']}: s3://{BUCKET}/{active['key']} "

@@ -130,18 +130,18 @@
 
 **Aceptación** (marca al cumplir, con enlace a la evidencia)
 
-- [ ] Una predicción sobre una imagen de test coincide con predictions_test.csv — **pendiente de F6 (Diego)**: `predictions_test.csv` lo genera la evaluación final. Listo del lado de F4: el servicio usa `build_eval_transform`, el mismo preprocesamiento de validación y prueba, y su predicción coincide al sexto decimal con el cálculo hecho aparte con el mismo checkpoint (recorte de val `0.1.3:a1330`: dog 0.943828) **Para cerrarla:** con F6 y F7 listas y el stack arriba, `python scripts/verify_inference.py --profile <perfil> --predictions <predictions_test.csv>` y pegar su salida aquí.
-- [ ] El modelo usado se descargó de S3 y su SHA-256 coincide con el registro — **pendiente de F7 (Diego)**: todavía no hay `registry.json` en S3 (el servicio llega al bucket real con el perfil del host y responde 409 `NoSuchKey`). Probado con un paquete de prueba en MinIO: versión `0.0.1` = checkpoint seleccionado (`e4acca42…`), SHA-256 verificado al descargar; `tests/test_inference.py` cubre el rechazo por SHA-256 distinto y el cambio de versión activa **Para cerrarla:** con F6 y F7 listas y el stack arriba, `python scripts/verify_inference.py --profile <perfil> --predictions <predictions_test.csv>` y pegar su salida aquí.
+- [x] Una predicción sobre una imagen de test coincide con predictions_test.csv → `scripts/verify_inference.py --profile p3-edith --predictions predictions_test.csv` (F6 PR #9, F7 PR #11) con el stack arriba, 28 sep: **145/145** recortes de test enviados por el portal (`POST :8000/api/p3/inference`) dan la misma clase y las mismas probabilidades (±1e-4) que `predictions_test.csv`
+- [x] El modelo usado se descargó de S3 y su SHA-256 coincide con el registro → `scripts/verify_inference.py --profile p3-edith --predictions predictions_test.csv` (F6 PR #9, F7 PR #11) con el stack arriba, 28 sep: versión activa 1.0.0, `s3://dataset-quality-releases-750702272375/models/clasificador/1.0.0/model.pt` VersionId `VtRww5se97lomVTcKJUv6d9mYSL7TXOf`; SHA-256 descargado = registro = `selection.json` = `e4acca429ebf73d0e5a60fb0dda383a6a5322dccb1decf04b4e40ab9db989172`, y el portal devolvió ese mismo `model_sha256` en las 145 predicciones (lectura sin `s3:GetObjectVersion`: PR #13)
 - [x] El elemento enviado aparece en la cola de anotación → con P1 levantado desde su README (`npm run up`, tras arreglar su imagen de MinIO) y el portal en `:8000`: la inferencia `1294c24f…` se envió con `POST /api/p3/inference/{id}/send-to-annotation` → 201 `image_id` 9; `GET :3000/api/images/9` la muestra `pending` y su archivo tiene el mismo SHA-256 que la foto enviada (`0bbe9272…`); las imágenes pendientes de P1 pasaron de 8 a 9; un segundo envío devuelve 200 con el mismo id, sin duplicar
 
 **Entregables:** `src/p3/inference/service.py`; Endpoints; Pruebas
 
 ## Definición de terminado
 
-- [ ] Todas las casillas de aceptación marcadas con evidencia real
-- [ ] PRs fusionados con review de Andrés
-- [ ] CI en verde en `main`
-- [ ] Commits red → green visibles en el historial
+- [x] Todas las casillas de aceptación marcadas con evidencia real
+- [ ] PRs fusionados con review de Andrés — #5, #6, #7 y #8 fusionados, pero los revisó, aprobó y fusionó **Diego** (D-Lemus), no Andrés; #13 (lectura de S3) espera su review
+- [x] CI en verde en `main` → run de CI sobre `4114c73` (merge de #8): success
+- [x] Commits red → green visibles en el historial → T09 `7538b71`→`0ddeba3`, T10 `4590e71`→`72b80aa`, T11 `e6f3947`→`fff1b14`, T12 `2081eac`→`b28e37d` y `fb8e433`→`7d80897`, T24 `3bef15e`→`52d8e96`, `340ba4c`→`e67e563` y `3d7a4ff`→`a553e3f`
 
 ## Registro de avance
 
@@ -154,3 +154,4 @@
 | 26 sep 2026 | Edith | T12 | `EarlyStopping` con restauración de la mejor época (red `2081eac` → green `b28e37d`); `p3.train.tracking` registra todo en MLflow; `p3.data.frozen` exige el manifiesto congelado (409 en la API); `mlflow_run_id` en el trabajo y timestamps con microsegundos (red `fb8e433` → green `7d80897`); experimento `p3-pruebas` para corridas de humo (`73b42f8` → `84b1313`). Snapshot de MLflow restaurable desde DVC y commit del código en cada corrida (`250bedc`); decisión 5 actualizada | `dvc add mlflow_snapshot` + push tras el barrido de F5 |
 | 27 sep 2026 | Edith | T24 | Servicio de inferencia: registro de versiones y descarga verificada por SHA-256 (red `3bef15e` → green `52d8e96`); API con cada inferencia guardada, envío a P1 y proxy del portal (red `340ba4c` → green `e67e563`); servicio `p3-inference` en el compose (`670c3f9`). Probado en el stack contra un paquete de prueba en MinIO: 200 con probabilidades que suman 1, recorte opcional, 415, 413 y 422 | Casillas que dependen de F6 (`predictions_test.csv`), F7 (`registry.json` en S3) y de levantar P1 |
 | 27 sep 2026 | Edith | T24 | P1 arranca desde un clon limpio (imagen de MinIO y ruta del README) y la inferencia llega a su cola de anotación: imagen 9 `pending`, mismos bytes | Solo quedan las casillas de F6 y F7 |
+| 28 sep 2026 | Edith | T24 | Con F6 y F7: `verify_inference.py` contra el S3 real y `predictions_test.csv`: 145/145 predicciones iguales y SHA-256 del modelo = registro = selección. Arreglo de lectura sin `s3:GetObjectVersion` (#13) | Review de Andrés en #13 |

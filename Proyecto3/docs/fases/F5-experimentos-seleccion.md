@@ -57,10 +57,10 @@
 
 ## Definición de terminado
 
-- [ ] Todas las casillas de aceptación marcadas con evidencia real
-- [ ] PRs fusionados con review de Andrés
-- [ ] CI en verde en `main`
-- [ ] Commits red → green visibles en el historial
+- [x] Todas las casillas de aceptación marcadas con evidencia real
+- [ ] PRs fusionados con review de Andrés — #7 fusionado con review y aprobación de **Diego** (D-Lemus), no de Andrés; #12 (`GET /api/p3/runs` para Experiments) espera su review
+- [x] CI en verde en `main` → run de CI sobre `35b4021` (merge de #7): success
+- [x] Commits red → green visibles en el historial → T13 `1364329`→`23ef512`, T14 `a68e0f1`→`4cda351`, runs `5180361`→`d951df6`
 
 ## Registro de avance
 
