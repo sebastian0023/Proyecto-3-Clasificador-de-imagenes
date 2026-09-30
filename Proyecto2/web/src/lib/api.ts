@@ -527,6 +527,20 @@ export interface ModelsResponse {
   models: ModelEntry[];
 }
 
+// --- inferencia (contrato §4, F4/F9) -----------------------------------------
+export interface InferenceResult {
+  inference_id: string;
+  model_version: string;
+  predicted_class: string;
+  probabilities: Record<string, number>;
+  model_sha256: string;
+}
+
+export interface AnnotationQueueItem {
+  image_id: number;
+  status: string;
+}
+
 /** Error que conserva el mensaje de la API, no un `fetch failed` generico. */
 export class ApiError extends Error {
   constructor(
@@ -664,6 +678,20 @@ export const api = {
     activateModel: (version: string) =>
       request<{ active_version: string }>(
         `/api/p3/models/${encodeURIComponent(version)}/activate`,
+        { method: 'POST' },
+      ),
+    /** Predice una imagen con la versión activa; `bbox_xywh` recorta antes de predecir. */
+    inference: (file: File, bbox?: [number, number, number, number]) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (bbox) form.append('bbox_xywh', JSON.stringify(bbox));
+      // Sin Content-Type: el navegador pone el boundary del multipart.
+      return request<InferenceResult>('/api/p3/inference', { method: 'POST', body: form });
+    },
+    /** Envía la imagen de una inferencia a la cola de anotación de P1. */
+    sendToAnnotation: (inferenceId: string) =>
+      request<{ annotation_queue_item: AnnotationQueueItem }>(
+        `/api/p3/inference/${encodeURIComponent(inferenceId)}/send-to-annotation`,
         { method: 'POST' },
       ),
   },

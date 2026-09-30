@@ -112,6 +112,17 @@ let jobSeq = 0;
 // Versión de modelo activa (mutable): la puede cambiar POST /models/{v}/activate.
 let activeVersion: string = DEFAULT_ACTIVE_VERSION;
 
+// Inferencias hechas (para el envío a la cola de anotación).
+const inferences = new Map<string, { annotationImageId: number | null }>();
+let inferenceSeq = 0;
+
+/** Probabilidades deterministas por versión activa (suman 1). */
+function probabilitiesFor(version: string): Record<string, number> {
+  return version === '0.9.0'
+    ? { cat: 0.7, dog: 0.2, person: 0.1 }
+    : { cat: 0.15, dog: 0.7, person: 0.15 };
+}
+
 function newJobId(): string {
   jobSeq += 1;
   return `mockjob${String(jobSeq).padStart(4, '0')}${'0'.repeat(20)}`;
@@ -149,7 +160,10 @@ function resolveUrl(input: FetchInput): { pathname: string; search: URLSearchPar
 async function route(input: FetchInput, init: FetchInit): Promise<Response> {
   const { pathname, search } = resolveUrl(input);
   const method = (init?.method ?? 'GET').toUpperCase();
-  const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+  // Solo el JSON se parsea; el multipart (inferencia) llega como FormData.
+  const raw = init?.body;
+  const body = typeof raw === 'string' ? JSON.parse(raw) : undefined;
+  const form = raw instanceof FormData ? raw : undefined;
 
   // Releases
   if (pathname === '/api/p3/releases' && method === 'GET') {
@@ -267,6 +281,47 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
     return json({ active_version: activeVersion });
   }
 
+  // Inferencia (F4/F9).
+  if (pathname === '/api/p3/inference' && method === 'POST') {
+    const file = form?.get('file');
+    if (!(file instanceof Blob)) return detail('Falta el archivo.', 422);
+    const type = file.type;
+    if (type !== 'image/png' && type !== 'image/jpeg')
+      return detail(`Tipo ${type || 'desconocido'} no admitido; usa JPEG o PNG.`, 415);
+    if (file.size > 10 * 1024 * 1024) return detail('El archivo pasa de 10 MB.', 413);
+    const bboxRaw = form?.get('bbox_xywh');
+    if (typeof bboxRaw === 'string') {
+      try {
+        const parsed = JSON.parse(bboxRaw);
+        if (!Array.isArray(parsed) || parsed.length !== 4)
+          return detail('bbox_xywh debe tener 4 numeros.', 422);
+      } catch {
+        return detail('bbox_xywh debe ser JSON.', 422);
+      }
+    }
+    inferenceSeq += 1;
+    const id = `inf${String(inferenceSeq).padStart(4, '0')}`;
+    inferences.set(id, { annotationImageId: null });
+    const probs = probabilitiesFor(activeVersion);
+    const predicted = Object.entries(probs).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'dog';
+    const model = modelVersions.find((m) => m.version === activeVersion);
+    return json({
+      inference_id: id,
+      model_version: activeVersion,
+      predicted_class: predicted,
+      probabilities: probs,
+      model_sha256: model?.s3.sha256 ?? '',
+    });
+  }
+  const sendMatch = pathname.match(/^\/api\/p3\/inference\/(.+)\/send-to-annotation$/);
+  if (sendMatch && method === 'POST') {
+    const record = inferences.get(sendMatch[1] ?? '');
+    if (!record) return detail('La inferencia no existe', 404);
+    const first = record.annotationImageId === null;
+    record.annotationImageId = 77;
+    return json({ annotation_queue_item: { image_id: 77, status: 'pending' } }, first ? 201 : 200);
+  }
+
   return detail(`Ruta mock no implementada: ${method} ${pathname}`, 404);
 }
 
@@ -291,6 +346,8 @@ export function uninstallP3Mock(): void {
   jobs.clear();
   jobSeq = 0;
   activeVersion = DEFAULT_ACTIVE_VERSION;
+  inferences.clear();
+  inferenceSeq = 0;
 }
 
 export function isP3MockActive(): boolean {
