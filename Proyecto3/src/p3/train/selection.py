@@ -24,6 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -42,6 +43,10 @@ CHECKPOINT = "checkpoint/model.pt"
 
 class NotEnoughRunsError(ValueError):
     """Menos de `MIN_RUNS` corridas validas: todavia no se puede elegir."""
+
+
+class MlflowUnavailableError(RuntimeError):
+    """MLflow fallo o no responde (no es lo mismo que "el run no existe")."""
 
 
 @dataclass(frozen=True)
@@ -164,11 +169,14 @@ class MlflowRest:
             raw = response.read()
         return json.loads(raw) if raw else {}
 
-    def search_runs(self, experiment: str) -> list[RunSummary]:
+    def experiment_id(self, experiment: str) -> str:
         found = self._call(
             "GET", f"/api/2.0/mlflow/experiments/get-by-name?experiment_name={experiment}"
         )
-        experiment_id = found["experiment"]["experiment_id"]
+        return found["experiment"]["experiment_id"]
+
+    def search_runs(self, experiment: str) -> list[RunSummary]:
+        experiment_id = self.experiment_id(experiment)
         runs: list[RunSummary] = []
         token = None
         while True:
@@ -180,6 +188,23 @@ class MlflowRest:
             token = page.get("next_page_token")
             if not token:
                 return runs
+
+    def get_run(self, run_id: str) -> RunSummary:
+        try:
+            found = self._call("GET", f"/api/2.0/mlflow/runs/get?run_id={run_id}")
+        except urllib.error.HTTPError as error:
+            if error.code in (400, 404):
+                raise LookupError(run_id) from error
+            raise MlflowUnavailableError(f"MLflow respondio {error.code}") from error
+        except OSError as error:
+            raise MlflowUnavailableError(f"MLflow no responde: {error}") from error
+        return RunSummary.from_rest(found["run"])
+
+    def metric_history(self, run_id: str, key: str) -> list[tuple[int, float]]:
+        found = self._call(
+            "GET", f"/api/2.0/mlflow/metrics/get-history?run_id={run_id}&metric_key={key}"
+        )
+        return [(int(m.get("step", 0)), float(m["value"])) for m in found.get("metrics", [])]
 
     def set_tag(self, run_id: str, key: str, value: str) -> None:
         self._call(

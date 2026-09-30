@@ -143,8 +143,8 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 | `GET /api/p3/manifests/{manifest_id}` | meta de un manifiesto | **implementado** (F3) |
 | `POST /api/p3/training/jobs` | encola un trabajo | **implementado** para `kind: "dummy"` (T02); `kind: "train"` en F4 |
 | `GET /api/p3/training/jobs/{job_id}` | estado, progreso, logs y error | **implementado** (T02); `mlflow_run_id` en F4 |
-| `GET /api/p3/runs` | corridas de MLflow | contrato (F5) |
-| `GET /api/p3/runs/{run_id}` | una corrida con curvas | contrato (F5) |
+| `GET /api/p3/runs` | corridas de MLflow | **implementado** (F5) |
+| `GET /api/p3/runs/{run_id}` | una corrida con curvas | **implementado** (F5) |
 | `POST /api/p3/selection` | fija el candidato | contrato (F5) |
 | `GET /api/p3/evaluation` | evaluación final en test | **implementado** (F6) |
 | `GET /api/p3/evaluation/predictions` | `predictions_test.csv` por muestra | **implementado** (F6) |
@@ -238,6 +238,8 @@ Leer el COCO del release (`p3.data.releases.open_release_archive`) exige que el 
 ```
 
 `GET /api/p3/runs/{run_id}` devuelve lo mismo más `history` (por época: `train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`) y `artifacts` (rutas de curvas y checkpoint). **404** si el run no existe.
+
+**Cambio aditivo (F5):** cada corrida trae también `experiment_id` (para armar el enlace a MLflow, `/#/experiments/<experiment_id>/runs/<run_id>`) y `selected` (`true` en el candidato de `selection.json`). `order_by` acepta `val_accuracy`, `val_loss`, `start_time` y `end_time`; `artifacts` trae las URI `mlflow-artifacts:/…` de `checkpoint`, `curves`, `history` y `environment`. Nunca hay métricas de test.
 
 ### `POST /api/p3/selection`
 
