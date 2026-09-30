@@ -170,3 +170,47 @@ def test_la_api_no_carga_torch_ni_el_cliente_de_mlflow(modulo: str) -> None:
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module.split(".")[0])
     assert modulo not in imported
+
+
+# --- MLflow no disponible: 503 con motivo, nunca 500 -----------------------------------------
+
+
+class DownMlflow(FakeMlflow):
+    def __init__(self, error: Exception, *, on_artifacts: bool = False) -> None:
+        base = evaluated()
+        super().__init__(base.runs, base.artifacts)
+        self.error = error
+        self.on_artifacts = on_artifacts
+
+    def search_runs(self, experiment: str) -> list[RunSummary]:
+        if not self.on_artifacts:
+            raise self.error
+        return super().search_runs(experiment)
+
+    def artifact_bytes(self, run: RunSummary, path: str) -> bytes:
+        raise self.error
+
+
+def mlflow_errors() -> list[tuple[Exception, bool]]:
+    import urllib.error
+
+    return [
+        (urllib.error.URLError("connection refused"), False),
+        (urllib.error.HTTPError("http://mlflow", 500, "boom", {}, None), False),
+        (urllib.error.URLError("connection refused"), True),
+        (urllib.error.HTTPError("http://mlflow", 500, "boom", {}, None), True),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("error", "on_artifacts"),
+    mlflow_errors(),
+    ids=["busqueda-sin-red", "busqueda-500", "artefacto-sin-red", "artefacto-500"],
+)
+@pytest.mark.parametrize("path", ["", "/predictions", "/examples"])
+def test_mlflow_no_disponible_responde_503(error, on_artifacts: bool, path: str) -> None:
+    fake = DownMlflow(error, on_artifacts=on_artifacts)
+    client = TestClient(client_with(fake).app, raise_server_exceptions=False)
+    response = client.get(f"/api/p3/evaluation{path}")
+    assert response.status_code == 503
+    assert "MLflow" in response.json()["detail"]
