@@ -11,12 +11,31 @@
 
 import { useEffect, useState } from 'react';
 import { Card, Pill, Tile } from '../components/ui';
-import { ApiError, api, type EvaluationReport } from '../lib/api';
+import { ApiError, api, type EvalExample, type EvaluationExamples, type EvaluationReport } from '../lib/api';
 
 const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
 
+/** Una fila de la galería: recorte, real → predicho y probabilidad. */
+function ExampleRow({ example }: { example: EvalExample }) {
+  const hit = example.true === example.predicted;
+  return (
+    <div className="row">
+      <span className="mono" style={{ fontSize: 12 }}>
+        {example.crop_id}
+      </span>
+      <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+        <Pill kind={hit ? 'pass' : 'fail'}>
+          {example.true} → {example.predicted}
+        </Pill>
+        <span className="mono">{pct(example.probability)}</span>
+      </span>
+    </div>
+  );
+}
+
 export default function Evaluation() {
   const [report, setReport] = useState<EvaluationReport | null>(null);
+  const [examples, setExamples] = useState<EvaluationExamples | null>(null);
   const [blocked, setBlocked] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,8 +43,15 @@ export default function Evaluation() {
     let cancelled = false;
     api.p3
       .evaluation()
-      .then((r) => {
-        if (!cancelled) setReport(r);
+      .then(async (r) => {
+        if (cancelled) return;
+        setReport(r);
+        try {
+          const ex = await api.p3.evaluationExamples();
+          if (!cancelled) setExamples(ex);
+        } catch {
+          // La galería es opcional: si falla, la página muestra igual las métricas.
+        }
       })
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -143,6 +169,35 @@ export default function Evaluation() {
               </div>
             </Card>
           </div>
+
+          <Card
+            title="Aciertos y errores del test"
+            hint="Ejemplos con su clase real, la predicha y la probabilidad. Para auditar, exporta el CSV completo."
+            aside={
+              <a href={api.p3.evaluationPredictionsUrl()} download>
+                Exportar predictions_test.csv
+              </a>
+            }
+          >
+            {examples ? (
+              <div className="cols-2">
+                <div>
+                  <h3>Aciertos</h3>
+                  {examples.correct.map((ex) => (
+                    <ExampleRow key={ex.crop_id} example={ex} />
+                  ))}
+                </div>
+                <div>
+                  <h3>Errores</h3>
+                  {examples.errors.map((ex) => (
+                    <ExampleRow key={ex.crop_id} example={ex} />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="state">Cargando ejemplos…</p>
+            )}
+          </Card>
         </>
       ) : (
         !error && <p className="state">Cargando evaluación…</p>
