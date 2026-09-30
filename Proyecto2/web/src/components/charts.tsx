@@ -267,6 +267,63 @@ export function ScatterPlot({
   );
 }
 
+/** Curvas por época: una polilínea por serie, con escala Y compartida. */
+export function LineChart({
+  title,
+  series,
+  height = 200,
+}: {
+  title: string;
+  series: { label: string; color: string; values: number[] }[];
+  height?: number;
+}) {
+  const n = Math.max(0, ...series.map((s) => s.values.length));
+  if (n === 0) return <p className="state">Sin datos.</p>;
+
+  const width = 640;
+  const pad = { top: 16, right: 16, bottom: 28, left: 42 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+  const all = series.flatMap((s) => s.values);
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+  const span = max - min || 1;
+  const x = (i: number) => pad.left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const y = (v: number) => pad.top + plotH - ((v - min) / span) * plotH;
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      style={{ width: '100%', height: 'auto' }}
+      role="img"
+      aria-label={title}
+    >
+      {[min, (min + max) / 2, max].map((tick) => (
+        <g key={tick}>
+          <line x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} stroke="var(--line)" />
+          <text x={pad.left - 6} y={y(tick) + 4} textAnchor="end" fontSize="10" fill="var(--muted)">
+            {tick.toFixed(2)}
+          </text>
+        </g>
+      ))}
+      {series.map((serie) => (
+        <polyline
+          key={serie.label}
+          fill="none"
+          stroke={serie.color}
+          strokeWidth="2"
+          points={serie.values.map((v, i) => `${x(i)},${y(v)}`).join(' ')}
+        >
+          <title>{serie.label}</title>
+        </polyline>
+      ))}
+      <text x={pad.left} y={height - 8} fontSize="10" fill="var(--muted)">
+        época →
+      </text>
+    </svg>
+  );
+}
+
 export function Legend({
   items,
 }: {

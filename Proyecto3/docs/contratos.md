@@ -139,16 +139,19 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 |---|---|---|
 | `GET /api/p3/releases?approved=true` | releases de P2 | **implementado** (F2 T05) |
 | `GET /api/p3/releases/{release_id}` | procedencia de un release aprobado | **implementado** (F2 T05) |
-| `POST /api/p3/manifests` | genera un manifiesto | contrato (F3) |
-| `GET /api/p3/manifests/{manifest_id}` | meta de un manifiesto | contrato (F3) |
+| `POST /api/p3/manifests` | manifiesto congelado de un release y una semilla | **implementado** (F3) |
+| `GET /api/p3/manifests/{manifest_id}` | meta de un manifiesto | **implementado** (F3) |
 | `POST /api/p3/training/jobs` | encola un trabajo | **implementado** para `kind: "dummy"` (T02); `kind: "train"` en F4 |
 | `GET /api/p3/training/jobs/{job_id}` | estado, progreso, logs y error | **implementado** (T02); `mlflow_run_id` en F4 |
 | `GET /api/p3/runs` | corridas de MLflow | **implementado** (F5) |
 | `GET /api/p3/runs/{run_id}` | una corrida con curvas | **implementado** (F5) |
 | `POST /api/p3/selection` | fija el candidato | contrato (F5) |
-| `GET /api/p3/evaluation` | evaluación final en test | contrato (F6) |
-| `GET /api/p3/models` | versiones de modelo | contrato (F7) |
-| `POST /api/p3/models/{version}/activate` | elige la versión para inferencia | contrato (F7) |
+| `GET /api/p3/evaluation` | evaluación final en test | **implementado** (F6) |
+| `GET /api/p3/evaluation/predictions` | `predictions_test.csv` por muestra | **implementado** (F6) |
+| `GET /api/p3/evaluation/examples` | aciertos y errores de test (`errors.json`) | **implementado** (F6) |
+| `GET /api/p3/models` | versiones de modelo | **implementado** (F7) |
+| `GET /api/p3/models/{version}/card` | tarjeta de una versión | **implementado** (F7) |
+| `POST /api/p3/models/{version}/activate` | elige la versión para inferencia | **implementado** (F7) |
 | `POST /api/p3/inference` | predice una imagen | **implementado** (F4 T24); página en F9 |
 | `POST /api/p3/inference/{inference_id}/send-to-annotation` | crea el elemento en la cola de anotación | **implementado** (F4 T24); página en F9 |
 
@@ -181,6 +184,10 @@ Leer el COCO del release (`p3.data.releases.open_release_archive`) exige que el 
 
 - **409** si el release no tiene `quality_status: "pass"`.
 - **404** si el release no existe.
+- **Implementado (F3):** no genera un manifiesto nuevo. El worker solo entrena con los congelados (`p3.data.frozen`), así que devuelve el congelado de ese release y esa semilla (`m-<release>-s<seed>-<n>`) después de comprobar que el SHA-256 de `manifest.jsonl` es el congelado y que el meta dice el mismo release y seed. Es idempotente y no escribe nada. Generar uno nuevo es `scripts/generate_manifest.py` (reproducible byte a byte) y congelarlo entra por PR.
+- **409** también si no hay congelado para ese release y esa semilla, o si los bytes en disco no son los congelados.
+- **503** si el congelado no está descargado (`dvc pull data/manifests/<id>.dvc`).
+- En Docker la app lee `Proyecto3/data/manifests` montado en solo lectura (`P3_MANIFESTS_DIR=/opt/p3/manifests`).
 
 ### `GET /api/p3/manifests/{manifest_id}`
 
@@ -244,12 +251,18 @@ Aplica la regla de [decisiones.md §4](decisiones.md#4-métrica-de-selección-de
 
 ### `GET /api/p3/evaluation`
 
-- **409** `{"detail": "La selección del modelo no está cerrada"}` mientras no exista `selection.json` commiteado. El test no se revela antes (criterio 6.3).
-- Después:
+Lee de MLflow la corrida `selected=true` y sus artefactos `evaluation/` (los registra `scripts/log_evaluation_mlflow.py`), para que portal, API y MLflow muestren las mismas cifras.
+
+- **409** `{"detail": "La selección del modelo no está cerrada"}` mientras ninguna corrida esté seleccionada. El test no se revela antes (criterio 6.3).
+- **404** si la corrida seleccionada todavía no tiene la evaluación final.
+- **200**:
 
 ```json
-{"run_id": "…", "manifest_id": "…", "test_size": 0, "accuracy": 0.0, "f1_macro": 0.0, "per_class": [{"class": "cat", "precision": 0.0, "recall": 0.0, "support": 0}], "confusion_matrix": {"labels": ["cat", "dog", "person"], "rows_true_cols_pred": [[0, 0, 0], [0, 0, 0], [0, 0, 0]]}, "majority_baseline": 0.0, "predictions_uri": "…/predictions.jsonl"}
+{"run_id": "9f9b62c2…", "manifest_id": "m-0.1.3-s42-1", "test_size": 145, "accuracy": 0.9793103448275862, "passes_threshold": true, "threshold": 0.85, "f1_macro": 0.9743519475145314, "per_class": [{"class": "cat", "precision": 1.0, "recall": 0.9375, "f1": 0.9677, "support": 32}], "confusion_matrix": {"labels": ["cat", "dog", "person"], "rows_true_cols_pred": [[30, 2, 0], [0, 38, 0], [0, 1, 74]]}, "majority_baseline": 0.5172413793103449, "majority_class": "person", "most_confused": {"true": "cat", "predicted": "dog", "count": 2}, "evaluated_at": "2026-09-28T02:25:07Z", "predictions_uri": "/api/p3/evaluation/predictions", "examples_uri": "/api/p3/evaluation/examples"}
 ```
+
+- **Cambios F6 (aditivos):** `f1` en `per_class`, `passes_threshold`, `threshold`, `majority_class`, `most_confused`, `evaluated_at` y `examples_uri`. `predictions_uri` apunta a `GET /api/p3/evaluation/predictions`, que devuelve el CSV de abajo (`text/csv`), no un `predictions.jsonl`.
+- `GET /api/p3/evaluation/examples`: `{"correct": [...], "errors": [...]}`. Cada ejemplo trae `crop_id`, `crop_path` (relativo a `data/crops/<release>/`), `true`, `predicted` y `probability`; todos son de `test`.
 
 ### `predictions_test.csv` (F6) — cambio aditivo de F4 T24
 
@@ -268,7 +281,12 @@ Las probabilidades salen del mismo `build_eval_transform` y del checkpoint de `s
 {"active_version": "1.0.0", "models": [{"version": "1.0.0", "run_id": "…", "manifest_id": "…", "release_id": "0.1.3", "s3": {"uri": "s3://…/models/clasificador/1.0.0/model.pt", "version_id": "…", "sha256": "…", "exists": true}, "card_uri": "…/MODEL_CARD.md"}]}
 ```
 
-`activate` responde **200** con `{"active_version": "1.0.0"}`, o **409** si el objeto de S3 no existe o su SHA-256 no coincide.
+Viven en el servicio `p3-inference` (el que tiene el perfil de AWS); la app de P2 los reenvía (`p3.registry.proxy`), igual que la inferencia.
+
+- `GET /api/p3/models`: versiones de `registry.json`; `s3.exists` sale de `head-object`, no del registro. **Aditivo (F7):** `active` por versión.
+- `GET /api/p3/models/{version}/card`: la `MODEL_CARD.md` (`text/markdown`); **404** si la versión no está publicada.
+- `POST /api/p3/models/{version}/activate`: **200** con la misma forma que `GET /api/p3/models` (antes decía `{"active_version": …}`; ahora devuelve también la lista); **404** si la versión no está publicada; **409** si el objeto de S3 no existe o su SHA-256 no coincide; **422** si `version` no es semántica.
+- `registry.json` lo escribe `p3.registry.publish` con, por versión, además de los campos de la sección 6: `release_id`, `card_key` y `files` (SHA-256 y `s3_version_id` de cada archivo del paquete).
 
 ### `POST /api/p3/inference`
 
