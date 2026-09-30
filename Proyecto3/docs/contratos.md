@@ -239,6 +239,8 @@ Leer el COCO del release (`p3.data.releases.open_release_archive`) exige que el 
 
 `GET /api/p3/runs/{run_id}` devuelve lo mismo más `history` (por época: `train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`) y `artifacts` (rutas de curvas y checkpoint). **404** si el run no existe.
 
+Si MLflow todavía no tiene el experimento `p3-clasificador` (clon limpio sin `dvc pull` de `mlflow_snapshot.dvc`), `GET /api/p3/runs` devuelve `{"runs": []}`, `/runs/{run_id}` **404**, `GET /api/p3/selection` **404** y `GET /api/p3/evaluation` **409**; nunca 500.
+
 **Cambio aditivo (F5):** cada corrida trae también `experiment_id` (para armar el enlace a MLflow, `/#/experiments/<experiment_id>/runs/<run_id>`) y `selected` (`true` en el candidato de `selection.json`). `order_by` acepta `val_accuracy`, `val_loss`, `start_time` y `end_time`; `artifacts` trae las URI `mlflow-artifacts:/…` de `checkpoint`, `curves`, `history` y `environment`. Nunca hay métricas de test.
 
 ### `POST /api/p3/selection`
