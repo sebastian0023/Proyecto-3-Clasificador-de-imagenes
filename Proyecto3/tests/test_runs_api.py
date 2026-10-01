@@ -187,7 +187,7 @@ def test_nunca_muestra_metricas_ni_tags_de_test() -> None:
         assert "test_" not in answer.text, url
 
 
-def test_si_mlflow_falla_responde_502_y_no_404(client: TestClient) -> None:
+def test_si_mlflow_falla_responde_503_y_no_404(client: TestClient) -> None:
     def falla(run_id: str) -> RunSummary:
         raise MlflowUnavailableError("MLflow respondio 500")
 
@@ -196,7 +196,7 @@ def test_si_mlflow_falla_responde_502_y_no_404(client: TestClient) -> None:
     app = FastAPI()
     app.include_router(runs_api.router)
     app.dependency_overrides[runs_api.get_mlflow] = lambda: fake
-    assert TestClient(app).get("/api/p3/runs/b").status_code == 502
+    assert TestClient(app).get("/api/p3/runs/b").status_code == 503
 
 
 @pytest.mark.parametrize(
@@ -283,3 +283,20 @@ def test_sin_experimento_seleccion_404_y_evaluacion_409(monkeypatch: pytest.Monk
     evaluation = client.get("/api/p3/evaluation")
     assert evaluation.status_code == 409
     assert "no está cerrada" in evaluation.json()["detail"]
+
+
+def test_si_mlflow_no_responde_la_lista_da_503() -> None:
+    import urllib.error
+
+    fake = FakeMlflow()
+
+    def caido(experiment: str) -> list[RunSummary]:
+        raise urllib.error.URLError("Connection refused")
+
+    fake.search_runs = caido  # type: ignore[method-assign]
+    app = FastAPI()
+    app.include_router(runs_api.router)
+    app.dependency_overrides[runs_api.get_mlflow] = lambda: fake
+    response = TestClient(app, raise_server_exceptions=False).get("/api/p3/runs")
+    assert response.status_code == 503
+    assert "P3_MLFLOW_URL" in response.json()["detail"]

@@ -196,3 +196,26 @@ def test_no_importa_torch_ni_mlflow() -> None:
 
     texto = Path(selection.__file__).read_text(encoding="utf-8")
     assert "import torch" not in texto and "import mlflow" not in texto
+
+
+# --- MLflow caido: 503 con que revisar, nunca 500 -------------------------------------------
+
+
+@pytest.mark.parametrize("metodo", ["get", "post"])
+def test_si_mlflow_no_responde_selection_da_503(metodo: str) -> None:
+    import urllib.error
+
+    class Caido:
+        def search_runs(self, experiment: str):
+            raise urllib.error.URLError("Connection refused")
+
+    app = FastAPI()
+    app.include_router(selection.router)
+    app.dependency_overrides[selection.get_mlflow] = lambda: Caido()
+    client = TestClient(app, raise_server_exceptions=False)
+    if metodo == "get":
+        response = client.get("/api/p3/selection")
+    else:
+        response = client.post("/api/p3/selection", json={"manifest_id": "m-0.1.3-s42-1"})
+    assert response.status_code == 503
+    assert "P3_MLFLOW_URL" in response.json()["detail"]
