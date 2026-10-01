@@ -20,7 +20,7 @@ from typing import Annotated, Any, Literal, Protocol
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
-from p3.train.selection import EXPERIMENT, MlflowUnavailableError, RunSummary, get_mlflow
+from p3.train.selection import EXPERIMENT, RunSummary, get_mlflow, mlflow_available
 
 router = APIRouter(prefix="/api/p3/runs", tags=["p3-runs"])
 
@@ -85,7 +85,8 @@ def list_runs(
     ] = None,
     desc: bool = True,
 ) -> dict[str, list[dict[str, Any]]]:
-    runs = mlflow.search_runs(EXPERIMENT)
+    with mlflow_available():
+        runs = mlflow.search_runs(EXPERIMENT)
     if manifest_id is not None:
         runs = [r for r in runs if r.manifest_id == manifest_id]
     if status is not None:
@@ -97,15 +98,14 @@ def list_runs(
 
 @router.get("/{run_id}")
 def read_run(run_id: RunId, mlflow: MlflowDep) -> dict[str, Any]:
-    try:
-        run = mlflow.get_run(run_id)
-    except LookupError as error:
-        raise HTTPException(404, f"No existe el run {run_id}") from error
-    except MlflowUnavailableError as error:
-        raise HTTPException(502, str(error)) from error
-    if run.experiment_id != mlflow.experiment_id(EXPERIMENT):
-        raise HTTPException(404, f"El run {run_id} no es del experimento {EXPERIMENT}")
-    series = {key: dict(mlflow.metric_history(run.run_id, key)) for key in HISTORY}
+    with mlflow_available():
+        try:
+            run = mlflow.get_run(run_id)
+        except LookupError as error:
+            raise HTTPException(404, f"No existe el run {run_id}") from error
+        if run.experiment_id != mlflow.experiment_id(EXPERIMENT):
+            raise HTTPException(404, f"El run {run_id} no es del experimento {EXPERIMENT}")
+        series = {key: dict(mlflow.metric_history(run.run_id, key)) for key in HISTORY}
     epochs = sorted(set().union(*(s.keys() for s in series.values())))
     history = [
         {"epoch": epoch, **{key: series[key].get(epoch) for key in HISTORY}} for epoch in epochs

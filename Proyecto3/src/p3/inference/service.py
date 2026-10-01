@@ -56,6 +56,11 @@ class ModelUnavailableError(RuntimeError):
     """No hay version activa o su objeto no existe (HTTP 409)."""
 
 
+class StorageUnavailableError(ModelUnavailableError):
+    """S3 no esta disponible: sin credenciales, perfil inexistente, sin red o acceso
+    denegado (HTTP 503). Es configuracion, no falta de modelo."""
+
+
 class ModelIntegrityError(RuntimeError):
     """El objeto descargado no es el registrado (HTTP 409)."""
 
