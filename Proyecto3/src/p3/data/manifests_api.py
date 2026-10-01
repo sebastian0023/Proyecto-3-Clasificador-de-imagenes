@@ -14,7 +14,6 @@ Se monta en la app de Proyecto2, igual que `p3.data.api`.
 from __future__ import annotations
 
 import json
-import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, Any
@@ -24,13 +23,10 @@ from fastapi import Path as PathParam
 from pydantic import BaseModel, ConfigDict, StrictInt
 
 from p3.data import releases
-from p3.data.api import ReleasesDep
-from p3.data.frozen import FROZEN_MANIFESTS, ManifestNotFrozenError, verify_frozen
+from p3.data.api import ReleasesDep, get_frozen
+from p3.data.frozen import MANIFEST_ID, ManifestNotFrozenError, frozen_for, verify_frozen
 
 router = APIRouter(prefix="/api/p3/manifests", tags=["p3-manifests"])
-
-# `m-<release_id>-s<seed>-<n>` (docs/manifiesto.md). Tambien impide salir de la carpeta.
-MANIFEST_ID = r"^m-(?P<release>\d+\.\d+\.\d+)-s(?P<seed>\d+)-(?P<n>\d+)$"
 
 
 def get_manifests_dir() -> Path:
@@ -39,12 +35,9 @@ def get_manifests_dir() -> Path:
     return get_settings().manifests_dir
 
 
-def get_frozen() -> Mapping[str, str]:
-    return FROZEN_MANIFESTS
-
-
 ManifestsDirDep = Annotated[Path, Depends(get_manifests_dir)]
 FrozenDep = Annotated[Mapping[str, str], Depends(get_frozen)]
+# El patron del id tambien impide salir de la carpeta.
 ManifestId = Annotated[str, PathParam(pattern=MANIFEST_ID)]
 
 
@@ -61,16 +54,6 @@ class ManifestCreated(BaseModel):
     counts: dict[str, Any]
 
 
-def _frozen_for(frozen: Mapping[str, str], release_id: str, seed: int) -> str | None:
-    """El congelado de ese release y esa semilla (el de mayor `n` si hubiera varios)."""
-    found = []
-    for manifest_id in frozen:
-        match = re.match(MANIFEST_ID, manifest_id)
-        if match and match["release"] == release_id and int(match["seed"]) == seed:
-            found.append((int(match["n"]), manifest_id))
-    return max(found)[1] if found else None
-
-
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_manifest(
     body: ManifestRequest, all_releases: ReleasesDep, folder: ManifestsDirDep, frozen: FrozenDep
@@ -82,7 +65,7 @@ def create_manifest(
     except releases.ReleaseNotApprovedError as error:
         raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
 
-    manifest_id = _frozen_for(frozen, body.release_id, body.seed)
+    manifest_id = frozen_for(body.release_id, body.seed, frozen)
     if manifest_id is None:
         raise HTTPException(
             status.HTTP_409_CONFLICT,

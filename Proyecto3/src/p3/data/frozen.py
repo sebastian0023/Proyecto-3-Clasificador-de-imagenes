@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,24 @@ from typing import Any
 FROZEN_MANIFESTS: Mapping[str, str] = {
     "m-0.1.3-s42-1": "45600f297d13f51685e051e0cbc4962beb1f7c6a4e03247cbf61a345e6fa4305",
 }
+
+
+# `m-<release_id>-s<seed>-<n>` (docs/manifiesto.md).
+MANIFEST_ID = r"^m-(?P<release>\d+\.\d+\.\d+)-s(?P<seed>\d+)-(?P<n>\d+)$"
+# Semilla del manifiesto con el que se entrena (el congelado de F3).
+TRAINING_SEED = 42
+
+
+def frozen_for(
+    release_id: str, seed: int, frozen: Mapping[str, str] = FROZEN_MANIFESTS
+) -> str | None:
+    """El congelado de ese release y esa semilla (el de mayor `n` si hubiera varios)."""
+    found = []
+    for manifest_id in frozen:
+        match = re.match(MANIFEST_ID, manifest_id)
+        if match and match["release"] == release_id and int(match["seed"]) == seed:
+            found.append((int(match["n"]), manifest_id))
+    return max(found)[1] if found else None
 
 
 class ManifestNotFrozenError(ValueError):

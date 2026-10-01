@@ -101,3 +101,13 @@ def test_con_el_registro_y_los_congelados_reales_solo_0_1_3_se_entrena(tmp_path:
     reasons = {r["release_id"]: r["blocked_reason"] for r in body}
     assert reasons["0.1.1"] == "no registra archive_sha256"
     assert reasons["0.1.2"] == "sin manifiesto congelado"
+
+
+def test_congelar_un_manifiesto_habilita_su_release(tmp_path: Path) -> None:
+    # La bandera sale de la lista de congelados, no de una lista fija.
+    frozen = {**FROZEN, "m-0.1.2-s42-1": "2" * 64}
+    client = client_with([entry("0.1.2"), entry("0.1.3")], frozen, tmp_path)
+    assert [r["trainable"] for r in client.get("/api/p3/releases").json()["releases"]] == [
+        True,
+        True,
+    ]
