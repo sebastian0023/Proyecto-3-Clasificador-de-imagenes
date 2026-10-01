@@ -26,6 +26,8 @@ import json
 import os
 import urllib.error
 import urllib.request
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Annotated, Any, Protocol
@@ -169,14 +171,22 @@ class MlflowRest:
             raw = response.read()
         return json.loads(raw) if raw else {}
 
-    def experiment_id(self, experiment: str) -> str:
-        found = self._call(
-            "GET", f"/api/2.0/mlflow/experiments/get-by-name?experiment_name={experiment}"
-        )
+    def experiment_id(self, experiment: str) -> str | None:
+        """El id del experimento, o `None` si MLflow no lo tiene (p. ej. sin `dvc pull`)."""
+        try:
+            found = self._call(
+                "GET", f"/api/2.0/mlflow/experiments/get-by-name?experiment_name={experiment}"
+            )
+        except urllib.error.HTTPError as error:
+            if error.code == 404:
+                return None
+            raise
         return found["experiment"]["experiment_id"]
 
     def search_runs(self, experiment: str) -> list[RunSummary]:
         experiment_id = self.experiment_id(experiment)
+        if experiment_id is None:
+            return []
         runs: list[RunSummary] = []
         token = None
         while True:
@@ -222,6 +232,18 @@ def get_mlflow() -> MlflowAccess:
     return MlflowRest(os.environ.get("P3_MLFLOW_URL", "http://mlflow:5000"))
 
 
+@contextmanager
+def mlflow_available() -> Iterator[None]:
+    """MLflow sin red o con un error que no es 404 -> 503 con que revisar, nunca 500."""
+    try:
+        yield
+    except (OSError, MlflowUnavailableError) as error:
+        raise HTTPException(
+            503,
+            f"MLflow no esta disponible ({error}); revisa el servicio `mlflow` y P3_MLFLOW_URL.",
+        ) from error
+
+
 # --- API ------------------------------------------------------------------------------------
 
 router = APIRouter(prefix="/api/p3/selection", tags=["p3-selection"])
@@ -243,7 +265,8 @@ def create_selection(body: SelectionRequest, mlflow: MlflowDep) -> dict[str, Any
     manifest_hash = FROZEN_MANIFESTS.get(body.manifest_id)
     if manifest_hash is None:
         raise HTTPException(409, f"El manifiesto {body.manifest_id} no esta congelado.")
-    runs = mlflow.search_runs(EXPERIMENT)
+    with mlflow_available():
+        runs = mlflow.search_runs(EXPERIMENT)
     previous = _current(runs)
     if previous is not None:
         raise HTTPException(
@@ -253,7 +276,8 @@ def create_selection(body: SelectionRequest, mlflow: MlflowDep) -> dict[str, Any
         winner = select(runs, manifest_hash=manifest_hash)
     except NotEnoughRunsError as error:
         raise HTTPException(409, str(error)) from error
-    checkpoint = mlflow.artifact_bytes(winner, CHECKPOINT)
+    with mlflow_available():
+        checkpoint = mlflow.artifact_bytes(winner, CHECKPOINT)
     record = selection_record(
         winner,
         candidates=len(valid_runs(runs, manifest_hash=manifest_hash)),
@@ -261,14 +285,16 @@ def create_selection(body: SelectionRequest, mlflow: MlflowDep) -> dict[str, Any
         crops_sha256=winner.tags.get("crops_jsonl_sha256"),
         selected_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
-    mlflow.set_tag(winner.run_id, "selection", json.dumps(record))
-    mlflow.set_tag(winner.run_id, "selected", "true")
+    with mlflow_available():
+        mlflow.set_tag(winner.run_id, "selection", json.dumps(record))
+        mlflow.set_tag(winner.run_id, "selected", "true")
     return record
 
 
 @router.get("")
 def read_selection(mlflow: MlflowDep) -> dict[str, Any]:
-    current = _current(mlflow.search_runs(EXPERIMENT))
+    with mlflow_available():
+        current = _current(mlflow.search_runs(EXPERIMENT))
     if current is None:
         raise HTTPException(404, "Todavia no hay un candidato seleccionado.")
     return json.loads(current.tags["selection"])

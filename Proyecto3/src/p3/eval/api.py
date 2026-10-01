@@ -9,6 +9,7 @@ API y MLflow muestran las mismas cifras (4.2).
 - `GET /api/p3/evaluation/examples`: aciertos y errores de test (`errors.json`).
 
 Mientras la seleccion no este cerrada responde 409 y no revela nada del test.
+Si MLflow no responde (o responde un error que no es 404) responde 503, no 500.
 Solo lee: usa el cliente REST de `p3.train.selection`, sin torch ni el cliente
 de MLflow, porque se monta en la app de P2.
 """
@@ -33,9 +34,11 @@ __all__ = ["get_mlflow", "router"]
 
 
 def _selected(mlflow: Any) -> RunSummary:
-    run = next(
-        (r for r in mlflow.search_runs(EXPERIMENT) if r.tags.get("selected") == "true"), None
-    )
+    try:
+        runs = mlflow.search_runs(EXPERIMENT)
+    except OSError as error:
+        raise _mlflow_down(error) from error
+    run = next((r for r in runs if r.tags.get("selected") == "true"), None)
     if run is None:
         raise HTTPException(409, NOT_SELECTED)
     return run
@@ -49,7 +52,15 @@ def _artifact(mlflow: Any, run: RunSummary, name: str) -> bytes:
     except urllib.error.HTTPError as error:
         if error.code == 404:
             raise _no_evaluation(run) from error
-        raise
+        raise _mlflow_down(error) from error
+    except OSError as error:
+        raise _mlflow_down(error) from error
+
+
+def _mlflow_down(error: OSError) -> HTTPException:
+    return HTTPException(
+        503, f"MLflow no esta disponible ({error}); revisa el servicio `mlflow` y P3_MLFLOW_URL."
+    )
 
 
 def _no_evaluation(run: RunSummary) -> HTTPException:

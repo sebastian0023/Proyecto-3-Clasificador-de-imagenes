@@ -455,6 +455,92 @@ export interface Selection {
   val_loss: number;
 }
 
+// --- evaluación en test (contrato §4, F6) ------------------------------------
+export interface EvalPerClass {
+  class: string;
+  precision: number;
+  recall: number;
+  f1: number;
+  support: number;
+}
+
+export interface ConfusionMatrix {
+  labels: string[];
+  /** Filas = clase real, columnas = clase predicha. */
+  rows_true_cols_pred: number[][];
+}
+
+/** Evaluación única en el test congelado. `GET /evaluation` da 409 sin selección. */
+export interface EvaluationReport {
+  run_id: string;
+  manifest_id: string;
+  test_size: number;
+  accuracy: number;
+  passes_threshold: boolean;
+  threshold: number;
+  f1_macro: number;
+  per_class: EvalPerClass[];
+  confusion_matrix: ConfusionMatrix;
+  majority_baseline: number;
+  majority_class: string;
+  most_confused?: unknown;
+  evaluated_at: string;
+  predictions_uri: string;
+  examples_uri: string;
+}
+
+/** Un recorte de test con su clase real, la predicha y la probabilidad. */
+export interface EvalExample {
+  crop_id: string;
+  crop_path: string;
+  true: string;
+  predicted: string;
+  probability: number;
+}
+
+export interface EvaluationExamples {
+  correct: EvalExample[];
+  errors: EvalExample[];
+}
+
+// --- versiones de modelo (contrato §4/§6, F7) --------------------------------
+export interface ModelS3 {
+  uri: string;
+  version_id: string | null;
+  sha256: string;
+  /** El objeto realmente existe en S3 con ese SHA-256. */
+  exists: boolean;
+}
+
+/** Una versión de modelo publicada. La versión es del MODELO, no del dataset. */
+export interface ModelEntry {
+  version: string;
+  run_id: string;
+  manifest_id: string;
+  release_id: string;
+  s3: ModelS3;
+  card_uri: string;
+}
+
+export interface ModelsResponse {
+  active_version: string | null;
+  models: ModelEntry[];
+}
+
+// --- inferencia (contrato §4, F4/F9) -----------------------------------------
+export interface InferenceResult {
+  inference_id: string;
+  model_version: string;
+  predicted_class: string;
+  probabilities: Record<string, number>;
+  model_sha256: string;
+}
+
+export interface AnnotationQueueItem {
+  image_id: number;
+  status: string;
+}
+
 /** Error que conserva el mensaje de la API, no un `fetch failed` generico. */
 export class ApiError extends Error {
   constructor(
@@ -577,6 +663,37 @@ export const api = {
      * con Edith (F5) antes de congelarlo (regla 11 de AGENTS.md).
      */
     selection: () => request<Selection>('/api/p3/selection'),
+    /** Evaluación final en test. Lanza ApiError 409 si la selección no está cerrada. */
+    evaluation: () => request<EvaluationReport>('/api/p3/evaluation'),
+    /** Aciertos y errores de ejemplo del test (para la galería). */
+    evaluationExamples: () => request<EvaluationExamples>('/api/p3/evaluation/examples'),
+    /** URL de descarga del CSV de predicciones (no es una petición: la usa un <a>). */
+    evaluationPredictionsUrl: () => '/api/p3/evaluation/predictions',
+    /** Versiones de modelo publicadas y la versión activa. */
+    models: () => request<ModelsResponse>('/api/p3/models'),
+    /** URL de la tarjeta (MODEL_CARD.md) de una versión. La usa un `<a>`. */
+    modelCardUrl: (version: string) =>
+      `/api/p3/models/${encodeURIComponent(version)}/card`,
+    /** Marca una versión como activa para inferencia. 404/409/422 si no procede. */
+    activateModel: (version: string) =>
+      request<{ active_version: string }>(
+        `/api/p3/models/${encodeURIComponent(version)}/activate`,
+        { method: 'POST' },
+      ),
+    /** Predice una imagen con la versión activa; `bbox_xywh` recorta antes de predecir. */
+    inference: (file: File, bbox?: [number, number, number, number]) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (bbox) form.append('bbox_xywh', JSON.stringify(bbox));
+      // Sin Content-Type: el navegador pone el boundary del multipart.
+      return request<InferenceResult>('/api/p3/inference', { method: 'POST', body: form });
+    },
+    /** Envía la imagen de una inferencia a la cola de anotación de P1. */
+    sendToAnnotation: (inferenceId: string) =>
+      request<{ annotation_queue_item: AnnotationQueueItem }>(
+        `/api/p3/inference/${encodeURIComponent(inferenceId)}/send-to-annotation`,
+        { method: 'POST' },
+      ),
   },
 };
 

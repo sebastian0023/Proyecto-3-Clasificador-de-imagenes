@@ -187,7 +187,7 @@ def test_nunca_muestra_metricas_ni_tags_de_test() -> None:
         assert "test_" not in answer.text, url
 
 
-def test_si_mlflow_falla_responde_502_y_no_404(client: TestClient) -> None:
+def test_si_mlflow_falla_responde_503_y_no_404(client: TestClient) -> None:
     def falla(run_id: str) -> RunSummary:
         raise MlflowUnavailableError("MLflow respondio 500")
 
@@ -196,7 +196,7 @@ def test_si_mlflow_falla_responde_502_y_no_404(client: TestClient) -> None:
     app = FastAPI()
     app.include_router(runs_api.router)
     app.dependency_overrides[runs_api.get_mlflow] = lambda: fake
-    assert TestClient(app).get("/api/p3/runs/b").status_code == 502
+    assert TestClient(app).get("/api/p3/runs/b").status_code == 503
 
 
 @pytest.mark.parametrize(
@@ -214,3 +214,89 @@ def test_get_run_solo_traduce_400_y_404_a_inexistente(
     monkeypatch.setattr(rest, "_call", call)
     with pytest.raises(esperado):
         rest.get_run("abc")
+
+
+# --- MLflow sin el experimento (clon limpio sin `dvc pull` del snapshot) ---------------------
+
+
+def _rest_sin_experimento(monkeypatch: pytest.MonkeyPatch) -> selection.MlflowRest:
+    import urllib.error
+
+    def call(method: str, path: str, *_args, **_kw):
+        if "experiments/get-by-name" in path:
+            # Asi responde MLflow: 404 RESOURCE_DOES_NOT_EXIST.
+            raise urllib.error.HTTPError("http://mlflow", 404, "not found", {}, None)  # type: ignore[arg-type]
+        raise AssertionError(f"no deberia llamar {path}")
+
+    rest = selection.MlflowRest("http://mlflow:5000")
+    monkeypatch.setattr(rest, "_call", call)
+    return rest
+
+
+def test_experimento_inexistente_es_una_lista_vacia(monkeypatch: pytest.MonkeyPatch) -> None:
+    rest = _rest_sin_experimento(monkeypatch)
+    assert rest.experiment_id("p3-clasificador") is None
+    assert rest.search_runs("p3-clasificador") == []
+
+
+def test_experimento_inexistente_otros_errores_siguen_subiendo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import urllib.error
+
+    def call(*_args, **_kw):
+        raise urllib.error.HTTPError("http://mlflow", 500, "boom", {}, None)  # type: ignore[arg-type]
+
+    rest = selection.MlflowRest("http://mlflow:5000")
+    monkeypatch.setattr(rest, "_call", call)
+    with pytest.raises(urllib.error.HTTPError):
+        rest.search_runs("p3-clasificador")
+
+
+def _app_con(rest: selection.MlflowRest) -> TestClient:
+    from p3.eval import api as evaluation_api
+
+    app = FastAPI()
+    app.include_router(runs_api.router)
+    app.include_router(selection.router)
+    app.include_router(evaluation_api.router)
+    app.dependency_overrides[runs_api.get_mlflow] = lambda: rest
+    return TestClient(app, raise_server_exceptions=False)
+
+
+def test_sin_experimento_runs_es_vacio_y_no_500(monkeypatch: pytest.MonkeyPatch) -> None:
+    response = _app_con(_rest_sin_experimento(monkeypatch)).get("/api/p3/runs")
+    assert response.status_code == 200
+    assert response.json() == {"runs": []}
+
+
+def test_sin_experimento_un_run_es_404(monkeypatch: pytest.MonkeyPatch) -> None:
+    rest = _rest_sin_experimento(monkeypatch)
+    ajeno = RunSummary(**{**_run("x", 0.5, 1.0).__dict__, "experiment_id": "7"})
+    monkeypatch.setattr(rest, "get_run", lambda run_id: ajeno)
+    assert _app_con(rest).get("/api/p3/runs/x").status_code == 404
+
+
+def test_sin_experimento_seleccion_404_y_evaluacion_409(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _app_con(_rest_sin_experimento(monkeypatch))
+    assert client.get("/api/p3/selection").status_code == 404
+    evaluation = client.get("/api/p3/evaluation")
+    assert evaluation.status_code == 409
+    assert "no está cerrada" in evaluation.json()["detail"]
+
+
+def test_si_mlflow_no_responde_la_lista_da_503() -> None:
+    import urllib.error
+
+    fake = FakeMlflow()
+
+    def caido(experiment: str) -> list[RunSummary]:
+        raise urllib.error.URLError("Connection refused")
+
+    fake.search_runs = caido  # type: ignore[method-assign]
+    app = FastAPI()
+    app.include_router(runs_api.router)
+    app.dependency_overrides[runs_api.get_mlflow] = lambda: fake
+    response = TestClient(app, raise_server_exceptions=False).get("/api/p3/runs")
+    assert response.status_code == 503
+    assert "P3_MLFLOW_URL" in response.json()["detail"]

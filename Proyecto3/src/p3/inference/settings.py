@@ -17,7 +17,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.orm import Session, sessionmaker
 
 from p3.inference.annotation import P1Annotation
-from p3.inference.service import InferenceService, ModelUnavailableError
+from p3.inference.service import (
+    InferenceService,
+    ModelUnavailableError,
+    StorageUnavailableError,
+)
+
+SETUP = (
+    "Configura P3_AWS_PROFILE (un perfil de ~/.aws montado con P3_AWS_DIR) o P3_S3_ENDPOINT "
+    "con sus llaves para el MinIO local."
+)
+# Codigos de S3 que dicen "ese objeto no esta" (409); cualquier otro rechazo es configuracion.
+MISSING = {"NoSuchKey", "NoSuchVersion", "404"}
 
 
 class InferenceSettings(BaseSettings):
@@ -50,23 +61,34 @@ class S3ObjectStore:
     `s3:GetObjectVersion`. Si leer por `VersionId` da AccessDenied, se lee la
     version actual y solo se acepta si su `VersionId` es el registrado; el
     servicio ademas exige el SHA-256 del registro.
+
+    Si S3 no esta disponible (sin credenciales, perfil inexistente, sin red o
+    acceso denegado) lanza `StorageUnavailableError` (503) con que configurar.
     """
 
     def __init__(self, settings: InferenceSettings) -> None:
+        from botocore.exceptions import BotoCoreError
+
+        try:
+            self._client = self._build_client(settings)
+        except BotoCoreError as error:
+            raise StorageUnavailableError(f"S3 no disponible: {error}. {SETUP}") from error
+
+    @staticmethod
+    def _build_client(settings: InferenceSettings) -> Any:
         import boto3
 
         if settings.s3_endpoint:
             secret = settings.s3_secret_key.get_secret_value() if settings.s3_secret_key else None
-            self._client = boto3.client(
+            return boto3.client(
                 "s3",
                 endpoint_url=settings.s3_endpoint,
                 aws_access_key_id=settings.s3_access_key,
                 aws_secret_access_key=secret,
                 region_name=settings.aws_region,
             )
-        else:
-            session = boto3.Session(profile_name=settings.aws_profile or None)
-            self._client = session.client("s3", region_name=settings.aws_region)
+        session = boto3.Session(profile_name=settings.aws_profile or None)
+        return session.client("s3", region_name=settings.aws_region)
 
     @classmethod
     def from_client(cls, client: Any) -> S3ObjectStore:
@@ -75,7 +97,7 @@ class S3ObjectStore:
         return store
 
     def get_bytes(self, bucket: str, key: str, version_id: str | None = None) -> bytes:
-        from botocore.exceptions import BotoCoreError, ClientError
+        from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 
         try:
             if version_id:
@@ -87,8 +109,15 @@ class S3ObjectStore:
                     if error.response.get("Error", {}).get("Code") not in ("AccessDenied", "403"):
                         raise
             obj = self._client.get_object(Bucket=bucket, Key=key)
-        except (ClientError, BotoCoreError) as error:
-            raise ModelUnavailableError(f"No se pudo leer s3://{bucket}/{key}: {error}") from error
+        except NoCredentialsError as error:
+            raise StorageUnavailableError(f"S3 sin credenciales de AWS. {SETUP}") from error
+        except ClientError as error:
+            code = error.response.get("Error", {}).get("Code", "?")
+            if code in MISSING:
+                raise ModelUnavailableError(f"No existe s3://{bucket}/{key}: {error}") from error
+            raise StorageUnavailableError(f"S3 rechazo la peticion ({code}). {SETUP}") from error
+        except BotoCoreError as error:
+            raise StorageUnavailableError(f"S3 no disponible: {error}. {SETUP}") from error
         current = obj.get("VersionId")
         if version_id and current != version_id:
             raise ModelUnavailableError(

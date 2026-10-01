@@ -41,8 +41,8 @@
 ## Definición de terminado
 
 - [x] Todas las casillas de aceptación marcadas con evidencia real — T07b y T08 completos, más `POST/GET /api/p3/manifests` (este PR)
-- [ ] PRs fusionados con review de Edith
-- [ ] CI en verde en `main`
+- [x] PRs fusionados con review de Edith — manifiesto (congelado con su aprobación, tag `p3-manifiesto-congelado`) y `/api/p3/manifests` (#16, aprobado por Edith, merge `e222dbf`)
+- [x] CI en verde en `main` — `CI` y `P3 CI` en verde sobre `e222dbf` y siguientes (`d410916`, `f7b5c47`)
 - [x] Commits red → green visibles en el historial — red `3a9cb14` → green `089ac4b`, prueba reforzada `c248087`
 
 ## Registro de avance

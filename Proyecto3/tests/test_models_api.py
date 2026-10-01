@@ -92,3 +92,76 @@ def test_version_con_formato_invalido_422(store, version: str) -> None:
     response = client_with(store).post(f"/api/p3/models/{version}/activate")
     assert response.status_code in (404, 422)
     assert read_registry(store, bucket=BUCKET, prefix=PREFIX).active_version == "1.0.0"
+
+
+# --- S3 no disponible: 503 con motivo, nunca 500 (hallazgo 3 del ensayo de F10) -----------
+
+
+class BrokenStore:
+    """Almacen cuyo S3 falla como falla boto3 sin credenciales o sin red."""
+
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+
+    def head(self, bucket: str, key: str) -> dict[str, Any] | None:
+        raise self.error
+
+    def get_bytes(self, bucket: str, key: str, version_id: str | None = None) -> bytes:
+        raise self.error
+
+    def put_bytes(self, bucket: str, key: str, data: bytes) -> str | None:  # pragma: no cover
+        raise AssertionError("no debe escribir")
+
+
+def s3_errors() -> list[Exception]:
+    from botocore.exceptions import ClientError, EndpointConnectionError, NoCredentialsError
+
+    return [
+        NoCredentialsError(),
+        EndpointConnectionError(endpoint_url="https://s3.amazonaws.com"),
+        ClientError({"Error": {"Code": "AccessDenied", "Message": "denied"}}, "HeadObject"),
+    ]
+
+
+@pytest.mark.parametrize("error", s3_errors(), ids=["sin-credenciales", "sin-red", "denegado"])
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("GET", "/api/p3/models"),
+        ("GET", "/api/p3/models/1.0.0/card"),
+        ("POST", "/api/p3/models/1.0.0/activate"),
+    ],
+)
+def test_s3_no_disponible_responde_503_con_motivo(error, method: str, path: str) -> None:
+    client = TestClient(client_with(BrokenStore(error)).app, raise_server_exceptions=False)
+    response = client.request(method, path)
+    assert response.status_code == 503
+    detail = response.json()["detail"]
+    assert "S3" in detail and "P3_AWS_PROFILE" in detail
+
+
+def test_sin_credenciales_el_detalle_lo_dice() -> None:
+    from botocore.exceptions import NoCredentialsError
+
+    client = TestClient(client_with(BrokenStore(NoCredentialsError())).app)
+    assert "credenciales" in client.get("/api/p3/models").json()["detail"]
+
+
+def test_perfil_de_aws_inexistente_responde_503(monkeypatch, tmp_path) -> None:
+    from p3.inference import settings
+
+    empty = tmp_path / "vacio"
+    empty.write_text("", encoding="utf-8")
+    monkeypatch.setenv("AWS_CONFIG_FILE", str(empty))
+    monkeypatch.setenv("AWS_SHARED_CREDENTIALS_FILE", str(empty))
+    monkeypatch.setenv("P3_AWS_PROFILE", "perfil-que-no-existe")
+    monkeypatch.delenv("P3_S3_ENDPOINT", raising=False)
+    settings.get_settings.cache_clear()
+    try:
+        app = FastAPI()
+        app.include_router(api.router)
+        response = TestClient(app, raise_server_exceptions=False).get("/api/p3/models")
+    finally:
+        settings.get_settings.cache_clear()
+    assert response.status_code == 503
+    assert "perfil-que-no-existe" in response.json()["detail"]

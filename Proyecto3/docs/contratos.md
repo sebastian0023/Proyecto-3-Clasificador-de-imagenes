@@ -237,7 +237,11 @@ Leer el COCO del release (`p3.data.releases.open_release_archive`) exige que el 
 {"runs": [{"run_id": "01b222d3…", "status": "FINISHED", "manifest_id": "m-0.1.3-s42-1", "params": {"…": "TrainingConfig efectiva"}, "best_epoch": 12, "stopped_epoch": 17, "best_val_accuracy": 0.9, "best_val_loss": 0.31, "commit": "…", "start_time": "…", "end_time": "…"}]}
 ```
 
-`GET /api/p3/runs/{run_id}` devuelve lo mismo más `history` (por época: `train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`) y `artifacts` (rutas de curvas y checkpoint). **404** si el run no existe.
+`GET /api/p3/runs/{run_id}` devuelve lo mismo más `history` (por época: `train_loss`, `train_accuracy`, `val_loss`, `val_accuracy`) y `artifacts` (rutas de curvas y checkpoint). **404** si el run no existe o no es del experimento `p3-clasificador`.
+
+**503** en `/runs`, `/runs/{run_id}` y `/selection` (GET y POST) si MLflow no responde o responde un error distinto de 400/404, con el motivo y qué revisar (`P3_MLFLOW_URL`); nunca 500.
+
+Si MLflow todavía no tiene el experimento `p3-clasificador` (clon limpio sin `dvc pull` de `mlflow_snapshot.dvc`), `GET /api/p3/runs` devuelve `{"runs": []}`, `/runs/{run_id}` **404**, `GET /api/p3/selection` **404** y `GET /api/p3/evaluation` **409**; nunca 500.
 
 **Cambio aditivo (F5):** cada corrida trae también `experiment_id` (para armar el enlace a MLflow, `/#/experiments/<experiment_id>/runs/<run_id>`) y `selected` (`true` en el candidato de `selection.json`). `order_by` acepta `val_accuracy`, `val_loss`, `start_time` y `end_time`; `artifacts` trae las URI `mlflow-artifacts:/…` de `checkpoint`, `curves`, `history` y `environment`. Nunca hay métricas de test.
 
@@ -255,6 +259,7 @@ Lee de MLflow la corrida `selected=true` y sus artefactos `evaluation/` (los reg
 
 - **409** `{"detail": "La selección del modelo no está cerrada"}` mientras ninguna corrida esté seleccionada. El test no se revela antes (criterio 6.3).
 - **404** si la corrida seleccionada todavía no tiene la evaluación final.
+- **503** si MLflow no responde o responde un error distinto de 404 (nunca 500).
 - **200**:
 
 ```json
@@ -285,6 +290,7 @@ Viven en el servicio `p3-inference` (el que tiene el perfil de AWS); la app de P
 
 - `GET /api/p3/models`: versiones de `registry.json`; `s3.exists` sale de `head-object`, no del registro. **Aditivo (F7):** `active` por versión.
 - `GET /api/p3/models/{version}/card`: la `MODEL_CARD.md` (`text/markdown`); **404** si la versión no está publicada.
+- **503** en los tres endpoints de modelos si S3 no está disponible (sin credenciales, perfil de AWS inexistente, sin red o acceso denegado), con el motivo y qué configurar; nunca 500.
 - `POST /api/p3/models/{version}/activate`: **200** con la misma forma que `GET /api/p3/models` (antes decía `{"active_version": …}`; ahora devuelve también la lista); **404** si la versión no está publicada; **409** si el objeto de S3 no existe o su SHA-256 no coincide; **422** si `version` no es semántica.
 - `registry.json` lo escribe `p3.registry.publish` con, por versión, además de los campos de la sección 6: `release_id`, `card_key` y `files` (SHA-256 y `s3_version_id` de cada archivo del paquete).
 
@@ -302,7 +308,7 @@ Viven en el servicio `p3-inference` (el que tiene el perfil de AWS); la app de P
 ```
 
 - Las probabilidades suman 1 (±1e-4).
-- **415** si el tipo no es válido; **413** si el archivo pasa de 10 MB; **422** si `bbox_xywh` no es válido o no cabe en la imagen; **409** si no hay versión activa, su objeto no existe o su SHA-256 no coincide; **503** si el servicio no responde.
+- **415** si el tipo no es válido; **413** si el archivo pasa de 10 MB; **422** si `bbox_xywh` no es válido o no cabe en la imagen; **409** si no hay versión activa, su objeto no existe o su SHA-256 no coincide; **503** si el servicio no responde o si S3 no está disponible (sin credenciales, perfil de AWS inexistente, sin red o acceso denegado), con el motivo y qué configurar; nunca 500.
 
 ### `POST /api/p3/inference/{inference_id}/send-to-annotation`
 

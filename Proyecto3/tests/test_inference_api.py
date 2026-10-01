@@ -120,3 +120,38 @@ def test_enviar_dos_veces_no_duplica(entorno) -> None:
 def test_enviar_una_inferencia_inexistente_404(entorno) -> None:
     client, *_ = entorno
     assert client.post("/api/p3/inference/no-existe/send-to-annotation").status_code == 404
+
+
+# --- S3 no disponible: 503 con que configurar, nunca 500 ------------------------------------
+
+
+def test_perfil_de_aws_inexistente_responde_503(entorno, monkeypatch: pytest.MonkeyPatch) -> None:
+    from p3.inference import settings
+
+    client, *_ = entorno
+    del client.app.dependency_overrides[api.get_service]
+    monkeypatch.setenv("P3_AWS_PROFILE", "perfil-que-no-existe")
+    monkeypatch.delenv("P3_S3_ENDPOINT", raising=False)
+    settings.get_settings.cache_clear()
+    settings.get_inference_service.cache_clear()
+    try:
+        response = _post(client, ti._png())
+    finally:
+        settings.get_settings.cache_clear()
+        settings.get_inference_service.cache_clear()
+    assert response.status_code == 503
+    assert "P3_AWS_PROFILE" in response.json()["detail"]
+
+
+def test_s3_sin_credenciales_al_predecir_responde_503(entorno) -> None:
+    client, _, _, store, _ = entorno
+
+    def sin_credenciales(*_args, **_kw) -> bytes:
+        raise service.StorageUnavailableError(
+            "S3 sin credenciales de AWS. Configura P3_AWS_PROFILE"
+        )
+
+    store.get_bytes = sin_credenciales  # type: ignore[method-assign]
+    response = _post(client, ti._png())
+    assert response.status_code == 503
+    assert "P3_AWS_PROFILE" in response.json()["detail"]

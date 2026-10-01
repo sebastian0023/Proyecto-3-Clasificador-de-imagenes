@@ -5,6 +5,10 @@
 # Requiere Docker Desktop con WSL2 (Windows) o NVIDIA Container Toolkit (Linux).
 services:
   p3-worker:
+    # torch con CUDA (el lockfile tal cual); sin este archivo la imagen es de CPU.
+    build:
+      args:
+        TORCH_VARIANT: cuda
     deploy:
       resources:
         reservations:

@@ -10,7 +10,10 @@
  */
 
 import type {
+  EvaluationExamples,
+  EvaluationReport,
   ManifestMeta,
+  ModelEntry,
   P3ReleaseDetail,
   P3ReleaseSummary,
   RunDetail,
@@ -186,3 +189,78 @@ export const selection: Selection = {
   val_accuracy: bestRun.best_val_accuracy,
   val_loss: bestRun.best_val_loss,
 };
+
+// Evaluacion en el test congelado del candidato (F6). Supera el umbral de 0.85.
+export const evaluation: EvaluationReport = {
+  run_id: bestRun.run_id,
+  manifest_id: MANIFEST_ID,
+  test_size: 30,
+  accuracy: 0.8667,
+  passes_threshold: true,
+  threshold: 0.85,
+  f1_macro: 0.8631,
+  per_class: [
+    { class: 'cat', precision: 0.9, recall: 0.9, f1: 0.9, support: 10 },
+    { class: 'dog', precision: 0.818, recall: 0.9, f1: 0.857, support: 10 },
+    { class: 'person', precision: 0.889, recall: 0.8, f1: 0.842, support: 10 },
+  ],
+  confusion_matrix: {
+    labels: ['cat', 'dog', 'person'],
+    rows_true_cols_pred: [
+      [9, 1, 0],
+      [0, 9, 1],
+      [1, 1, 8],
+    ],
+  },
+  majority_baseline: 0.3333,
+  majority_class: 'cat',
+  most_confused: { true: 'person', predicted: 'cat', count: 1 },
+  evaluated_at: '2026-09-29T19:00:00Z',
+  predictions_uri: '/api/p3/evaluation/predictions',
+  examples_uri: '/api/p3/evaluation/examples',
+};
+
+export const evaluationExamples: EvaluationExamples = {
+  correct: [
+    { crop_id: '0.1.3:a4', crop_path: 'a4.png', true: 'cat', predicted: 'cat', probability: 0.97 },
+    { crop_id: '0.1.3:a9', crop_path: 'a9.png', true: 'dog', predicted: 'dog', probability: 0.91 },
+    { crop_id: '0.1.3:a6', crop_path: 'a6.png', true: 'person', predicted: 'person', probability: 0.88 },
+  ],
+  errors: [
+    { crop_id: '0.1.3:a17', crop_path: 'a17.png', true: 'person', predicted: 'cat', probability: 0.55 },
+    { crop_id: '0.1.3:a39', crop_path: 'a39.png', true: 'dog', predicted: 'person', probability: 0.52 },
+  ],
+};
+
+// Versiones de modelo publicadas. La versión es del MODELO (semver), distinta de
+// la del dataset (release_id). 0.8.0 tiene el objeto ausente en S3 a propósito
+// (para probar que no se puede activar). La activa por defecto es 1.0.0.
+const BUCKET_URI = 's3://dataset-quality-releases-750702272375/models/clasificador';
+export const DEFAULT_ACTIVE_VERSION = '1.0.0';
+
+export const modelVersions: ModelEntry[] = [
+  {
+    version: '0.9.0',
+    run_id: runs[8]?.run_id ?? 'run0009',
+    manifest_id: MANIFEST_ID,
+    release_id: RELEASE_ID,
+    s3: { uri: `${BUCKET_URI}/0.9.0/model.pt`, version_id: 'v0900', sha256: `a9${'0'.repeat(62)}`, exists: true },
+    card_uri: `${BUCKET_URI}/0.9.0/MODEL_CARD.md`,
+  },
+  {
+    version: '1.0.0',
+    run_id: bestRun.run_id,
+    manifest_id: MANIFEST_ID,
+    release_id: RELEASE_ID,
+    s3: { uri: `${BUCKET_URI}/1.0.0/model.pt`, version_id: 'v1000', sha256: `10${'0'.repeat(62)}`, exists: true },
+    card_uri: `${BUCKET_URI}/1.0.0/MODEL_CARD.md`,
+  },
+  {
+    version: '0.8.0',
+    run_id: runs[2]?.run_id ?? 'run0003',
+    manifest_id: MANIFEST_ID,
+    release_id: RELEASE_ID,
+    s3: { uri: `${BUCKET_URI}/0.8.0/model.pt`, version_id: null, sha256: `08${'0'.repeat(62)}`, exists: false },
+    card_uri: `${BUCKET_URI}/0.8.0/MODEL_CARD.md`,
+  },
+];
