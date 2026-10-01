@@ -30,6 +30,7 @@ function numValue(value: number): string {
 export default function TrainingConfigForm({ manifestId, onLaunched }: Props) {
   const [config, setConfig] = useState<TrainingConfig>(DEFAULT_TRAINING_CONFIG);
   const [hiddenText, setHiddenText] = useState(DEFAULT_TRAINING_CONFIG.hidden_layers.join(', '));
+  const [experiment, setExperiment] = useState('p3-pruebas');
   const [serverError, setServerError] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
 
@@ -59,6 +60,7 @@ export default function TrainingConfigForm({ manifestId, onLaunched }: Props) {
         kind: 'train',
         manifest_id: manifestId,
         config,
+        experiment,
       });
       onLaunched(job_id);
     } catch (err: unknown) {
@@ -73,6 +75,18 @@ export default function TrainingConfigForm({ manifestId, onLaunched }: Props) {
 
   return (
     <form className="form-grid" onSubmit={launch}>
+      <label className="field">
+        <span>experiment</span>
+        <select
+          className="campo"
+          value={experiment}
+          onChange={(e) => setExperiment(e.target.value)}
+        >
+          <option value="p3-pruebas">p3-pruebas</option>
+          <option value="p3-clasificador">p3-clasificador</option>
+        </select>
+      </label>
+
       <label className="field">
         <span>optimizer</span>
         <select

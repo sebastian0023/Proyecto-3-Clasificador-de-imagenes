@@ -107,7 +107,8 @@ export const manifestMeta: ManifestMeta = {
     dataset_fingerprint: RELEASE_HASH,
     quality_status: 'pass',
     quality_report_fingerprint: releaseDetail.quality_report_fingerprint,
-    archive_sha256: releaseDetail.archive_sha256,
+    // El manifiesto deriva de un release empaquetado: su archive siempre existe.
+    archive_sha256: releaseDetail.archive_sha256 as string,
     p2_splits_fingerprint: '9a87e0de3fb3069f06686065f149d64787593c04d90265a3e0f667a170d66279',
     dvc_pointer: {
       path: 'Proyecto2/data/raw.dvc',
