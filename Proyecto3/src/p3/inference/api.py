@@ -28,6 +28,7 @@ from p3.inference.service import (
     InferenceService,
     ModelIntegrityError,
     ModelUnavailableError,
+    StorageUnavailableError,
 )
 
 router = APIRouter(prefix="/api/p3/inference", tags=["p3-inference"])
@@ -36,7 +37,10 @@ router = APIRouter(prefix="/api/p3/inference", tags=["p3-inference"])
 def get_service() -> InferenceService:
     from p3.inference.settings import get_inference_service
 
-    return get_inference_service()
+    try:
+        return get_inference_service()
+    except StorageUnavailableError as error:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from error
 
 
 def get_session() -> Iterator[Session]:
@@ -84,6 +88,8 @@ async def predict(
         result = await run_in_threadpool(inference.predict, data, content_type, bbox)
     except InferenceError as error:
         raise HTTPException(error.status_code, str(error)) from error
+    except StorageUnavailableError as error:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from error
     except (ModelUnavailableError, ModelIntegrityError) as error:
         raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
 
