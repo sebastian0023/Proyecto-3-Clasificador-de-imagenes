@@ -1,6 +1,6 @@
 # Autoevaluación con el prompt de la rúbrica (F11 T29)
 
-## Pasada preliminar — 30 sep 2026, sobre `main` en `f7b5c47`
+## Pasada preliminar — 30 sep 2026, sobre `main` en `f7b5c47` (superada por la pasada final, abajo)
 
 Pasada **estática y con datos primarios**, sin levantar el stack, para encontrar
 huecos con tiempo. La pasada final se repite sobre el commit candidato (con F9 y
@@ -79,6 +79,132 @@ Con F9 en main:         hasta ~99 (+11 de 6.3–6.5, +1 de 4.2, +1.5 de 4.4, +1 
 4. **E2E con `p3.registry.publish`** (Andrés, F10) → +0.5 en 7.2.
 5. En la demo, mostrar que cambiar de release cambia los conteos (1.1) con la prueba que lo cubre (`pytest tests/test_releases.py -k cambiar_de_release`): `generate_manifest.py` hoy solo genera el release fijado en el script, sin opción para elegir otro.
 
-## Pasada final
+## Pasada final — 30 sep 2026, sobre `main` en `3e423c4`
 
-Pendiente: sobre el commit candidato, en una copia limpia, siguiendo `docs/rubrica.md` completo (Fases 0–4, con el reporte HTML).
+Sobre el commit candidato, con F9 (#19), los 503 (#17, #20) y torch de CPU (#21)
+ya en `main`. CI de `main` en verde (`CI` y `P3 CI` sobre `3e423c4`). Repite los
+recálculos de la pasada preliminar (mismos resultados) y agrega la verificación
+de S3, la recarga del modelo y las mutaciones.
+
+**Límite de esta pasada:** el stack no se levantó aquí. M1 y el recorrido de las
+5 páginas (recargar durante un trabajo, cambiar de versión, archivo inválido,
+envío a la cola) se confirman en el ensayo de la demo ([demo.md](demo.md)); las
+puntuaciones de 6.x se basan en el código, las pruebas de componente en CI y la
+verificación contra el backend real que registra cada fase.
+
+### A. Requisitos mínimos
+
+| Estado | Requisito | Evidencia |
+|---|---|---|
+| CUMPLE* | M1 Arranque desde el README | `docs/ensayo_arranque.md`: 13 servicios `Healthy` desde un clon limpio; con #21 la imagen de P3 pasa de 9.57 GB a 1.99 GB (antes ~92 min de build). *Reconfirmar en el ensayo de la demo. |
+| CUMPLE | M2 Release aprobado y versionado | `0.1.3` (`pass`) → `Proyecto2/data/raw.dvc` md5 `ca56420c…` → `p3.data.releases.open_release_archive` (SHA-256 `787742988af1…` y huella `2200274d…`) → `manifest.meta.json` con `dvc_pointer`; cada corrida guarda `release_id`, `release_hash` y `dvc_md5` |
+| CUMPLE | M3 Aislamiento | Recalculado: 0 en las 9 intersecciones (`crop_id`, `source_image_id`, `dup_group_id`); aumentación solo en train (`src/p3/data/transforms.py`); `selection.json` (`6bd9101`, 26 sep) antes de la evaluación (28 sep) |
+| CUMPLE | M4 Modelo recargable | `get-object` de `models/clasificador/1.0.0/model.pt` → SHA-256 `e4acca42…` = registro = `selection.json`; cargado en un proceso nuevo con su mapa de clases y preprocesamiento: `0.1.3:a1057` → person 0.997828 y `0.1.3:a1574` → dog 0.676567, iguales a `predictions_test.csv` |
+
+**Compuerta:** NO ACTIVADA.
+
+### B. Tabla de calificación
+
+| Puntos | Requisito | Lo que falta |
+|---|---|---|
+| 3.5 / 4 | 1.1 Traspaso desde P2 | En el portal solo 0.1.3 tiene manifiesto congelado: elegir otro release aprobado responde 409, así que el cambio de conteos se demuestra con `tests/test_releases.py::test_cambiar_de_release_cambia_los_conteos`, no en la UI. |
+| 5 / 5 | 1.2 Recortes y clases | — |
+| 5 / 5 | 1.3 Manifiesto 70/20/10 | — |
+| **13.5 / 14** | **Subtotal Integración y datos** | |
+| 5 / 5 | 2.1 Clasificador entrenado | — |
+| 4 / 4 | 2.2 Minibatches y parámetros | — |
+| 4 / 4 | 2.3 Semillas y aumentación | — |
+| 5 / 5 | 2.4 Curvas y early stopping | — |
+| **18 / 18** | **Subtotal Modelo** | |
+| 6 / 6 | 3.1 Diez experimentos | — (12 válidas, tabla abajo) |
+| 5 / 5 | 3.2 Registro en MLflow | — |
+| 3 / 3 | 3.3 Comparación y elección | — |
+| **14 / 14** | **Subtotal Experimentos** | |
+| 5 / 5 | 4.1 Protocolo congelado | — |
+| 4 / 4 | 4.2 Matriz y métricas | — (recalculadas desde `predictions_test.csv`; iguales en `metrics.json`, MLflow, API y página Evaluation) |
+| 6 / 6 | 4.3 Umbral de 85 % | — (142/145 = 0.97931) |
+| 2 / 3 | 4.4 Errores | La galería de Evaluation lista aciertos y errores del test sin la **imagen del recorte** (el backend no la sirve) y la página no muestra la **clase más confundida**, aunque viene en la respuesta (`most_confused`: cat→dog, 2). Ambas cosas están en [analisis_errores.md](analisis_errores.md). |
+| **17 / 18** | **Subtotal Evaluación** | |
+| 4 / 4 | 5.1 Paquete | — |
+| 4 / 4 | 5.2 S3 real | — (`head-object` y `get-object` de pesos y tarjeta, `VersionId` y SHA-256 local, inferencia en proceso nuevo) |
+| 2 / 2 | 5.3 Registro navegable | — (Models: 1.0.0 y 0.9.0 con run, release y SHA-256; activar cambia el artefacto que carga Inference) |
+| **10 / 10** | **Subtotal S3** | |
+| 4 / 4 | 6.1 Training | — |
+| 3 / 3 | 6.2 Experiments | — |
+| 3 / 3 | 6.3 Evaluation | — (bloqueo 409 antes de la selección, métricas, matriz, ejemplos y exportar CSV) |
+| 3.5 / 4 | 6.4 Models | Falta una **acción de descarga** del modelo; la tarjeta sí se abre. |
+| 4 / 4 | 6.5 Inference | — |
+| **17.5 / 18** | **Subtotal Portal** | |
+| 4 / 4 | 7.1 Pruebas y TDD | — (dos mutaciones en copia aislada hacen fallar la suite; ver G) |
+| 1.5 / 2 | 7.2 Integración | `tests/test_e2e.py` escribe `registry.json` a mano en vez de usar `p3.registry.publish` y no pasa por la API del portal. |
+| 2 / 2 | 7.3 CI y secretos | — |
+| **7.5 / 8** | **Subtotal Pruebas** | |
+
+### C. Trazabilidad de extremo a extremo
+
+| Release DVC y hash | Manifiesto 70/20/10 y hash | Run MLflow elegido | Checkpoint | Versión de modelo | S3 bucket/key y hash | Predicción de prueba |
+|---|---|---|---|---|---|---|
+| `0.1.3`, huella `2200274d…`, `raw.dvc` md5 `ca56420c…` | `m-0.1.3-s42-1`, `45600f29…` | `9f9b62c202f0446a8a4b411a10321eff` | SHA-256 `e4acca42…` | `1.0.0` | `dataset-quality-releases-750702272375/models/clasificador/1.0.0/model.pt`, `VersionId` `VtRww5se…`, SHA-256 `e4acca42…` | `0.1.3:a1574` → dog 0.676567 (= `predictions_test.csv`); 145/145 por el portal (F4 T24) |
+
+Detalle completo en [trazabilidad.md](trazabilidad.md).
+
+### D. Contraste de métricas
+
+| Métrica | Reportado por el equipo | Verificado | ¿Coincide? |
+|---|---:|---:|---|
+| Corridas válidas de MLflow | 12 | 12 (14 − 2 `FAILED`) | Sí |
+| Train / val / test (recortes) | 1022 / 292 / 145 | 1022 / 292 / 145 | Sí |
+| Train / val / test (originales) | 763 / 229 / 109 | 763 / 229 / 109 | Sí |
+| Accuracy top-1 en test | 0.9793 | 142/145 = 0.979310 | Sí |
+| F1 macro en test | 0.9744 | 0.974352 | Sí |
+| Total de la matriz de confusión | 145 | 145 | Sí |
+
+Las 12 corridas válidas (experimento `p3-clasificador`, manifiesto `45600f29…`, commit `250bedc`):
+
+| Run | Optimizador | Batch | Épocas máx. | LR | Imagen | Capas ocultas | Dropout | Mejor val_acc | val_loss | Época | Estado |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `c15c8edf` | adamw | 32 | 30 | 0.0003 | 224 | [256] | 0.3 | 0.9726 | 0.0745 | 5 | FINISHED |
+| `eab49735` | adamw | 64 | 30 | 0.001 | 224 | [512, 128] | 0.5 | 0.9384 | 0.1641 | 7 | FINISHED |
+| `46cb41fb` | adam | 64 | 30 | 0.0003 | 128 | [] | 0.2 | 0.9829 | 0.0331 | 11 | FINISHED |
+| `ba8aac02` | sgd | 64 | 15 | 0.003 | 128 | [512, 128] | 0.2 | 0.9897 | 0.0473 | 6 | FINISHED |
+| `cb72f7db` | adamw | 32 | 15 | 0.0003 | 128 | [512, 128] | 0.5 | 0.9623 | 0.1078 | 3 | FINISHED |
+| `5ebc2c9f` | sgd | 32 | 30 | 0.001 | 224 | [] | 0.3 | 0.9966 | 0.0435 | 3 | FINISHED |
+| `76dc45e2` | adam | 32 | 30 | 0.001 | 224 | [512, 128] | 0.3 | 0.9418 | 0.1702 | 7 | FINISHED |
+| `9f9b62c2` **(seleccionada)** | adamw | 64 | 15 | 0.0001 | 224 | [] | 0.5 | 0.9966 | 0.0243 | 6 | FINISHED |
+| `75d6bbb9` | sgd | 64 | 30 | 0.01 | 128 | [256] | 0.3 | 0.9760 | 0.1131 | 4 | FINISHED |
+| `26afad93` | adamw | 32 | 30 | 0.0001 | 160 | [256] | 0.2 | 0.9897 | 0.0412 | 2 | FINISHED |
+| `16c09c8e` | adam | 32 | 15 | 0.0001 | 224 | [256] | 0.2 | 0.9932 | 0.0292 | 7 | FINISHED |
+| `981df1d9` | sgd | 32 | 30 | 0.01 | 224 | [256] | 0.5 | 0.9760 | 0.0724 | 5 | FINISHED |
+
+### E. Resultado final
+
+```text
+Suma de secciones:      97.5 / 100
+Compuerta aplicada:     no
+CALIFICACIÓN FINAL:     97.5
+Meta de 85% en test:    alcanzada (0.979310)
+Escala:                 Excelente (90-100)
+```
+
+### F. Comentario para el equipo
+
+Aciertos: (1) la cadena release → manifiesto → run → checkpoint → S3 → predicción se sostiene con hashes en cada eslabón y se reproduce desde datos primarios; (2) aislamiento demostrado (0 en las 9 intersecciones) y test abierto una sola vez después de `selection.json`; (3) 12 corridas válidas que varían los 7 parámetros, todas trazables en MLflow.
+
+Pérdidas (2.5 pts): (1) imagen del recorte y clase más confundida en la galería de Evaluation (4.4, −1); (2) acción de descarga en Models (6.4, −0.5); (3) la E2E no usa `p3.registry.publish` (7.2, −0.5); (4) en el portal no se ve que cambiar de release cambie los conteos (1.1, −0.5).
+
+### G. Anexo de verificación
+
+| Acción | Resultado |
+|---|---|
+| `ruff check .` / `ruff format --check .` (Proyecto3) | sin hallazgos / 127 archivos formateados |
+| `pytest` (Proyecto3 y Proyecto2) | todo en verde |
+| Pruebas del portal (`npm run test:unit`) | no se corrieron localmente (sin `node_modules`); en verde en la CI de `main` (`3e423c4`) |
+| Intersecciones del manifiesto | 0 en las 9 |
+| Recálculo de la matriz desde `predictions_test.csv` | `[[30,2,0],[0,38,0],[0,1,74]]`, 142/145 |
+| `aws s3api head-object` y `get-object` (solo lectura, perfil del equipo) | `model.pt` `VtRww5se…` 44 783 563 bytes, SHA-256 `e4acca42…`; `MODEL_CARD.md` `7LNRNnVo…`, menciona el run `9f9b62c2…` |
+| Carga del modelo en un proceso nuevo | iguales a `predictions_test.csv` en los dos recortes probados |
+| Mutación: matriz con filas y columnas invertidas (`metrics.py`) | 3 pruebas fallan en `tests/test_metrics.py` |
+| Mutación: los casi duplicados dejan de agruparse (`split.py`) | 3 pruebas fallan en `tests/test_split.py` |
+| Estado de la copia | mutaciones en una copia aislada de `main`, restauradas y eliminadas; `git status` limpio |
+
+**No verificado en esta pasada:** el arranque con `up.py` y el recorrido de las 5 páginas con el stack (queda para el ensayo de la demo), y el escaneo de secretos sobre el historial (la CI corre gitleaks sobre el árbol).

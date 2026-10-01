@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autoevaluación Proyecto 3</title>
+<style>
+:root {
+  --iteso-azul: #003C71; --iteso-azul-medio: #0067A5; --iteso-azul-claro: #9BC4E2;
+  --gris-texto: #333333; --gris-borde: #DDE3E9; --fondo: #FFFFFF;
+  --ok: #1E7A3C; --parcial: #B8860B; --fallo: #A32020;
+  --fuente: "Gotham", "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fondo); color: var(--gris-texto); font-family: var(--fuente); line-height: 1.5; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+header { border-bottom: 3px solid var(--iteso-azul); padding-bottom: 16px; margin-bottom: 24px; }
+.logo { color: var(--iteso-azul); font-weight: 700; letter-spacing: .08em; font-size: 28px; }
+h1 { color: var(--iteso-azul); font-size: 24px; margin: 8px 0; }
+h2 { color: var(--iteso-azul); font-size: 19px; margin: 32px 0 12px; border-bottom: 1px solid var(--gris-borde); padding-bottom: 4px; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 4px 24px; font-size: 14px; }
+.meta b { color: var(--iteso-azul); }
+.resultado { border: 2px solid var(--iteso-azul); border-radius: 8px; padding: 16px 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.resultado .cifra { font-size: 40px; font-weight: 700; color: var(--iteso-azul); }
+.resultado .etiqueta { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--iteso-azul-medio); }
+.barra { display: grid; grid-template-columns: 240px 1fr 80px; gap: 12px; align-items: center; margin: 6px 0; font-size: 14px; }
+.pista { background: var(--gris-borde); border-radius: 4px; height: 12px; overflow: hidden; }
+.relleno { display: block; height: 100%; background: var(--iteso-azul-medio); }
+.pts { text-align: right; font-variant-numeric: tabular-nums; }
+.tabla { overflow-x: auto; margin: 8px 0 16px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { background: var(--iteso-azul); color: #fff; text-align: left; padding: 6px 8px; }
+td { border-bottom: 1px solid var(--gris-borde); padding: 6px 8px; vertical-align: top; }
+tr.subtotal td { background: #EEF4FA; font-weight: 700; }
+code { font-size: 12px; background: #F3F6F9; padding: 0 3px; border-radius: 3px; word-break: break-all; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.badge.ok { background: var(--ok); } .badge.parcial { background: var(--parcial); } .badge.fallo { background: var(--fallo); }
+pre { white-space: pre-wrap; background: #F3F6F9; border: 1px solid var(--gris-borde); padding: 12px; border-radius: 6px; font-size: 13px; }
+.nota { border-left: 4px solid var(--parcial); padding: 8px 12px; background: #FBF6EA; font-size: 14px; }
+footer { margin-top: 40px; border-top: 1px solid var(--gris-borde); padding-top: 12px; font-size: 13px; }
+button.imprimir { float: right; background: var(--iteso-azul); color: #fff; border: 0; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-family: var(--fuente); }
+@media (max-width: 600px) { .barra { grid-template-columns: 1fr 70px; } .barra .pista { grid-column: 1 / -1; grid-row: 2; } }
+@media print {
+  button.imprimir { display: none; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tr { break-inside: avoid; }
+  @page { size: A4; margin: 15mm; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <button class="imprimir" onclick="window.print()">Imprimir</button>
+  <!-- Logotipo: reemplazar este texto por el archivo del logo embebido en base64 si se tiene. -->
+  <div class="logo">ITESO</div>
+  <h1>Evaluación de proyecto 3 — Clasificador de imágenes</h1>
+  <div class="meta">
+    <div><b>Tipo:</b> autoevaluación interna del equipo (F11 T29)</div>
+    <div><b>Equipo:</b> Diego Lemus, Edith (edithflor), Andrés Quiroz Valdovinos</div>
+    <div><b>Repositorio:</b> sebastian0023/Proyecto-3-Clasificador-de-imagenes</div>
+    <div><b>Commit evaluado:</b> <code>3e423c4</code> (<code>main</code>)</div>
+    <div><b>Release de dataset:</b> 0.1.3</div>
+    <div><b>Versión de modelo:</b> 1.0.0</div>
+    <div><b>Fecha:</b> 30 de septiembre de 2026</div>
+  </div>
+</header>
+
+<h2>Resultado</h2>
+<div class="resultado">
+  <div><div class="etiqueta">Calificación</div><div class="cifra">97.5</div></div>
+  <div><div class="etiqueta">Escala</div><div><span class="badge ok">Excelente (90-100)</span></div></div>
+  <div><div class="etiqueta">Compuerta M1–M4</div><div><span class="badge ok">No activada</span></div></div>
+  <div><div class="etiqueta">Meta de 85 % en test</div><div><span class="badge ok">Alcanzada (0.979310)</span></div></div>
+</div>
+<p class="nota"><strong>Límite de esta pasada:</strong> el stack no se levantó aquí. M1 y el recorrido de las
+5 páginas (recargar durante un trabajo, cambiar de versión, archivo inválido,
+envío a la cola) se confirman en el ensayo de la demo (demo.md); las
+puntuaciones de 6.x se basan en el código, las pruebas de componente en CI y la
+verificación contra el backend real que registra cada fase.</p>
+
+<h2>Resumen por sección</h2>
+<div class="barra"><span class="nombre">Integración y datos</span><span class="pista"><span class="relleno" style="width:96.4%"></span></span><span class="pts">13.5 / 14</span></div><div class="barra"><span class="nombre">Modelo</span><span class="pista"><span class="relleno" style="width:100.0%"></span></span><span class="pts">18 / 18</span></div><div class="barra"><span class="nombre">Experimentos</span><span class="pista"><span class="relleno" style="width:100.0%"></span></span><span class="pts">14 / 14</span></div><div class="barra"><span class="nombre">Evaluación</span><span class="pista"><span class="relleno" style="width:94.4%"></span></span><span class="pts">17 / 18</span></div><div class="barra"><span class="nombre">S3</span><span class="pista"><span class="relleno" style="width:100.0%"></span></span><span class="pts">10 / 10</span></div><div class="barra"><span class="nombre">Portal</span><span class="pista"><span class="relleno" style="width:97.2%"></span></span><span class="pts">17.5 / 18</span></div><div class="barra"><span class="nombre">Pruebas</span><span class="pista"><span class="relleno" style="width:93.8%"></span></span><span class="pts">7.5 / 8</span></div>
+
+<h2>A. Requisitos mínimos</h2>
+<div class="tabla"><table><thead><tr><th>Estado</th><th>Requisito</th><th>Evidencia</th></tr></thead><tbody><tr><td><span class="badge ok">CUMPLE*</span></td><td>M1 Arranque desde el README</td><td><code>docs/ensayo_arranque.md</code>: 13 servicios <code>Healthy</code> desde un clon limpio; con #21 la imagen de P3 pasa de 9.57 GB a 1.99 GB (antes ~92 min de build). *Reconfirmar en el ensayo de la demo.</td></tr><tr><td><span class="badge ok">CUMPLE</span></td><td>M2 Release aprobado y versionado</td><td><code>0.1.3</code> (<code>pass</code>) → <code>Proyecto2/data/raw.dvc</code> md5 <code>ca56420c…</code> → <code>p3.data.releases.open_release_archive</code> (SHA-256 <code>787742988af1…</code> y huella <code>2200274d…</code>) → <code>manifest.meta.json</code> con <code>dvc_pointer</code>; cada corrida guarda <code>release_id</code>, <code>release_hash</code> y <code>dvc_md5</code></td></tr><tr><td><span class="badge ok">CUMPLE</span></td><td>M3 Aislamiento</td><td>Recalculado: 0 en las 9 intersecciones (<code>crop_id</code>, <code>source_image_id</code>, <code>dup_group_id</code>); aumentación solo en train (<code>src/p3/data/transforms.py</code>); <code>selection.json</code> (<code>6bd9101</code>, 26 sep) antes de la evaluación (28 sep)</td></tr><tr><td><span class="badge ok">CUMPLE</span></td><td>M4 Modelo recargable</td><td><code>get-object</code> de <code>models/clasificador/1.0.0/model.pt</code> → SHA-256 <code>e4acca42…</code> = registro = <code>selection.json</code>; cargado en un proceso nuevo con su mapa de clases y preprocesamiento: <code>0.1.3:a1057</code> → person 0.997828 y <code>0.1.3:a1574</code> → dog 0.676567, iguales a <code>predictions_test.csv</code></td></tr></tbody></table></div>
+
+<h2>B. Tabla de calificación</h2>
+<div class="tabla"><table><thead><tr><th>Puntos</th><th>Requisito</th><th>Lo que falta</th></tr></thead><tbody><tr><td><span class="badge parcial">3.5 / 4</span></td><td>1.1 Traspaso desde P2</td><td>En el portal solo 0.1.3 tiene manifiesto congelado: elegir otro release aprobado responde 409, así que el cambio de conteos se demuestra con <code>tests/test_releases.py::test_cambiar_de_release_cambia_los_conteos</code>, no en la UI.</td></tr><tr><td><span class="badge ok">5 / 5</span></td><td>1.2 Recortes y clases</td><td>—</td></tr><tr><td><span class="badge ok">5 / 5</span></td><td>1.3 Manifiesto 70/20/10</td><td>—</td></tr><tr class="subtotal"><td><strong>13.5 / 14</strong></td><td><strong>Subtotal Integración y datos</strong></td><td></td></tr><tr><td><span class="badge ok">5 / 5</span></td><td>2.1 Clasificador entrenado</td><td>—</td></tr><tr><td><span class="badge ok">4 / 4</span></td><td>2.2 Minibatches y parámetros</td><td>—</td></tr><tr><td><span class="badge ok">4 / 4</span></td><td>2.3 Semillas y aumentación</td><td>—</td></tr><tr><td><span class="badge ok">5 / 5</span></td><td>2.4 Curvas y early stopping</td><td>—</td></tr><tr class="subtotal"><td><strong>18 / 18</strong></td><td><strong>Subtotal Modelo</strong></td><td></td></tr><tr><td><span class="badge ok">6 / 6</span></td><td>3.1 Diez experimentos</td><td>— (12 válidas, tabla abajo)</td></tr><tr><td><span class="badge ok">5 / 5</span></td><td>3.2 Registro en MLflow</td><td>—</td></tr><tr><td><span class="badge ok">3 / 3</span></td><td>3.3 Comparación y elección</td><td>—</td></tr><tr class="subtotal"><td><strong>14 / 14</strong></td><td><strong>Subtotal Experimentos</strong></td><td></td></tr><tr><td><span class="badge ok">5 / 5</span></td><td>4.1 Protocolo congelado</td><td>—</td></tr><tr><td><span class="badge ok">4 / 4</span></td><td>4.2 Matriz y métricas</td><td>— (recalculadas desde <code>predictions_test.csv</code>; iguales en <code>metrics.json</code>, MLflow, API y página Evaluation)</td></tr><tr><td><span class="badge ok">6 / 6</span></td><td>4.3 Umbral de 85 %</td><td>— (142/145 = 0.97931)</td></tr><tr><td><span class="badge parcial">2 / 3</span></td><td>4.4 Errores</td><td>La galería de Evaluation lista aciertos y errores del test sin la <strong>imagen del recorte</strong> (el backend no la sirve) y la página no muestra la <strong>clase más confundida</strong>, aunque viene en la respuesta (<code>most_confused</code>: cat→dog, 2). Ambas cosas están en analisis_errores.md.</td></tr><tr class="subtotal"><td><strong>17 / 18</strong></td><td><strong>Subtotal Evaluación</strong></td><td></td></tr><tr><td><span class="badge ok">4 / 4</span></td><td>5.1 Paquete</td><td>—</td></tr><tr><td><span class="badge ok">4 / 4</span></td><td>5.2 S3 real</td><td>— (<code>head-object</code> y <code>get-object</code> de pesos y tarjeta, <code>VersionId</code> y SHA-256 local, inferencia en proceso nuevo)</td></tr><tr><td><span class="badge ok">2 / 2</span></td><td>5.3 Registro navegable</td><td>— (Models: 1.0.0 y 0.9.0 con run, release y SHA-256; activar cambia el artefacto que carga Inference)</td></tr><tr class="subtotal"><td><strong>10 / 10</strong></td><td><strong>Subtotal S3</strong></td><td></td></tr><tr><td><span class="badge ok">4 / 4</span></td><td>6.1 Training</td><td>—</td></tr><tr><td><span class="badge ok">3 / 3</span></td><td>6.2 Experiments</td><td>—</td></tr><tr><td><span class="badge ok">3 / 3</span></td><td>6.3 Evaluation</td><td>— (bloqueo 409 antes de la selección, métricas, matriz, ejemplos y exportar CSV)</td></tr><tr><td><span class="badge parcial">3.5 / 4</span></td><td>6.4 Models</td><td>Falta una <strong>acción de descarga</strong> del modelo; la tarjeta sí se abre.</td></tr><tr><td><span class="badge ok">4 / 4</span></td><td>6.5 Inference</td><td>—</td></tr><tr class="subtotal"><td><strong>17.5 / 18</strong></td><td><strong>Subtotal Portal</strong></td><td></td></tr><tr><td><span class="badge ok">4 / 4</span></td><td>7.1 Pruebas y TDD</td><td>— (dos mutaciones en copia aislada hacen fallar la suite; ver G)</td></tr><tr><td><span class="badge parcial">1.5 / 2</span></td><td>7.2 Integración</td><td><code>tests/test_e2e.py</code> escribe <code>registry.json</code> a mano en vez de usar <code>p3.registry.publish</code> y no pasa por la API del portal.</td></tr><tr><td><span class="badge ok">2 / 2</span></td><td>7.3 CI y secretos</td><td>—</td></tr><tr class="subtotal"><td><strong>7.5 / 8</strong></td><td><strong>Subtotal Pruebas</strong></td><td></td></tr></tbody></table></div>
+
+<h2>C. Trazabilidad de extremo a extremo</h2>
+<div class="tabla"><table><thead><tr><th>Release DVC y hash</th><th>Manifiesto 70/20/10 y hash</th><th>Run MLflow elegido</th><th>Checkpoint</th><th>Versión de modelo</th><th>S3 bucket/key y hash</th><th>Predicción de prueba</th></tr></thead><tbody><tr><td><code>0.1.3</code>, huella <code>2200274d…</code>, <code>raw.dvc</code> md5 <code>ca56420c…</code></td><td><code>m-0.1.3-s42-1</code>, <code>45600f29…</code></td><td><code>9f9b62c202f0446a8a4b411a10321eff</code></td><td>SHA-256 <code>e4acca42…</code></td><td><code>1.0.0</code></td><td><code>dataset-quality-releases-750702272375/models/clasificador/1.0.0/model.pt</code>, <code>VersionId</code> <code>VtRww5se…</code>, SHA-256 <code>e4acca42…</code></td><td><code>0.1.3:a1574</code> → dog 0.676567 (= <code>predictions_test.csv</code>); 145/145 por el portal (F4 T24)</td></tr></tbody></table></div>
+
+<h2>D. Contraste de métricas</h2>
+<div class="tabla"><table><thead><tr><th>Métrica</th><th>Reportado por el equipo</th><th>Verificado</th><th>¿Coincide?</th></tr></thead><tbody><tr><td>Corridas válidas de MLflow</td><td>12</td><td>12 (14 − 2 <code>FAILED</code>)</td><td>Sí</td></tr><tr><td>Train / val / test (recortes)</td><td>1022 / 292 / 145</td><td>1022 / 292 / 145</td><td>Sí</td></tr><tr><td>Train / val / test (originales)</td><td>763 / 229 / 109</td><td>763 / 229 / 109</td><td>Sí</td></tr><tr><td>Accuracy top-1 en test</td><td>0.9793</td><td>142/145 = 0.979310</td><td>Sí</td></tr><tr><td>F1 macro en test</td><td>0.9744</td><td>0.974352</td><td>Sí</td></tr><tr><td>Total de la matriz de confusión</td><td>145</td><td>145</td><td>Sí</td></tr></tbody></table></div>
+<p>Las 12 corridas válidas:</p>
+<div class="tabla"><table><thead><tr><th>Run</th><th>Optimizador</th><th>Batch</th><th>Épocas máx.</th><th>LR</th><th>Imagen</th><th>Capas ocultas</th><th>Dropout</th><th>Mejor val_acc</th><th>val_loss</th><th>Época</th><th>Estado</th></tr></thead><tbody><tr><td><code>c15c8edf</code></td><td>adamw</td><td>32</td><td>30</td><td>0.0003</td><td>224</td><td>[256]</td><td>0.3</td><td>0.9726</td><td>0.0745</td><td>5</td><td>FINISHED</td></tr><tr><td><code>eab49735</code></td><td>adamw</td><td>64</td><td>30</td><td>0.001</td><td>224</td><td>[512, 128]</td><td>0.5</td><td>0.9384</td><td>0.1641</td><td>7</td><td>FINISHED</td></tr><tr><td><code>46cb41fb</code></td><td>adam</td><td>64</td><td>30</td><td>0.0003</td><td>128</td><td>[]</td><td>0.2</td><td>0.9829</td><td>0.0331</td><td>11</td><td>FINISHED</td></tr><tr><td><code>ba8aac02</code></td><td>sgd</td><td>64</td><td>15</td><td>0.003</td><td>128</td><td>[512, 128]</td><td>0.2</td><td>0.9897</td><td>0.0473</td><td>6</td><td>FINISHED</td></tr><tr><td><code>cb72f7db</code></td><td>adamw</td><td>32</td><td>15</td><td>0.0003</td><td>128</td><td>[512, 128]</td><td>0.5</td><td>0.9623</td><td>0.1078</td><td>3</td><td>FINISHED</td></tr><tr><td><code>5ebc2c9f</code></td><td>sgd</td><td>32</td><td>30</td><td>0.001</td><td>224</td><td>[]</td><td>0.3</td><td>0.9966</td><td>0.0435</td><td>3</td><td>FINISHED</td></tr><tr><td><code>76dc45e2</code></td><td>adam</td><td>32</td><td>30</td><td>0.001</td><td>224</td><td>[512, 128]</td><td>0.3</td><td>0.9418</td><td>0.1702</td><td>7</td><td>FINISHED</td></tr><tr><td><code>9f9b62c2</code> <strong>(seleccionada)</strong></td><td>adamw</td><td>64</td><td>15</td><td>0.0001</td><td>224</td><td>[]</td><td>0.5</td><td>0.9966</td><td>0.0243</td><td>6</td><td>FINISHED</td></tr><tr><td><code>75d6bbb9</code></td><td>sgd</td><td>64</td><td>30</td><td>0.01</td><td>128</td><td>[256]</td><td>0.3</td><td>0.9760</td><td>0.1131</td><td>4</td><td>FINISHED</td></tr><tr><td><code>26afad93</code></td><td>adamw</td><td>32</td><td>30</td><td>0.0001</td><td>160</td><td>[256]</td><td>0.2</td><td>0.9897</td><td>0.0412</td><td>2</td><td>FINISHED</td></tr><tr><td><code>16c09c8e</code></td><td>adam</td><td>32</td><td>15</td><td>0.0001</td><td>224</td><td>[256]</td><td>0.2</td><td>0.9932</td><td>0.0292</td><td>7</td><td>FINISHED</td></tr><tr><td><code>981df1d9</code></td><td>sgd</td><td>32</td><td>30</td><td>0.01</td><td>224</td><td>[256]</td><td>0.5</td><td>0.9760</td><td>0.0724</td><td>5</td><td>FINISHED</td></tr></tbody></table></div>
+
+<h2>E. Resultado final</h2>
+<pre>Suma de secciones:      97.5 / 100
+Compuerta aplicada:     no
+CALIFICACIÓN FINAL:     97.5
+Meta de 85% en test:    alcanzada (0.979310)
+Escala:                 Excelente (90-100)
+</pre>
+
+<h2>F. Comentario para el equipo</h2>
+<p>Aciertos: (1) la cadena release → manifiesto → run → checkpoint → S3 → predicción se sostiene con hashes en cada eslabón y se reproduce desde datos primarios; (2) aislamiento demostrado (0 en las 9 intersecciones) y test abierto una sola vez después de <code>selection.json</code>; (3) 12 corridas válidas que varían los 7 parámetros, todas trazables en MLflow.</p><p>Pérdidas (2.5 pts): (1) imagen del recorte y clase más confundida en la galería de Evaluation (4.4, −1); (2) acción de descarga en Models (6.4, −0.5); (3) la E2E no usa <code>p3.registry.publish</code> (7.2, −0.5); (4) en el portal no se ve que cambiar de release cambie los conteos (1.1, −0.5).</p>
+
+<h2>G. Anexo de verificación</h2>
+<div class="tabla"><table><thead><tr><th>Acción</th><th>Resultado</th></tr></thead><tbody><tr><td><code>ruff check .</code> / <code>ruff format --check .</code> (Proyecto3)</td><td>sin hallazgos / 127 archivos formateados</td></tr><tr><td><code>pytest</code> (Proyecto3 y Proyecto2)</td><td>todo en verde</td></tr><tr><td>Pruebas del portal (<code>npm run test:unit</code>)</td><td>no se corrieron localmente (sin <code>node_modules</code>); en verde en la CI de <code>main</code> (<code>3e423c4</code>)</td></tr><tr><td>Intersecciones del manifiesto</td><td>0 en las 9</td></tr><tr><td>Recálculo de la matriz desde <code>predictions_test.csv</code></td><td><code>[[30,2,0],[0,38,0],[0,1,74]]</code>, 142/145</td></tr><tr><td><code>aws s3api head-object</code> y <code>get-object</code> (solo lectura, perfil del equipo)</td><td><code>model.pt</code> <code>VtRww5se…</code> 44 783 563 bytes, SHA-256 <code>e4acca42…</code>; <code>MODEL_CARD.md</code> <code>7LNRNnVo…</code>, menciona el run <code>9f9b62c2…</code></td></tr><tr><td>Carga del modelo en un proceso nuevo</td><td>iguales a <code>predictions_test.csv</code> en los dos recortes probados</td></tr><tr><td>Mutación: matriz con filas y columnas invertidas (<code>metrics.py</code>)</td><td>3 pruebas fallan en <code>tests/test_metrics.py</code></td></tr><tr><td>Mutación: los casi duplicados dejan de agruparse (<code>split.py</code>)</td><td>3 pruebas fallan en <code>tests/test_split.py</code></td></tr><tr><td>Estado de la copia</td><td>mutaciones en una copia aislada de <code>main</code>, restauradas y eliminadas; <code>git status</code> limpio</td></tr></tbody></table></div>
+<p><strong>No verificado en esta pasada:</strong> el arranque con <code>up.py</code> y el recorrido de las 5 páginas con el stack (queda para el ensayo de la demo), y el escaneo de secretos sobre el historial (la CI corre gitleaks sobre el árbol).</p>
+
+<footer>
+  Autoevaluación interna del equipo con el prompt de <code>Proyecto3/docs/rubrica.md</code>; la materia, el docente y el ciclo escolar no están registrados en el repositorio.<br>
+  <em>Reporte generado automáticamente a partir del estado del repositorio en el commit indicado. La calificación es revisable a solicitud del equipo.</em>
+</footer>
+</main>
+</body>
+</html>

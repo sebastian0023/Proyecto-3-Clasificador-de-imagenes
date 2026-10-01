@@ -85,3 +85,5 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 30 sep 2026 | Diego | T29 | Autoevaluación con el prompt de `rubrica.md`: pasada preliminar sobre `f7b5c47` (84.5, sin F9) y **pasada final sobre `3e423c4` (97.5/100, compuerta no activada, 85 % alcanzado)** con datos primarios recalculados (manifiesto, 12 corridas, matriz de test), S3 en solo lectura, recarga del modelo en un proceso nuevo y dos mutaciones en copia aislada. [autoevaluacion.md](../autoevaluacion.md) y [reporte-autoevaluacion.html](../reporte-autoevaluacion.html). | M1 y las 5 páginas con el stack en el ensayo de la demo; pérdidas de 2.5 pts listadas en F |
+| 30 sep 2026 | Diego | T30, T33 | [trazabilidad.md](../trazabilidad.md) (17 eslabones con dónde se comprueba cada uno) y [demo.md](../demo.md) (7 tramos con responsable y preguntas probables). | Fila 17 con el id completo de la inferencia y tiempos del ensayo; tag `p3-entrega` |
