@@ -38,6 +38,8 @@ export const releaseSummary: P3ReleaseSummary = {
   counts: { images: 2045, annotations: 2120, categories: 5 },
   storage_uri: 's3://dataset-quality-releases-750702272375/0.1.3/dataset.tar.zst',
   published_in: ['dev', 'prod'],
+  trainable: true,
+  blocked_reason: null,
 };
 
 export const releaseDetail: P3ReleaseDetail = {
@@ -45,6 +47,54 @@ export const releaseDetail: P3ReleaseDetail = {
   quality_report_fingerprint: '4d6e64aa13c6f66b15801811c4bb84ebc265b07f538ae27982f79628b170631a',
   archive_sha256: '787742988af1df41d9a58573b81b5c9b4fe7ab24a647b25f2e71d3eb323838b5',
 };
+
+// La lista REAL que devuelve la API (`GET /releases?approved=true`), en orden:
+// 0.1.1 (sin archive_sha256 -> no entrenable), 0.1.2 (no publicado en prod -> no
+// entrenable), 0.1.3 (entrenable). Es el dato de la prueba de regresión M1.
+const release011: P3ReleaseSummary = {
+  release_id: '0.1.1',
+  dataset_fingerprint: '295f4257328ee413ca6d7b8e9446bae50f7db80b2777bb8b93eb3f1dbc3dbdf2',
+  quality_status: 'pass',
+  created_at: '2026-09-15T01:14:15Z',
+  counts: { images: 838, annotations: 887, categories: 5 },
+  storage_uri: null,
+  published_in: ['dev'],
+  trainable: false,
+  blocked_reason: 'Sin archive_sha256 registrado: el release no tiene un paquete verificable.',
+};
+
+const release012: P3ReleaseSummary = {
+  release_id: '0.1.2',
+  dataset_fingerprint: 'c1d2e3f4a5b60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00',
+  quality_status: 'pass',
+  created_at: '2026-09-18T04:14:00Z',
+  counts: { images: 2045, annotations: 2120, categories: 5 },
+  storage_uri: null,
+  published_in: ['dev'],
+  trainable: false,
+  blocked_reason: 'No publicado en el remote prod: el paquete no se puede recuperar.',
+};
+
+/** Lo que responde `GET /releases?approved=true`, en orden. */
+export const releaseSummaries: P3ReleaseSummary[] = [release011, release012, releaseSummary];
+
+const releaseDetailsById: Record<string, P3ReleaseDetail> = {
+  '0.1.1': {
+    ...release011,
+    quality_report_fingerprint: 'aaaa64aa13c6f66b15801811c4bb84ebc265b07f538ae27982f79628b1706aaa',
+    archive_sha256: null,
+  },
+  '0.1.2': {
+    ...release012,
+    quality_report_fingerprint: 'bbbb64aa13c6f66b15801811c4bb84ebc265b07f538ae27982f79628b1706bbb',
+    archive_sha256: 'cccc2988af1df41d9a58573b81b5c9b4fe7ab24a647b25f2e71d3eb323838ccc',
+  },
+  '0.1.3': releaseDetail,
+};
+
+export function releaseDetailFor(releaseId: string): P3ReleaseDetail | undefined {
+  return releaseDetailsById[releaseId];
+}
 
 export const manifestMeta: ManifestMeta = {
   schema_version: 1,
