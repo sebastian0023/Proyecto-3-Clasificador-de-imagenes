@@ -54,8 +54,10 @@ Desde `Proyecto3/`, con el mismo perfil de AWS (usa el `dvc` del venv de Proyect
 
 ```bash
 ../Proyecto2/.venv/Scripts/dvc remote modify --local prod profile <tu-perfil>
-../Proyecto2/.venv/Scripts/dvc pull                 # manifiesto congelado y snapshot de MLflow
+../Proyecto2/.venv/Scripts/dvc pull data/manifests/m-0.1.3-s42-1.dvc mlflow_snapshot.dvc
 ```
+
+Nombra los dos punteros: un `dvc pull` sin argumentos trae el snapshot de MLflow pero no el manifiesto congelado.
 
 Los recortes se regeneran desde el release (idénticos byte a byte, ver `Proyecto3/docs/verificacion_recortes.md`). Desde `Proyecto2/`:
 
@@ -63,7 +65,7 @@ Los recortes se regeneran desde el release (idénticos byte a byte, ver `Proyect
 PYTHONPATH="../Proyecto3/src;src" .venv/Scripts/python ../Proyecto3/scripts/generate_crops.py --release 0.1.3 --profile <tu-perfil>
 ```
 
-Con el snapshot descargado, `python scripts/up.py` carga las corridas en MLflow (`http://localhost:5000`) si su volumen está vacío.
+Después de `dvc pull` y de los recortes, vuelve a correr `python scripts/up.py` desde `Proyecto2/`: carga las 12 corridas del barrido en MLflow (`http://localhost:5000`) aunque el primer `up.py` lo haya dejado vacío, y reinicia MLflow para que las lea. Si MLflow ya tiene corridas, no las toca.
 
 Si la máquina tiene GPU NVIDIA (Docker Desktop con WSL2 o NVIDIA Container Toolkit), `up.py` se la asigna al worker; si no, entrena en CPU. `P3_GPU=0` o `P3_GPU=1` fuerzan la elección.
 
