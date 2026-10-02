@@ -149,6 +149,7 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 | `GET /api/p3/evaluation` | evaluación final en test | **implementado** (F6) |
 | `GET /api/p3/evaluation/predictions` | `predictions_test.csv` por muestra | **implementado** (F6) |
 | `GET /api/p3/evaluation/examples` | aciertos y errores de test (`errors.json`) | **implementado** (F6) |
+| `GET /api/p3/evaluation/crops/{crop_id}` | PNG de un recorte del test elegido | **implementado** (F12, contrato C1) |
 | `GET /api/p3/models` | versiones de modelo | **implementado** (F7) |
 | `GET /api/p3/models/{version}/card` | tarjeta de una versión | **implementado** (F7) |
 | `POST /api/p3/models/{version}/activate` | elige la versión para inferencia | **implementado** (F7) |
@@ -271,6 +272,20 @@ Lee de MLflow la corrida `selected=true` y sus artefactos `evaluation/` (los reg
 ```json
 {"run_id": "9f9b62c2…", "manifest_id": "m-0.1.3-s42-1", "test_size": 145, "accuracy": 0.9793103448275862, "passes_threshold": true, "threshold": 0.85, "f1_macro": 0.9743519475145314, "per_class": [{"class": "cat", "precision": 1.0, "recall": 0.9375, "f1": 0.9677, "support": 32}], "confusion_matrix": {"labels": ["cat", "dog", "person"], "rows_true_cols_pred": [[30, 2, 0], [0, 38, 0], [0, 1, 74]]}, "majority_baseline": 0.5172413793103449, "majority_class": "person", "most_confused": {"true": "cat", "predicted": "dog", "count": 2}, "evaluated_at": "2026-09-28T02:25:07Z", "predictions_uri": "/api/p3/evaluation/predictions", "examples_uri": "/api/p3/evaluation/examples"}
 ```
+
+**Cambio aditivo (F12, contrato C1):** la respuesta suma la procedencia de las cifras (6.3): `release_id` (tag de la corrida), `manifest_hash` (de `metrics.json`), `checkpoint_sha256` y `selected_at` (de la selección guardada en la corrida). Con los datos reales: `"release_id": "0.1.3"`, `"manifest_hash": "45600f29…"`, `"checkpoint_sha256": "e4acca42…"`, `"selected_at": "2026-09-27T03:39:45Z"`.
+
+### `GET /api/p3/evaluation/crops/{crop_id}` (F12, contrato C1)
+
+El PNG de un recorte del **test del manifiesto de la corrida elegida**, para las miniaturas de la galería de Evaluation (4.4). `crop_id` es `<release_id>:a<annotation_id>` (por ejemplo `0.1.3:a1574`), igual que en `errors.json` y `predictions_test.csv`.
+
+- **200** `image/png`.
+- **409** `{"detail": "La selección del modelo no está cerrada"}` antes de cerrar la selección, como el resto de la evaluación.
+- **404** si el recorte no es del test de ese manifiesto (de train o val, o de otro manifiesto).
+- **422** si el id no tiene la forma de un recorte (impide salir de la carpeta).
+- **503** con el comando que falta si el manifiesto no está descargado (`dvc pull`) o faltan los recortes (`scripts/generate_crops.py`).
+
+Lee `manifest.jsonl` (`P3_MANIFESTS_DIR`) y `crops.jsonl` con los PNG (`P3_CROPS_DIR`); en Docker, `Proyecto3/data/crops` se monta en solo lectura en `/opt/p3/crops`.
 
 - **Cambios F6 (aditivos):** `f1` en `per_class`, `passes_threshold`, `threshold`, `majority_class`, `most_confused`, `evaluated_at` y `examples_uri`. `predictions_uri` apunta a `GET /api/p3/evaluation/predictions`, que devuelve el CSV de abajo (`text/csv`), no un `predictions.jsonl`.
 - `GET /api/p3/evaluation/examples`: `{"correct": [...], "errors": [...]}`. Cada ejemplo trae `crop_id`, `crop_path` (relativo a `data/crops/<release>/`), `true`, `predicted` y `probability`; todos son de `test`.
