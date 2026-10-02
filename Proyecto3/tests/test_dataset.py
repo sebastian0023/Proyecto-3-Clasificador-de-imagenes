@@ -73,10 +73,16 @@ def test_el_transform_de_evaluacion_es_determinista(crops_dir) -> None:
     val = _datasets(crops_dir)["val"]
     torch.manual_seed(0)
     first, _, _ = val[0]
-    torch.manual_seed(123)
-    second, _, _ = val[0]
-    assert torch.equal(first, second)
+    # Varias semillas: una aumentacion con probabilidad 0.5 no pasa por casualidad.
+    for seed in range(1, 9):
+        torch.manual_seed(seed)
+        assert torch.equal(first, val[0][0])
     assert first.shape == (3, 32, 32)
+
+
+def test_el_transform_de_evaluacion_no_tiene_operaciones_aleatorias() -> None:
+    nombres = [type(t).__name__ for t in transforms.build_eval_transform(32).transforms]
+    assert not [n for n in nombres if n.startswith("Random") or n == "ColorJitter"], nombres
 
 
 def test_la_aumentacion_aleatoria_solo_esta_en_train(crops_dir) -> None:
@@ -121,13 +127,26 @@ def test_una_fila_sin_recorte_generado_falla(crops_dir) -> None:
         dataset.build_datasets(rows, index, image_size=32)
 
 
-def test_una_fuga_entre_particiones_se_rechaza(crops_dir) -> None:
-    _, rows = crops_dir
-    fugado = dict(rows[0], crop_id="9.9.9:a999", split="test")  # misma imagen en train y test
-    root, _ = crops_dir
+# Fijos a proposito (no `dataset.LEAKAGE_FIELDS`): si alguien quita un campo del codigo,
+# su caso sigue aqui y falla.
+@pytest.mark.parametrize("campo", ["crop_id", "source_image_id", "dup_group_id"])
+def test_una_fuga_entre_particiones_se_rechaza(crops_dir, campo: str) -> None:
+    # Una fila nueva en otra particion que comparte SOLO `campo` con rows[0]: cada
+    # identificador (recorte, original y grupo de casi duplicados) se vigila por separado.
+    root, rows = crops_dir
+    original = rows[0]
+    otra = next(s for s in dataset.SPLITS if s != original["split"])
+    fugado = dict(
+        original,
+        crop_id="9.9.9:a999",
+        source_image_id=999_999,
+        dup_group_id="g999999",
+        split=otra,
+    )
+    fugado[campo] = original[campo]
     index = dataset.load_crop_index(root)
-    index["9.9.9:a999"] = index[rows[0]["crop_id"]]
-    with pytest.raises(dataset.LeakageError, match="source_image_id"):
+    index["9.9.9:a999"] = index[original["crop_id"]]
+    with pytest.raises(dataset.LeakageError, match=campo):
         dataset.build_datasets([*rows, fugado], index, image_size=32)
 
 
