@@ -9,7 +9,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { api, type TrainingConfig } from '../lib/api';
+import { type ExperimentName, api, type TrainingConfig } from '../lib/api';
 import {
   DEFAULT_TRAINING_CONFIG,
   isConfigValid,
@@ -30,7 +30,7 @@ function numValue(value: number): string {
 export default function TrainingConfigForm({ manifestId, onLaunched }: Props) {
   const [config, setConfig] = useState<TrainingConfig>(DEFAULT_TRAINING_CONFIG);
   const [hiddenText, setHiddenText] = useState(DEFAULT_TRAINING_CONFIG.hidden_layers.join(', '));
-  const [experiment, setExperiment] = useState('p3-pruebas');
+  const [experiment, setExperiment] = useState<ExperimentName>('p3-pruebas');
   const [serverError, setServerError] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
 
@@ -80,7 +80,7 @@ export default function TrainingConfigForm({ manifestId, onLaunched }: Props) {
         <select
           className="campo"
           value={experiment}
-          onChange={(e) => setExperiment(e.target.value)}
+          onChange={(e) => setExperiment(e.target.value as ExperimentName)}
         >
           <option value="p3-pruebas">p3-pruebas</option>
           <option value="p3-clasificador">p3-clasificador</option>

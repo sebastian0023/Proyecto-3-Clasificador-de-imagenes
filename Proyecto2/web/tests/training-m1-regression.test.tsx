@@ -40,8 +40,9 @@ describe('Training — regresión M1 (releases reales)', () => {
     expect(byValue['0.1.1']?.disabled).toBe(true);
     expect(byValue['0.1.2']?.disabled).toBe(true);
     expect(byValue['0.1.3']?.disabled).toBe(false);
-    // El motivo aparece (en el texto de la opción).
-    expect(byValue['0.1.1']?.textContent ?? '').toMatch(/archive|hash|publicad|prod/i);
+    // El motivo EXACTO de la API aparece en el texto de cada opción.
+    expect(byValue['0.1.1']?.textContent ?? '').toContain('no registra archive_sha256');
+    expect(byValue['0.1.2']?.textContent ?? '').toContain('sin manifiesto congelado');
   });
 
   it('consulta el manifiesto y lanza el trabajo con experiment "p3-pruebas"', async () => {

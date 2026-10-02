@@ -395,12 +395,15 @@ export interface JobCreated {
   status: JobStatus;
 }
 
+/** Experimentos de MLflow válidos (el worker acepta solo estos dos). */
+export type ExperimentName = 'p3-clasificador' | 'p3-pruebas';
+
 export interface CreateTrainJobRequest {
   kind: 'train';
   manifest_id: string;
   config: TrainingConfig;
-  /** Experimento de MLflow donde registrar el barrido (p. ej. `p3-pruebas`). */
-  experiment: string;
+  /** Experimento de MLflow donde registrar el barrido. */
+  experiment: ExperimentName;
 }
 
 // --- corridas de MLflow (contrato §4) ---------------------------------------

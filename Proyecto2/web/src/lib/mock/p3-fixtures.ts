@@ -60,34 +60,37 @@ const release011: P3ReleaseSummary = {
   storage_uri: null,
   published_in: ['dev'],
   trainable: false,
-  blocked_reason: 'Sin archive_sha256 registrado: el release no tiene un paquete verificable.',
+  blocked_reason: 'no registra archive_sha256',
 };
 
 const release012: P3ReleaseSummary = {
   release_id: '0.1.2',
-  dataset_fingerprint: 'c1d2e3f4a5b60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00',
+  dataset_fingerprint: '2200274dc6bbe6d0bc516e0136ae68651c0040bc6cab64a871794924fa39aa84',
   quality_status: 'pass',
   created_at: '2026-09-18T04:14:00Z',
   counts: { images: 2045, annotations: 2120, categories: 5 },
   storage_uri: null,
   published_in: ['dev'],
   trainable: false,
-  blocked_reason: 'No publicado en el remote prod: el paquete no se puede recuperar.',
+  blocked_reason: 'sin manifiesto congelado',
 };
 
 /** Lo que responde `GET /releases?approved=true`, en orden. */
 export const releaseSummaries: P3ReleaseSummary[] = [release011, release012, releaseSummary];
 
+// Hashes reales de `Proyecto2/reports/versions.json`.
 const releaseDetailsById: Record<string, P3ReleaseDetail> = {
   '0.1.1': {
     ...release011,
-    quality_report_fingerprint: 'aaaa64aa13c6f66b15801811c4bb84ebc265b07f538ae27982f79628b1706aaa',
+    quality_report_fingerprint:
+      'd2cd9e197f4e8870d99aa923d849e220cb5b5c4317ef31db25695d7533af3432',
     archive_sha256: null,
   },
   '0.1.2': {
     ...release012,
-    quality_report_fingerprint: 'bbbb64aa13c6f66b15801811c4bb84ebc265b07f538ae27982f79628b1706bbb',
-    archive_sha256: 'cccc2988af1df41d9a58573b81b5c9b4fe7ab24a647b25f2e71d3eb323838ccc',
+    quality_report_fingerprint:
+      '512fc1c3460ef905b3d73270ce206679c5ac0aab243cf1236ab8fff5c208fe09',
+    archive_sha256: '130998b0c1303a35634417aad5376bd691e34657ced4d55351d547b680912f60',
   },
   '0.1.3': releaseDetail,
 };
