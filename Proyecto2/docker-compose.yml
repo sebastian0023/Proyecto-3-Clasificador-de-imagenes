@@ -129,6 +129,7 @@ services:
       # `/opt/p3/src` (ver `volumes`) y la app monta su router `/api/p3/...`.
       PYTHONPATH: /app/src:/opt/p3/src
       P3_MANIFESTS_DIR: /opt/p3/manifests
+      P3_CROPS_DIR: /opt/p3/crops
     ports:
       - "${APP_PORT:?falta APP_PORT en .env}:8000"
     volumes:
@@ -154,6 +155,9 @@ services:
       # Los manifiestos de F3 (`dvc pull`), solo lectura: `/api/p3/manifests`
       # sirve el congelado (P3_MANIFESTS_DIR).
       - ../Proyecto3/data/manifests:/opt/p3/manifests:ro
+      # Los recortes de F2 (`generate_crops.py`), solo lectura: miniaturas de los
+      # ejemplos de test en Evaluation (`/api/p3/evaluation/crops/{crop_id}`).
+      - ../Proyecto3/data/crops:/opt/p3/crops:ro
       # Volumenes anonimos que tapan artefactos del host sin sentido aqui
       # dentro: un venv de Windows y binarios nativos compilados para el host.
       - /app/.venv

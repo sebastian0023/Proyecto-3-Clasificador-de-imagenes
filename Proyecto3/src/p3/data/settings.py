@@ -32,6 +32,9 @@ class DataSettings(BaseSettings):
     manifests_dir: Path = Field(
         default=Path("../Proyecto3/data/manifests"), alias="P3_MANIFESTS_DIR"
     )
+    # Recortes de F2 (`generate_crops.py`), para las miniaturas de Evaluation. En
+    # Docker, el montaje de solo lectura `/opt/p3/crops`.
+    crops_dir: Path = Field(default=Path("../Proyecto3/data/crops"), alias="P3_CROPS_DIR")
 
 
 @lru_cache

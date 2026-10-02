@@ -7,6 +7,9 @@ API y MLflow muestran las mismas cifras (4.2).
 - `GET /api/p3/evaluation`: metricas, matriz, baseline y procedencia.
 - `GET /api/p3/evaluation/predictions`: `predictions_test.csv` por muestra, para auditar.
 - `GET /api/p3/evaluation/examples`: aciertos y errores de test (`errors.json`).
+- `GET /api/p3/evaluation/crops/{crop_id}`: el PNG de un recorte del test del
+  manifiesto elegido (miniaturas de la galeria, 4.4). Lee el manifiesto y los
+  recortes en disco; 404 si el recorte no es de ese test, 503 si faltan.
 
 Mientras la seleccion no este cerrada responde 409 y no revela nada del test.
 Si MLflow no responde (o responde un error que no es 404) responde 503, no 500.
@@ -18,9 +21,11 @@ from __future__ import annotations
 
 import json
 import urllib.error
-from typing import Any
+from pathlib import Path
+from typing import Annotated, Any, NamedTuple
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import Path as PathParam
 
 from p3.train.selection import EXPERIMENT, MlflowDep, RunSummary, get_mlflow
 
@@ -31,6 +36,23 @@ FOLDER = "evaluation"
 PER_CLASS_FIELDS = ("class", "precision", "recall", "f1", "support")
 
 __all__ = ["get_mlflow", "router"]
+
+
+class DataDirs(NamedTuple):
+    manifests: Path
+    crops: Path
+
+
+def get_data_dirs() -> DataDirs:
+    from p3.data.settings import get_settings
+
+    settings = get_settings()
+    return DataDirs(settings.manifests_dir, settings.crops_dir)
+
+
+DataDirsDep = Annotated[DataDirs, Depends(get_data_dirs)]
+# `<release_id>:a<annotation_id>` (`p3.data.crops.crop_id`); tambien impide salir de la carpeta.
+CropId = Annotated[str, PathParam(pattern=r"^\d+\.\d+\.\d+:a\d+$")]
 
 
 def _selected(mlflow: Any) -> RunSummary:
@@ -73,9 +95,15 @@ def _no_evaluation(run: RunSummary) -> HTTPException:
 def read_evaluation(mlflow: MlflowDep) -> dict[str, Any]:
     run = _selected(mlflow)
     metrics = json.loads(_artifact(mlflow, run, "metrics.json"))
+    selection = json.loads(run.tags.get("selection") or "{}")
     return {
         "run_id": run.run_id,
         "manifest_id": metrics["manifest_id"],
+        # Procedencia (6.3): de donde salen las cifras.
+        "release_id": run.tags.get("release_id"),
+        "manifest_hash": metrics.get("manifest_hash") or run.manifest_hash,
+        "checkpoint_sha256": selection.get("checkpoint_sha256"),
+        "selected_at": selection.get("selected_at"),
         "test_size": metrics["test_size"],
         "accuracy": metrics["accuracy"],
         "passes_threshold": metrics["passes_threshold"],
@@ -106,3 +134,47 @@ def read_predictions(mlflow: MlflowDep) -> Response:
 def read_examples(mlflow: MlflowDep) -> dict[str, Any]:
     run = _selected(mlflow)
     return json.loads(_artifact(mlflow, run, "errors.json"))
+
+
+@router.get("/crops/{crop_id}")
+def read_crop(crop_id: CropId, mlflow: MlflowDep, dirs: DataDirsDep) -> Response:
+    run = _selected(mlflow)
+    if crop_id not in _test_crops(dirs.manifests, run.manifest_id):
+        raise HTTPException(
+            404, f"El recorte {crop_id} no es del test del manifiesto {run.manifest_id}."
+        )
+    release_id = crop_id.split(":")[0]
+    path = _crop_paths(dirs.crops, release_id).get(crop_id)
+    if path is None or not path.is_file():
+        raise _missing_crops(release_id)
+    return Response(path.read_bytes(), media_type="image/png")
+
+
+def _test_crops(folder: Path, manifest_id: str) -> set[str]:
+    manifest = folder / manifest_id / "manifest.jsonl"
+    if not manifest.is_file():
+        raise HTTPException(
+            503,
+            f"El manifiesto {manifest_id} no está descargado; corre "
+            f"`dvc pull data/manifests/{manifest_id}.dvc` en Proyecto3.",
+        )
+    with manifest.open(encoding="utf-8") as lines:
+        rows = (json.loads(line) for line in lines if line.strip())
+        return {row["crop_id"] for row in rows if row["split"] == "test"}
+
+
+def _crop_paths(folder: Path, release_id: str) -> dict[str, Path]:
+    index = folder / release_id / "crops.jsonl"
+    if not index.is_file():
+        raise _missing_crops(release_id)
+    with index.open(encoding="utf-8") as lines:
+        rows = (json.loads(line) for line in lines if line.strip())
+        return {row["crop_id"]: folder / release_id / row["crop_path"] for row in rows}
+
+
+def _missing_crops(release_id: str) -> HTTPException:
+    return HTTPException(
+        503,
+        f"Faltan los recortes del release {release_id}; generalos con "
+        f"`scripts/generate_crops.py --release {release_id}` (README).",
+    )
