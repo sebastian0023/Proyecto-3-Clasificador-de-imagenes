@@ -10,6 +10,7 @@ corridas.
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from p3 import mlflow_restore
@@ -17,7 +18,7 @@ from p3 import mlflow_restore
 
 def _db(path: Path, runs: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(path) as conn:
+    with closing(sqlite3.connect(path)) as conn, conn:
         conn.execute("CREATE TABLE runs (run_uuid TEXT)")
         conn.executemany("INSERT INTO runs VALUES (?)", [(f"r{i}",) for i in range(runs)])
 
@@ -31,7 +32,7 @@ def _snapshot(tmp_path: Path) -> Path:
 
 
 def _runs(path: Path) -> int:
-    with sqlite3.connect(path) as conn:
+    with closing(sqlite3.connect(path)) as conn:
         return conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
 
 
