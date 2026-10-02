@@ -76,3 +76,17 @@ Para recuperar el manifiesto en un clon limpio: `cd Proyecto3 && dvc pull data/m
 `tests/test_split.py`: las filas cumplen el contrato; ningún identificador en dos particiones; ±5 puntos global y por clase; cada clase en `val` y `test`; misma semilla → mismo hash; el orden de entrada no importa; la caja degenerada del fixture no llega al manifiesto. `check_manifest` detecta un original en dos particiones, una clase ausente de `test` y proporciones fuera de tolerancia.
 
 Mutaciones: repartir por imagen (fuga real), ignorar la semilla, no barajar, no estratificar, no revisar `dup_group_id`, quitar la tolerancia y no exigir clases en `test` ponen la suite en rojo. Una mutación que arma mal las unidades pero sigue asignando por `dup_group_id` queda en verde: no produce fuga, porque cada fila toma la partición de su grupo.
+
+## Segundo manifiesto congelado: `m-0.1.3-s7-1` (F12, criterio 1.1)
+
+Mismo release 0.1.3 con **semilla 7**, para demostrar que elegir otro manifiesto cambia el split. Los releases 0.1.2, 0.1.4 y 0.1.5 tienen la misma huella que 0.1.3, así que con ellos los conteos no cambiarían: solo la semilla los cambia.
+
+| | `m-0.1.3-s42-1` (barrido) | `m-0.1.3-s7-1` |
+|---|---|---|
+| `manifest.jsonl` (SHA-256) | `45600f29…` | `c7319207ae60b636e8ef45cd0a6f904e3c2b07755e9536fd2eded140a5089f01` |
+| Puntero DVC (md5) | `64eae7e5….dir` | `82a38b4019bfecc9c25bcb12e98aa3d4.dir` |
+| Recortes train / val / test | 1022 / 292 / 145 | 1020 / 291 / 148 |
+| Intersecciones (9) | 0 | 0 |
+| Reproducible (`--check`) | sí | sí, idéntico byte a byte |
+
+Generado con `generate_manifest.py --release 0.1.3 --seed 7` sobre el árbol limpio de `fix/ronda-2` (`002a8aa`). Se entrena **solo en `p3-pruebas`**: `p3-clasificador` es el barrido sobre `m-0.1.3-s42-1`, y el worker rechaza otro manifiesto en ese experimento (409), así que `/api/p3/runs` y la selección no cambian.
