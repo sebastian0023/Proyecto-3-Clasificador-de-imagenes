@@ -21,13 +21,17 @@ from typing import Any
 # manifest_id -> SHA-256 de `manifest.jsonl` (tag `p3-manifiesto-congelado`, F3).
 FROZEN_MANIFESTS: Mapping[str, str] = {
     "m-0.1.3-s42-1": "45600f297d13f51685e051e0cbc4962beb1f7c6a4e03247cbf61a345e6fa4305",
+    # F12 (1.1): mismo release con otra semilla, para mostrar que cambiar de
+    # manifiesto cambia el split. Se entrena solo en `p3-pruebas`.
+    "m-0.1.3-s7-1": "c7319207ae60b636e8ef45cd0a6f904e3c2b07755e9536fd2eded140a5089f01",
 }
 
 
 # `m-<release_id>-s<seed>-<n>` (docs/manifiesto.md).
 MANIFEST_ID = r"^m-(?P<release>\d+\.\d+\.\d+)-s(?P<seed>\d+)-(?P<n>\d+)$"
-# Semilla del manifiesto con el que se entrena (el congelado de F3).
-TRAINING_SEED = 42
+# El manifiesto del barrido: las 12 corridas de `p3-clasificador` y la seleccion
+# salen de el. Los demas congelados solo se entrenan en `p3-pruebas`.
+SWEEP_MANIFEST = "m-0.1.3-s42-1"
 
 
 def frozen_for(
@@ -40,6 +44,19 @@ def frozen_for(
         if match and match["release"] == release_id and int(match["seed"]) == seed:
             found.append((int(match["n"]), manifest_id))
     return max(found)[1] if found else None
+
+
+def manifests_for(
+    release_id: str, frozen: Mapping[str, str] = FROZEN_MANIFESTS
+) -> list[tuple[str, int]]:
+    """Los congelados de un release como `(manifest_id, seed)`, el del barrido primero."""
+    found = []
+    for manifest_id in frozen:
+        match = re.match(MANIFEST_ID, manifest_id)
+        if match and match["release"] == release_id:
+            found.append((manifest_id, int(match["seed"]), int(match["n"])))
+    found.sort(key=lambda m: (m[0] != SWEEP_MANIFEST, m[1], m[2]))
+    return [(manifest_id, seed) for manifest_id, seed, _ in found]
 
 
 class ManifestNotFrozenError(ValueError):

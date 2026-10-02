@@ -127,7 +127,12 @@ def test_con_dos_congelados_del_mismo_release_y_semilla_gana_el_de_mayor_n() -> 
 def test_cada_release_lista_sus_manifiestos_congelados_con_el_del_barrido_primero(
     tmp_path: Path,
 ) -> None:
-    frozen = {"m-0.1.3-s7-1": "7" * 64, "m-0.1.3-s42-1": "4" * 64, "m-0.1.2-s5-1": "5" * 64}
+    frozen = {
+        "m-0.1.3-s7-1": "7" * 64,
+        "m-0.1.3-s42-1": "4" * 64,
+        "m-0.1.2-s5-1": "5" * 64,
+        "m-0.1.1-s42-1": "1" * 64,
+    }
     client = client_with([entry("0.1.1", sha=None), entry("0.1.3")], frozen, tmp_path)
     body = {r["release_id"]: r for r in client.get("/api/p3/releases").json()["releases"]}
     assert body["0.1.3"]["manifests"] == [
