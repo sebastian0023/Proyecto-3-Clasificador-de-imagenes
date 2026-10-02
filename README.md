@@ -80,6 +80,16 @@ curl http://localhost:8000/api/p3/training/jobs/<job_id>
 
 El `POST` responde `202` con el `job_id` sin ejecutar nada; el `GET` muestra estado, progreso, logs y error, que persisten al reiniciar.
 
+### Entrenamiento corto (sin GPU)
+
+Para comprobar un entrenamiento real en pocos segundos, en **Training** elige el release `0.1.3`, pulsa *Generar manifiesto 70/20/10* y lanza con esta configuración:
+
+| experiment | optimizer | batch_size | max_epochs | learning_rate | image_size | hidden_layers | dropout | seed |
+|---|---|---|---|---|---|---|---|---|
+| `p3-pruebas` | `adamw` | 64 | 1 | 0.001 | 64 | 128 | 0.2 | 42 |
+
+En CPU termina en ~30 s (medido: 28 s, `val_acc` 0.81). La corrida queda en el experimento `p3-pruebas` de MLflow; `p3-clasificador` conserva solo las 12 corridas del barrido. Recargar la página durante el trabajo conserva su estado y sus logs.
+
 ## Pruebas de Proyecto 3
 
 Desde `Proyecto3/`:
