@@ -152,6 +152,7 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 | `GET /api/p3/models` | versiones de modelo | **implementado** (F7) |
 | `GET /api/p3/models/{version}/card` | tarjeta de una versión | **implementado** (F7) |
 | `POST /api/p3/models/{version}/activate` | elige la versión para inferencia | **implementado** (F7) |
+| `GET /api/p3/models/{version}/download` | descarga el `model.pt` publicado (C2) | contrato (F13) |
 | `POST /api/p3/inference` | predice una imagen | **implementado** (F4 T24); página en F9 |
 | `POST /api/p3/inference/{inference_id}/send-to-annotation` | crea el elemento en la cola de anotación | **implementado** (F4 T24); página en F9 |
 
@@ -300,6 +301,18 @@ Viven en el servicio `p3-inference` (el que tiene el perfil de AWS); la app de P
 - `POST /api/p3/models/{version}/activate`: **200** con la misma forma que `GET /api/p3/models` (antes decía `{"active_version": …}`; ahora devuelve también la lista); **404** si la versión no está publicada; **409** si el objeto de S3 no existe o su SHA-256 no coincide; **422** si `version` no es semántica.
 - `registry.json` lo escribe `p3.registry.publish` con, por versión, además de los campos de la sección 6: `release_id`, `card_key` y `files` (SHA-256 y `s3_version_id` de cada archivo del paquete).
 
+### `GET /api/p3/models/{version}/download` (C2, F13: Edith → Andrés)
+
+Descarga los pesos publicados de una versión para la acción «Descargar pesos» de Models (criterio 6.4). Lo atiende `p3-inference` y el portal lo reenvía conservando los encabezados.
+
+- **200** `application/octet-stream` con los bytes de `model.pt` leídos de S3 (la versión registrada, como en la inferencia), solo si su SHA-256 es el del registro.
+  - `Content-Disposition: attachment; filename="clasificador-<version>-model.pt"`
+  - `X-Model-SHA256: <sha256 del registro>` (el mismo que muestra `GET /api/p3/models` en `s3.sha256`).
+- **404** si la versión no está en `registry.json`.
+- **409** si el objeto no existe en S3, su `VersionId` no es el registrado o su SHA-256 no coincide: nunca se sirve un archivo distinto del publicado.
+- **422** si `version` no es semántica.
+- **503** si S3 no está disponible, con el motivo y qué configurar (igual que los demás endpoints de modelos).
+
 ### `POST /api/p3/inference`
 
 **Implementado (F4 T24).** Lo atiende el servicio `p3-inference` (el único con PyTorch); la app del portal le reenvía la petición.
@@ -323,6 +336,7 @@ Viven en el servicio `p3-inference` (el que tiene el perfil de AWS); la app de P
 - **201** `{"annotation_queue_item": {"image_id": 91, "status": "pending"}}`.
 - **200** con el mismo elemento si ya se había enviado: no se duplica.
 - **404** si la inferencia no existe; **502** si P1 no responde o rechaza la imagen.
+- **Cambio (F13):** el `detail` del 502 dice en español qué pasó y qué hacer: si P1 no responde, nombra la URL (`P3_ANNOTATION_URL`) y los comandos del README para levantarlo; si P1 respondió con error, incluye su código.
 
 ## 5. `selection.json` — contrato (F5)
 
