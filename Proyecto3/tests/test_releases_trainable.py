@@ -111,3 +111,12 @@ def test_congelar_un_manifiesto_habilita_su_release(tmp_path: Path) -> None:
         True,
         True,
     ]
+
+
+def test_con_dos_congelados_del_mismo_release_y_semilla_gana_el_de_mayor_n() -> None:
+    from p3.data.frozen import frozen_for
+
+    frozen = {"m-0.1.3-s42-1": "1" * 64, "m-0.1.3-s42-2": "2" * 64, "m-0.1.3-s7-9": "9" * 64}
+    assert frozen_for("0.1.3", 42, frozen) == "m-0.1.3-s42-2"
+    # El orden de la lista no importa.
+    assert frozen_for("0.1.3", 42, dict(reversed(list(frozen.items())))) == "m-0.1.3-s42-2"
