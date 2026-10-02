@@ -34,6 +34,10 @@ El worker de entrenamiento (`p3-worker`) no publica puertos: toma los trabajos d
 
 Para apagar sin perder datos: `python scripts/down.py` (desde `Proyecto2/`). Los registros y artefactos de MLflow viven en el volumen `mlflow_data` y sobreviven a `down`/`up`.
 
+**Models e Inference** leen el modelo publicado en AWS S3 con un perfil de `~/.aws`: pon su nombre en `Proyecto2/.env` (`P3_AWS_PROFILE=<tu-perfil>`) y vuelve a correr `up.py`. Sin él, esas páginas responden 503 con qué configurar.
+
+> **Rutas en Linux/macOS:** los comandos usan las del venv de Windows. Cambia `.venv/Scripts/` por `.venv/bin/`, y en `PYTHONPATH` separa con `:` en vez de `;` (`PYTHONPATH="../Proyecto3/src:src"`).
+
 ## Dataset real (release aprobado de P2)
 
 El dataset no está en Git; se recupera con DVC desde S3. Necesitas un perfil de AWS autorizado en `~/.aws` (las llaves nunca se escriben en el repositorio). Desde `Proyecto2/`:
@@ -88,7 +92,22 @@ Para comprobar un entrenamiento real en pocos segundos, en **Training** elige el
 |---|---|---|---|---|---|---|---|---|
 | `p3-pruebas` | `adamw` | 64 | 1 | 0.001 | 64 | 128 | 0.2 | 42 |
 
-En CPU termina en ~30 s (medido: 28 s, `val_acc` 0.81). La corrida queda en el experimento `p3-pruebas` de MLflow; `p3-clasificador` conserva solo las 12 corridas del barrido. Recargar la página durante el trabajo conserva su estado y sus logs.
+En CPU termina en unos 20–30 s; la `val_acc` de una sola época varía con la máquina (medido entre 0.71 y 0.81). La corrida queda en el experimento `p3-pruebas` de MLflow; `p3-clasificador` conserva solo las 12 corridas del barrido. Recargar la página durante el trabajo conserva su estado y sus logs.
+
+## Cola de anotación (Proyecto 1)
+
+**Enviar a cola de anotación** (página Inference) sube la imagen a la cola de P1, así que P1 tiene que estar arriba. Arranque ligero, en otra terminal desde la raíz del repo (sin el seeder, que descarga el dataset de Hugging Face):
+
+```bash
+cd Proyecto1
+npm install
+cp -n .env.example .env          # PowerShell: if (!(Test-Path .env)) { Copy-Item .env.example .env }
+docker compose up -d --wait      # MariaDB :3306 y MinIO :9000 de P1
+npm run db:migrate
+npm run dev:api                  # API de P1 en http://localhost:3000
+```
+
+Comprueba que la imagen llegó con `curl http://localhost:3000/api/images`. Si P1 no está arriba, `up.py` lo avisa al terminar y «Enviar a cola» responde 502 con estos mismos comandos.
 
 ## Pruebas de Proyecto 3
 

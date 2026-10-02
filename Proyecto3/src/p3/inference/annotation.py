@@ -25,7 +25,7 @@ class AnnotationUnavailableError(RuntimeError):
 # Arranque ligero de P1 (README, "Cola de anotacion"): sin el seeder, que descarga
 # el dataset de Hugging Face.
 START_P1 = (
-    "cd Proyecto1 && npm install && docker compose up -d --wait "
+    "cd Proyecto1 && npm install && cp -n .env.example .env && docker compose up -d --wait "
     "&& npm run db:migrate && npm run dev:api"
 )
 

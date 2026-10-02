@@ -176,7 +176,7 @@ def wait_for_health(url: str, timeout_seconds: int = 90) -> dict[str, object] | 
 
 
 P1_START = (
-    "cd ../Proyecto1 && npm install && docker compose up -d --wait "
+    "cd ../Proyecto1 && npm install && cp -n .env.example .env && docker compose up -d --wait "
     "&& npm run db:migrate && npm run dev:api"
 )
 
