@@ -1,6 +1,6 @@
 # Autoevaluación con el prompt de la rúbrica (F11 T29)
 
-## Pasada preliminar — 30 sep 2026, sobre `main` en `f7b5c47` (superada por la pasada final, abajo)
+## Pasada preliminar — 30 sep 2026, sobre `main` en `f7b5c47` (superada por la pasada sobre `3e423c4`, abajo)
 
 Pasada **estática y con datos primarios**, sin levantar el stack, para encontrar
 huecos con tiempo. La pasada final se repite sobre el commit candidato (con F9 y
@@ -79,7 +79,9 @@ Con F9 en main:         hasta ~99 (+11 de 6.3–6.5, +1 de 4.2, +1.5 de 4.4, +1 
 4. **E2E con `p3.registry.publish`** (Andrés, F10) → +0.5 en 7.2.
 5. En la demo, mostrar que cambiar de release cambia los conteos (1.1) con la prueba que lo cubre (`pytest tests/test_releases.py -k cambiar_de_release`): `generate_manifest.py` hoy solo genera el release fijado en el script, sin opción para elegir otro.
 
-## Pasada final — 30 sep 2026, sobre `main` en `3e423c4`
+## Pasada sobre `main` en `3e423c4` — 30 sep 2026, corregida el 1 oct: **no válida para la entrega**
+
+> **Corrección (1 oct, revisión de Edith en el #22).** Esta pasada no levantó el stack y aun así calificó M1 como CUMPLE y dio puntos a la sección 6 y a 2.2. Eso contradice la regla 1 de la rúbrica ("sin evidencia, no hay puntos"). Edith levantó el stack sobre este mismo commit y **Training sale en blanco**: el registro real incluye 0.1.1 con `archive_sha256` nulo y la página lo recortaba. Por lo tanto **M1 no se cumple y la compuerta se activa (máximo 60)**. Abajo están las puntuaciones corregidas; la pasada válida se repite **con el stack levantado** después de integrar #23, #25 y #26 (`fix/m1-training`).
 
 Sobre el commit candidato, con F9 (#19), los 503 (#17, #20) y torch de CPU (#21)
 ya en `main`. CI de `main` en verde (`CI` y `P3 CI` sobre `3e423c4`). Repite los
@@ -96,12 +98,12 @@ verificación contra el backend real que registra cada fase.
 
 | Estado | Requisito | Evidencia |
 |---|---|---|
-| CUMPLE* | M1 Arranque desde el README | `docs/ensayo_arranque.md`: 13 servicios `Healthy` desde un clon limpio; con #21 la imagen de P3 pasa de 9.57 GB a 1.99 GB (antes ~92 min de build). *Reconfirmar en el ensayo de la demo. |
+| NO CUMPLE | M1 Arranque desde el README | Con el stack levantado sobre `3e423c4` (Edith, 1 oct), **Training sale en blanco** con el registro real (0.1.1 sin `archive_sha256`). Además, con el orden del README MLflow no cargaba las 12 corridas. Lo corrigen #23, #25 y #26. |
 | CUMPLE | M2 Release aprobado y versionado | `0.1.3` (`pass`) → `Proyecto2/data/raw.dvc` md5 `ca56420c…` → `p3.data.releases.open_release_archive` (SHA-256 `787742988af1…` y huella `2200274d…`) → `manifest.meta.json` con `dvc_pointer`; cada corrida guarda `release_id`, `release_hash` y `dvc_md5` |
 | CUMPLE | M3 Aislamiento | Recalculado: 0 en las 9 intersecciones (`crop_id`, `source_image_id`, `dup_group_id`); aumentación solo en train (`src/p3/data/transforms.py`); `selection.json` (`6bd9101`, 26 sep) antes de la evaluación (28 sep) |
 | CUMPLE | M4 Modelo recargable | `get-object` de `models/clasificador/1.0.0/model.pt` → SHA-256 `e4acca42…` = registro = `selection.json`; cargado en un proceso nuevo con su mapa de clases y preprocesamiento: `0.1.3:a1057` → person 0.997828 y `0.1.3:a1574` → dog 0.676567, iguales a `predictions_test.csv` |
 
-**Compuerta:** NO ACTIVADA.
+**Compuerta:** ACTIVADA (máximo 60).
 
 ### B. Tabla de calificación
 
@@ -112,10 +114,10 @@ verificación contra el backend real que registra cada fase.
 | 5 / 5 | 1.3 Manifiesto 70/20/10 | — |
 | **13.5 / 14** | **Subtotal Integración y datos** | |
 | 5 / 5 | 2.1 Clasificador entrenado | — |
-| 4 / 4 | 2.2 Minibatches y parámetros | — |
+| 2 / 4 | 2.2 Minibatches y parámetros | Por API el valor inválido se rechaza con 422 (pruebas de `TrainingConfig`). **Por portal no hay evidencia:** Training no carga en este commit. |
 | 4 / 4 | 2.3 Semillas y aumentación | — |
 | 5 / 5 | 2.4 Curvas y early stopping | — |
-| **18 / 18** | **Subtotal Modelo** | |
+| **16 / 18** | **Subtotal Modelo** | |
 | 6 / 6 | 3.1 Diez experimentos | — (12 válidas, tabla abajo) |
 | 5 / 5 | 3.2 Registro en MLflow | — |
 | 3 / 3 | 3.3 Comparación y elección | — |
@@ -127,14 +129,14 @@ verificación contra el backend real que registra cada fase.
 | **17 / 18** | **Subtotal Evaluación** | |
 | 4 / 4 | 5.1 Paquete | — |
 | 4 / 4 | 5.2 S3 real | — (`head-object` y `get-object` de pesos y tarjeta, `VersionId` y SHA-256 local, inferencia en proceso nuevo) |
-| 2 / 2 | 5.3 Registro navegable | — (Models: 1.0.0 y 0.9.0 con run, release y SHA-256; activar cambia el artefacto que carga Inference) |
-| **10 / 10** | **Subtotal S3** | |
-| 4 / 4 | 6.1 Training | — |
-| 3 / 3 | 6.2 Experiments | — |
-| 3 / 3 | 6.3 Evaluation | — (bloqueo 409 antes de la selección, métricas, matriz, ejemplos y exportar CSV) |
-| 3.5 / 4 | 6.4 Models | Falta una **acción de descarga** del modelo; la tarjeta sí se abre. |
-| 4 / 4 | 6.5 Inference | — |
-| **17.5 / 18** | **Subtotal Portal** | |
+| 1 / 2 | 5.3 Registro navegable | `GET /api/p3/models` resuelve 1.0.0 y 0.9.0 con run, release y SHA-256, y las dos versiones dan probabilidades distintas en un venv limpio (`publicacion_s3.md`). **Falta evidencia de que activar desde Models cambia el artefacto que carga Inference.** Probarlo escribe `registry.json` en el bucket de producción: hacerlo una sola vez en el ensayo, volviendo a 1.0.0, y anotarlo. |
+| **9 / 10** | **Subtotal S3** | |
+| 0 / 4 | 6.1 Training | **La página sale en blanco** con el registro real (Edith, stack sobre `3e423c4`). |
+| 0 / 3 | 6.2 Experiments | Sin evidencia con el stack en esta pasada. |
+| 0 / 3 | 6.3 Evaluation | Sin evidencia con el stack en esta pasada (hay pruebas de componente en CI). |
+| 0 / 4 | 6.4 Models | Sin evidencia con el stack en esta pasada. Además falta una **acción de descarga** del modelo. |
+| 0 / 4 | 6.5 Inference | Sin evidencia con el stack en esta pasada (el backend tiene la verificación 145/145 de F4 T24). |
+| **0 / 18** | **Subtotal Portal** | |
 | 4 / 4 | 7.1 Pruebas y TDD | — (dos mutaciones en copia aislada hacen fallar la suite; ver G) |
 | 1.5 / 2 | 7.2 Integración | `tests/test_e2e.py` escribe `registry.json` a mano en vez de usar `p3.registry.publish` y no pasa por la API del portal. |
 | 2 / 2 | 7.3 CI y secretos | — |
@@ -179,18 +181,18 @@ Las 12 corridas válidas (experimento `p3-clasificador`, manifiesto `45600f29…
 ### E. Resultado final
 
 ```text
-Suma de secciones:      97.5 / 100
-Compuerta aplicada:     no
-CALIFICACIÓN FINAL:     97.5
+Suma de secciones:      77 / 100   (solo lo que tiene evidencia)
+Compuerta aplicada:     sí (M1 no cumple)
+CALIFICACIÓN FINAL:     60
 Meta de 85% en test:    alcanzada (0.979310)
-Escala:                 Excelente (90-100)
+Escala:                 Suficiente (60-74)
 ```
 
 ### F. Comentario para el equipo
 
 Aciertos: (1) la cadena release → manifiesto → run → checkpoint → S3 → predicción se sostiene con hashes en cada eslabón y se reproduce desde datos primarios; (2) aislamiento demostrado (0 en las 9 intersecciones) y test abierto una sola vez después de `selection.json`; (3) 12 corridas válidas que varían los 7 parámetros, todas trazables en MLflow.
 
-Pérdidas (2.5 pts): (1) imagen del recorte y clase más confundida en la galería de Evaluation (4.4, −1); (2) acción de descarga en Models (6.4, −0.5); (3) la E2E no usa `p3.registry.publish` (7.2, −0.5); (4) en el portal no se ve que cambiar de release cambie los conteos (1.1, −0.5).
+Pérdidas: (1) **M1: Training en blanco → compuerta, máximo 60** (lo corrigen #23, #25 y #26); (2) **sección 6 sin evidencia con el stack** (−18); (3) 2.2 por portal y 5.3 sin evidencia (−3); (4) imagen del recorte y clase más confundida en Evaluation (4.4, −1); (5) la E2E no usa `p3.registry.publish` (7.2, −0.5); (6) en el portal no se ve que cambiar de release cambie los conteos (1.1, −0.5).
 
 ### G. Anexo de verificación
 
@@ -207,4 +209,8 @@ Pérdidas (2.5 pts): (1) imagen del recorte y clase más confundida en la galer�
 | Mutación: los casi duplicados dejan de agruparse (`split.py`) | 3 pruebas fallan en `tests/test_split.py` |
 | Estado de la copia | mutaciones en una copia aislada de `main`, restauradas y eliminadas; `git status` limpio |
 
-**No verificado en esta pasada:** el arranque con `up.py` y el recorrido de las 5 páginas con el stack (queda para el ensayo de la demo), y el escaneo de secretos sobre el historial (la CI corre gitleaks sobre el árbol).
+**No verificado en esta pasada:** el arranque con `up.py` y el recorrido de las 5 páginas con el stack, y el escaneo de secretos sobre el historial (la CI corre gitleaks sobre el árbol). **Por eso esta pasada no puede dar puntos a M1 ni a la sección 6.**
+
+## Pasada válida (pendiente)
+
+Después de integrar #23, #25 y #26 en `fix/m1-training`, en una copia limpia y **con el stack levantado** siguiendo el README: arranque (M1), las 5 páginas (recargar durante un trabajo, archivo inválido, envío a la cola), el valor inválido por el portal (2.2), y cambiar de versión en Models comprobando el `model_sha256` de una predicción (5.3, una sola escritura en `registry.json` y vuelta a 1.0.0). Solo se puntúa lo que se observe.

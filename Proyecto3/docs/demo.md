@@ -9,11 +9,23 @@ predicción en el portal, con los mismos IDs de punta a punta
 
 ## Antes de empezar (10 min antes, una sola persona)
 
+Mismo orden que el [README](../../README.md), con un perfil de AWS autorizado en `~/.aws`:
+
 ```bash
-cd Proyecto3 && dvc pull data/manifests/m-0.1.3-s42-1.dvc mlflow_snapshot.dvc && cd ..
-python scripts/up.py             # app :8000, MLflow :5000, MinIO, MariaDB, worker, inference
-cd Proyecto1 && npm run up        # cola de anotación en :3000 (tramo 7)
+cd Proyecto2
+python scripts/up.py                                    # primer arranque: app :8000, MLflow :5000, MinIO, MariaDB, worker, inference
+.venv/Scripts/dvc remote modify --local prod profile <perfil>
+.venv/Scripts/dvc pull -r prod data/raw.dvc             # imágenes del release 0.1.3
+cd ../Proyecto3
+../Proyecto2/.venv/Scripts/dvc remote modify --local prod profile <perfil>
+../Proyecto2/.venv/Scripts/dvc pull data/manifests/m-0.1.3-s42-1.dvc mlflow_snapshot.dvc
+cd ../Proyecto2
+PYTHONPATH="../Proyecto3/src;src" .venv/Scripts/python ../Proyecto3/scripts/generate_crops.py --release 0.1.3 --profile <perfil>
+python scripts/up.py                                    # otra vez: carga las 12 corridas en MLflow y reinicia MLflow
+cd ../Proyecto1 && npm run up                           # cola de anotación en :3000 (tramo 7)
 ```
+
+Sin los recortes, el trabajo del tramo 3 falla. Comprobar en `http://localhost:5000` que `p3-clasificador` tiene sus 12 corridas antes de empezar.
 
 - `.env` con `P3_AWS_PROFILE=<perfil>` y `P3_AWS_DIR` apuntando a `~/.aws`, para que `p3-inference` lea el modelo de S3.
 - Pestañas abiertas: portal `http://localhost:8000`, MLflow `http://localhost:5000`, P1 `http://localhost:3000`.
@@ -25,7 +37,7 @@ cd Proyecto1 && npm run up        # cola de anotación en :3000 (tramo 7)
 
 - Portal → **Training** → selector de release: solo aparece lo aprobado. Elegir **0.1.3**.
 - Mostrar la procedencia: huella `2200274d…`, compuerta `pass`, reporte de calidad `4d6e64aa…`.
-- **¿De dónde sale?** `Proyecto2/reports/versions.json` (lo escribe `dq release`). El archivo en S3 se verifica por SHA-256 (`787742988af1…`) y su COCO por la huella de P2 antes de usarlo. 0.1.0 no pasa la compuerta y no aparece. De los aprobados, solo 0.1.3 tiene manifiesto congelado: elegir otro y generar manifiesto responde 409 con el motivo.
+- **¿De dónde sale?** `Proyecto2/reports/versions.json` (lo escribe `dq release`). El archivo en S3 se verifica por SHA-256 (`787742988af1…`) y su COCO por la huella de P2 antes de usarlo. 0.1.0 no pasa la compuerta y no aparece. Los aprobados que no se pueden entrenar aparecen deshabilitados con su motivo (`GET /api/p3/releases`: `trainable` y `blocked_reason`): 0.1.1 "no registra archive_sha256"; 0.1.2, 0.1.4 y 0.1.5 "sin manifiesto congelado". Solo 0.1.3 queda seleccionable.
 
 ### 2. Recortes y manifiesto 70/20/10 — Diego (2 min)
 
@@ -36,7 +48,13 @@ cd Proyecto1 && npm run up        # cola de anotación en :3000 (tramo 7)
 ### 3. Entrenamiento — Edith (3 min)
 
 - En Training, mostrar el formulario (7 parámetros + seed, patience, min_delta) y un valor inválido rechazado antes de crear el trabajo (422).
-- Lanzar un trabajo corto (1 época) y **recargar la página**: el estado, el progreso y los logs siguen ahí.
+- Lanzar el **trabajo corto del README** y **recargar la página**: el estado, el progreso y los logs siguen ahí.
+
+  | experiment | optimizer | batch_size | max_epochs | learning_rate | image_size | hidden_layers | dropout | seed |
+  |---|---|---|---|---|---|---|---|---|
+  | `p3-pruebas` | `adamw` | 64 | 1 | 0.001 | 64 | 128 | 0.2 | 42 |
+
+  En CPU tarda ~30 s (medido por Edith: 28 s). La corrida queda en `p3-pruebas`; `p3-clasificador` conserva sus 12 corridas.
 - **¿De dónde sale?** El worker lee el manifiesto congelado por su id y solo acepta los de `p3.data.frozen`. Cada corrida registra en MLflow el commit, el manifiesto, el release y el entorno.
 
 ### 4. Experimentos y selección — Edith (2 min)
@@ -71,7 +89,7 @@ cd Proyecto1 && npm run up        # cola de anotación en :3000 (tramo 7)
 | ¿Cómo saben que no hay fuga entre train y test? | Diego | Se reparte por grupo de casi duplicados (pHash de P2), no por recorte; `check_manifest` y la prueba confirman 0 en las 9 intersecciones. |
 | ¿Por qué no eligieron por test? | Edith | El test se abrió una sola vez, después de fijar `selection.json`; la API de evaluación responde 409 hasta que la selección está cerrada. |
 | ¿La predicción sale del modelo o de reglas? | Andrés | Cambiar de versión cambia las probabilidades; 145/145 coinciden con la evaluación offline del mismo archivo. |
-| ¿Qué pasa si falta la credencial de AWS? | Diego | Models responde 503 con qué configurar; Inference responde 409; nada da 500. |
+| ¿Qué pasa si falta la credencial de AWS? | Diego | Models e Inference responden 503 con qué configurar (#17, #20); nada da 500. |
 
 ## Ensayo cronometrado
 
