@@ -22,8 +22,6 @@ import {
 import { launchBlockReason } from '../lib/training-config';
 
 const SPLITS: SplitName[] = ['train', 'val', 'test'];
-/** Semilla por defecto del manifiesto (contrato §3: seed por defecto 42). */
-const SEED = 42;
 /** Dónde se recuerda el trabajo en curso para sobrevivir a un recargado. */
 const JOB_STORAGE_KEY = 'p3.training.jobId';
 
@@ -35,6 +33,8 @@ function totalPorClase(counts: ManifestCreated['counts'], className: string): nu
 export default function Training() {
   const [releases, setReleases] = useState<P3ReleaseSummary[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Manifiesto congelado elegido del release (F12): su semilla genera el split.
+  const [manifestId, setManifestId] = useState<string | null>(null);
   const [provenance, setProvenance] = useState<P3ReleaseDetail | null>(null);
   const [manifest, setManifest] = useState<ManifestCreated | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -91,11 +91,12 @@ export default function Training() {
   }, [selectedId]);
 
   async function generarManifiesto() {
-    if (!selectedId) return;
+    const chosen = selected?.manifests.find((m) => m.manifest_id === manifestId);
+    if (!selectedId || !chosen) return;
     setGenerating(true);
     setError(null);
     try {
-      setManifest(await api.p3.createManifest(selectedId, SEED));
+      setManifest(await api.p3.createManifest(selectedId, chosen.seed));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error desconocido');
     } finally {
@@ -120,7 +121,20 @@ export default function Training() {
     setSelectedId(releaseId);
   }
 
+  function onSelectManifest(id: string) {
+    // Otro manifiesto es otro split: descarta el generado y el trabajo en curso.
+    clearJob();
+    setManifest(null);
+    setManifestId(id);
+  }
+
   const selected = releases?.find((r) => r.release_id === selectedId) ?? null;
+  const manifestOptions = selected?.manifests ?? [];
+
+  // Al cambiar de release, el manifiesto por defecto es el primero (el del barrido).
+  useEffect(() => {
+    setManifestId(selected?.manifests[0]?.manifest_id ?? null);
+  }, [selected]);
   const classNames = manifest ? Object.keys(manifest.counts.crops.train) : [];
   // Motivo por el que no se puede lanzar aún (compuerta o manifiesto sin congelar).
   const blockReason = selected
@@ -164,6 +178,24 @@ export default function Training() {
                   ))}
                 </select>
               </label>
+
+              {manifestOptions.length > 0 && (
+                <label className="row" style={{ gap: 10 }}>
+                  <span>Manifiesto</span>
+                  <select
+                    className="campo"
+                    value={manifestId ?? ''}
+                    onChange={(e) => onSelectManifest(e.target.value)}
+                  >
+                    {manifestOptions.map((m) => (
+                      <option key={m.manifest_id} value={m.manifest_id}>
+                        {m.manifest_id} · seed {m.seed}
+                        {m.sweep ? ' · barrido' : ' · solo p3-pruebas'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
 
               {selected && (
                 <>
