@@ -147,6 +147,15 @@ def compose(*args: str, check: bool = True) -> int:
     return result.returncode
 
 
+def snapshot_restored() -> bool:
+    """`mlflow-restore` acaba de cargar el snapshot (ver `p3/mlflow_restore.py`)."""
+    files = [flag for name in COMPOSE_FILES for flag in ("-f", name)]
+    command = ["docker", "compose", *files, "logs", "--no-log-prefix", "mlflow-restore"]
+    result = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
+    lines = result.stdout.strip().splitlines()
+    return bool(lines) and lines[-1].startswith("Snapshot restaurado")
+
+
 def wait_for_health(url: str, timeout_seconds: int = 90) -> dict[str, object] | None:
     """Consulta `/health` hasta que responda 200 o se agote el tiempo."""
     deadline = time.monotonic() + timeout_seconds
@@ -224,6 +233,13 @@ def main() -> None:
     if not args.no_build:
         up_args.insert(1, "--build")
     compose(*up_args)
+
+    # Si `dvc pull` llego despues del primer `up.py`, MLflow ya estaba corriendo
+    # con su base vacia: el restore la reemplaza, pero el servidor no la relee
+    # hasta reiniciarse.
+    if snapshot_restored():
+        log("Snapshot de MLflow restaurado: reiniciando MLflow para cargar las corridas...")
+        compose("restart", "mlflow")
 
     log("Verificando /health (MariaDB + MinIO desde la app)...")
     health = wait_for_health(f"http://localhost:{app_port}/health")
