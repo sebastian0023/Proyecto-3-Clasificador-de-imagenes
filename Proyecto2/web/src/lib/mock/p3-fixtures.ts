@@ -38,6 +38,8 @@ export const releaseSummary: P3ReleaseSummary = {
   counts: { images: 2045, annotations: 2120, categories: 5 },
   storage_uri: 's3://dataset-quality-releases-750702272375/0.1.3/dataset.tar.zst',
   published_in: ['dev', 'prod'],
+  trainable: true,
+  blocked_reason: null,
 };
 
 export const releaseDetail: P3ReleaseDetail = {
@@ -45,6 +47,57 @@ export const releaseDetail: P3ReleaseDetail = {
   quality_report_fingerprint: '4d6e64aa13c6f66b15801811c4bb84ebc265b07f538ae27982f79628b170631a',
   archive_sha256: '787742988af1df41d9a58573b81b5c9b4fe7ab24a647b25f2e71d3eb323838b5',
 };
+
+// La lista REAL que devuelve la API (`GET /releases?approved=true`), en orden:
+// 0.1.1 (sin archive_sha256 -> no entrenable), 0.1.2 (no publicado en prod -> no
+// entrenable), 0.1.3 (entrenable). Es el dato de la prueba de regresión M1.
+const release011: P3ReleaseSummary = {
+  release_id: '0.1.1',
+  dataset_fingerprint: '295f4257328ee413ca6d7b8e9446bae50f7db80b2777bb8b93eb3f1dbc3dbdf2',
+  quality_status: 'pass',
+  created_at: '2026-09-15T01:14:15Z',
+  counts: { images: 838, annotations: 887, categories: 5 },
+  storage_uri: null,
+  published_in: ['dev'],
+  trainable: false,
+  blocked_reason: 'no registra archive_sha256',
+};
+
+const release012: P3ReleaseSummary = {
+  release_id: '0.1.2',
+  dataset_fingerprint: '2200274dc6bbe6d0bc516e0136ae68651c0040bc6cab64a871794924fa39aa84',
+  quality_status: 'pass',
+  created_at: '2026-09-18T04:14:00Z',
+  counts: { images: 2045, annotations: 2120, categories: 5 },
+  storage_uri: null,
+  published_in: ['dev'],
+  trainable: false,
+  blocked_reason: 'sin manifiesto congelado',
+};
+
+/** Lo que responde `GET /releases?approved=true`, en orden. */
+export const releaseSummaries: P3ReleaseSummary[] = [release011, release012, releaseSummary];
+
+// Hashes reales de `Proyecto2/reports/versions.json`.
+const releaseDetailsById: Record<string, P3ReleaseDetail> = {
+  '0.1.1': {
+    ...release011,
+    quality_report_fingerprint:
+      'd2cd9e197f4e8870d99aa923d849e220cb5b5c4317ef31db25695d7533af3432',
+    archive_sha256: null,
+  },
+  '0.1.2': {
+    ...release012,
+    quality_report_fingerprint:
+      '512fc1c3460ef905b3d73270ce206679c5ac0aab243cf1236ab8fff5c208fe09',
+    archive_sha256: '130998b0c1303a35634417aad5376bd691e34657ced4d55351d547b680912f60',
+  },
+  '0.1.3': releaseDetail,
+};
+
+export function releaseDetailFor(releaseId: string): P3ReleaseDetail | undefined {
+  return releaseDetailsById[releaseId];
+}
 
 export const manifestMeta: ManifestMeta = {
   schema_version: 1,
@@ -57,7 +110,8 @@ export const manifestMeta: ManifestMeta = {
     dataset_fingerprint: RELEASE_HASH,
     quality_status: 'pass',
     quality_report_fingerprint: releaseDetail.quality_report_fingerprint,
-    archive_sha256: releaseDetail.archive_sha256,
+    // El manifiesto deriva de un release empaquetado: su archive siempre existe.
+    archive_sha256: releaseDetail.archive_sha256 as string,
     p2_splits_fingerprint: '9a87e0de3fb3069f06686065f149d64787593c04d90265a3e0f667a170d66279',
     dvc_pointer: {
       path: 'Proyecto2/data/raw.dvc',

@@ -52,7 +52,15 @@ export default function Training() {
       .then((res) => {
         if (cancelled) return;
         setReleases(res.releases);
-        setSelectedId((prev) => prev ?? res.releases[0]?.release_id ?? null);
+        // Selecciona el primer release ENTRENABLE (no el primero a secas): los
+        // no entrenables quedan deshabilitados en el selector.
+        setSelectedId(
+          (prev) =>
+            prev ??
+            res.releases.find((r) => r.trainable)?.release_id ??
+            res.releases[0]?.release_id ??
+            null,
+        );
       })
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Error desconocido');
@@ -149,8 +157,9 @@ export default function Training() {
                   onChange={(e) => onSelectRelease(e.target.value)}
                 >
                   {releases.map((r) => (
-                    <option key={r.release_id} value={r.release_id}>
+                    <option key={r.release_id} value={r.release_id} disabled={!r.trainable}>
                       v{r.release_id} · {r.quality_status}
+                      {!r.trainable && r.blocked_reason ? ` — ${r.blocked_reason}` : ''}
                     </option>
                   ))}
                 </select>
@@ -190,7 +199,9 @@ export default function Training() {
               <div className="row">
                 <span>Archivo (sha256)</span>
                 <span className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  {provenance.archive_sha256.slice(0, 16)}…
+                  {provenance.archive_sha256
+                    ? `${provenance.archive_sha256.slice(0, 16)}…`
+                    : 'Sin hash registrado'}
                 </span>
               </div>
               <div className="row">

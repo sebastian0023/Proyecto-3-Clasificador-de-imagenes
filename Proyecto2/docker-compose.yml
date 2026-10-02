@@ -207,13 +207,10 @@ services:
     volumes:
       - mlflow_data:/mlflow
       - ../Proyecto3/mlflow_snapshot:/snapshot:ro
-    command:
-      - sh
-      - -c
-      - |
-        if [ -f /mlflow/mlflow.db ]; then echo "MLflow ya tiene datos; no se restaura."
-        elif [ -f /snapshot/mlflow.db ]; then cp -a /snapshot/. /mlflow/ && echo "Snapshot restaurado."
-        else echo "Sin snapshot: MLflow arranca vacio."; fi
+      # Restaura tambien si MLflow ya creo una base SIN corridas (up.py antes de
+      # dvc pull); nunca pisa una base con corridas (p3/mlflow_restore.py).
+      - ../Proyecto3/src/p3/mlflow_restore.py:/restore.py:ro
+    command: ["python3", "/restore.py", "/snapshot", "/mlflow"]
 
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.16.1

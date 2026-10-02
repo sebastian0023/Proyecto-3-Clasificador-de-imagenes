@@ -282,12 +282,17 @@ export interface P3ReleaseSummary {
   /** `null` si el release no está publicado en el remote `prod`. */
   storage_uri: string | null;
   published_in: string[];
+  /** Si se puede lanzar un entrenamiento sobre este release. */
+  trainable: boolean;
+  /** Motivo por el que NO es entrenable (p. ej. sin paquete en prod), o `null`. */
+  blocked_reason: string | null;
 }
 
 /** Procedencia completa de un release aprobado (`GET /releases/{id}`). */
 export interface P3ReleaseDetail extends P3ReleaseSummary {
   quality_report_fingerprint: string;
-  archive_sha256: string;
+  /** `null` si el release no tiene paquete verificable publicado. */
+  archive_sha256: string | null;
 }
 
 export interface P3ReleasesResponse {
@@ -390,10 +395,15 @@ export interface JobCreated {
   status: JobStatus;
 }
 
+/** Experimentos de MLflow válidos (el worker acepta solo estos dos). */
+export type ExperimentName = 'p3-clasificador' | 'p3-pruebas';
+
 export interface CreateTrainJobRequest {
   kind: 'train';
   manifest_id: string;
   config: TrainingConfig;
+  /** Experimento de MLflow donde registrar el barrido. */
+  experiment: ExperimentName;
 }
 
 // --- corridas de MLflow (contrato §4) ---------------------------------------

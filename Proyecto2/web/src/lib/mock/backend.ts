@@ -21,7 +21,8 @@ import {
   evaluationExamples,
   manifestMeta,
   modelVersions,
-  releaseDetail,
+  releaseDetailFor,
+  releaseSummaries,
   releaseSummary,
   runDetail,
   runs,
@@ -167,13 +168,12 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
 
   // Releases
   if (pathname === '/api/p3/releases' && method === 'GET') {
-    return json({ releases: [releaseSummary] });
+    return json({ releases: releaseSummaries });
   }
   const releaseMatch = pathname.match(/^\/api\/p3\/releases\/(.+)$/);
   if (releaseMatch && method === 'GET') {
-    return releaseMatch[1] === releaseSummary.release_id
-      ? json(releaseDetail)
-      : detail(`El release ${releaseMatch[1]} no existe`, 404);
+    const found = releaseDetailFor(releaseMatch[1] ?? '');
+    return found ? json(found) : detail(`El release ${releaseMatch[1]} no existe`, 404);
   }
 
   // Manifiestos
