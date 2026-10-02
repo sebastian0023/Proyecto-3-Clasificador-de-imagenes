@@ -118,3 +118,58 @@ def test_el_cliente_de_p1_sube_al_endpoint_de_carga_con_el_campo_file() -> None:
     assert P1.content_type.startswith("multipart/form-data; boundary=")
     assert b'name="file"; filename="foto.png"' in P1.body
     assert b"\x89PNG bytes" in P1.body
+
+
+# --- Cola de P1 caida o con error: 502 en espanol con que hacer (F13, 6.5) ---------------
+
+
+def _puerto_libre() -> int:
+    import socket
+
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+def test_si_p1_no_responde_el_error_dice_como_levantarlo() -> None:
+    from p3.inference.annotation import AnnotationUnavailableError, P1Annotation
+
+    url = f"http://127.0.0.1:{_puerto_libre()}"
+    with pytest.raises(AnnotationUnavailableError) as raised:
+        P1Annotation(url, timeout=2).upload("foto.png", "image/png", b"x")
+    message = str(raised.value)
+    assert "no responde" in message
+    assert url in message
+    assert "P3_ANNOTATION_URL" in message
+    assert "cd Proyecto1" in message and "npm run dev:api" in message
+
+
+class P1ConError(http.server.BaseHTTPRequestHandler):
+    def do_POST(self) -> None:
+        self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        payload = b'{"error": "boom"}'
+        self.send_response(500)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def log_message(self, *args: object) -> None:
+        del args
+
+
+def test_si_p1_rechaza_la_imagen_el_error_trae_su_codigo() -> None:
+    from p3.inference.annotation import AnnotationUnavailableError, P1Annotation
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), P1ConError)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        with pytest.raises(AnnotationUnavailableError) as raised:
+            P1Annotation(f"http://127.0.0.1:{server.server_port}").upload(
+                "foto.png", "image/png", b"x"
+            )
+    finally:
+        server.shutdown()
+    message = str(raised.value)
+    assert "respondio 500" in message
+    assert "npm run dev:api" not in message  # P1 si esta arriba: no hay que levantarlo
