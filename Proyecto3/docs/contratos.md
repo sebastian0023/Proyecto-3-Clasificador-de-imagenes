@@ -152,7 +152,7 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 | `GET /api/p3/models` | versiones de modelo | **implementado** (F7) |
 | `GET /api/p3/models/{version}/card` | tarjeta de una versión | **implementado** (F7) |
 | `POST /api/p3/models/{version}/activate` | elige la versión para inferencia | **implementado** (F7) |
-| `GET /api/p3/models/{version}/download` | descarga el `model.pt` publicado (C2) | contrato (F13) |
+| `GET /api/p3/models/{version}/download` | descarga el `model.pt` publicado (C2) | **implementado** (F13) |
 | `POST /api/p3/inference` | predice una imagen | **implementado** (F4 T24); página en F9 |
 | `POST /api/p3/inference/{inference_id}/send-to-annotation` | crea el elemento en la cola de anotación | **implementado** (F4 T24); página en F9 |
 
