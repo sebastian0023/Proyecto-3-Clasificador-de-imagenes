@@ -160,12 +160,18 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 Lee `Proyecto2/reports/versions.json`. Con `approved=true` solo devuelve `quality_status: "pass"`.
 
 ```json
-{"releases": [{"release_id": "0.1.3", "dataset_fingerprint": "2200274d…", "quality_status": "pass", "created_at": "2026-09-18T04:17:13Z", "counts": {"images": 2045, "annotations": 2120, "categories": 5}, "storage_uri": "s3://dataset-quality-releases-750702272375/0.1.3/dataset.tar.zst", "published_in": ["dev", "prod"]}]}
+{"releases": [{"release_id": "0.1.3", "dataset_fingerprint": "2200274d…", "quality_status": "pass", "created_at": "2026-09-18T04:17:13Z", "counts": {"images": 2045, "annotations": 2120, "categories": 5}, "storage_uri": "s3://dataset-quality-releases-750702272375/0.1.3/dataset.tar.zst", "published_in": ["dev", "prod"], "trainable": true, "blocked_reason": null}]}
 ```
 
 - **Cambio F2 T05 (aditivo):** campo `published_in`, con los remotes donde P2 publicó el release.
 - `storage_uri` se arma con el bucket configurado (`P3_RELEASES_BUCKET`) si el release está en el remote `prod` (`P3_RELEASES_REMOTE`); si no, es `null`: el release solo existe en el MinIO local de quien lo generó y no se recupera desde un clon limpio. No se usa la URI que guarda P2, porque la del 0.1.3 apunta al bucket de la cuenta anterior ([decisiones.md §1](decisiones.md#1-release-dvc-de-origen)). El registro de P2 es la fuente de verdad: el archivo del 0.1.2 existe en el bucket del equipo, pero `versions.json` no registra esa publicación en `prod`, así que su `storage_uri` sale `null` (observación de la revisión del PR #3; el release elegido es el 0.1.3).
 - Sin `approved` (o con `approved=false`) devuelve todos, incluidos los de compuerta fallida.
+- **Cambio aditivo (1 oct):** `trainable` (bool) y `blocked_reason` (string o `null`) por release, para que Training deshabilite los que no se pueden entrenar y muestre el motivo. Las reglas se aplican en este orden:
+  1. sin `archive_sha256` → `false`, `"no registra archive_sha256"` (su archivo no se puede verificar);
+  2. sin manifiesto congelado con seed 42 en `p3.data.frozen` → `false`, `"sin manifiesto congelado"` (el worker lo rechazaría);
+  3. si no → `true`, `null`.
+
+  Con el registro actual: 0.1.1 `"no registra archive_sha256"`; 0.1.2, 0.1.4 y 0.1.5 `"sin manifiesto congelado"`; **0.1.3 `true`**. Congelar un manifiesto nuevo (por PR) habilita su release sin tocar esta API. `GET /api/p3/releases/{release_id}` trae los mismos dos campos.
 
 ### `GET /api/p3/releases/{release_id}` (nuevo en F2 T05)
 
