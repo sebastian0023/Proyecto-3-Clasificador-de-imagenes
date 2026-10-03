@@ -113,8 +113,13 @@ export default function Models() {
                   <td className="mono" title={m.run_id}>
                     {short(m.run_id)}
                   </td>
-                  <td className="mono" style={{ fontSize: 11 }} title={m.s3.sha256}>
-                    {short(m.s3.sha256)}
+                  <td className="mono" style={{ fontSize: 11 }}>
+                    <div title={m.s3.sha256}>{short(m.s3.sha256)}</div>
+                    {m.s3.exists && (
+                      <a href={api.p3.modelWeightsUrl(m.version)} download>
+                        Descargar pesos
+                      </a>
+                    )}
                   </td>
                   <td>
                     <Pill kind={m.s3.exists ? 'pass' : 'fail'}>

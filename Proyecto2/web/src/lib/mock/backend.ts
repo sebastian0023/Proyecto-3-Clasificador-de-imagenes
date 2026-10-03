@@ -285,6 +285,21 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
         })
       : detail(`La version ${cardMatch[1]} no esta publicada`, 404);
   }
+  const weightsMatch = pathname.match(/^\/api\/p3\/models\/(.+)\/weights$/);
+  if (weightsMatch && method === 'GET') {
+    const entry = modelVersions.find((m) => m.version === weightsMatch[1]);
+    if (!entry) return detail(`La version ${weightsMatch[1]} no esta publicada`, 404);
+    if (!entry.s3.exists)
+      return detail(`s3://.../${entry.version}/model.pt no existe: no hay pesos que descargar`, 409);
+    const bytes = new TextEncoder().encode(`mock model.pt ${entry.version}`);
+    return new Response(bytes, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="p3-clasificador-${entry.version}.pt"`,
+      },
+    });
+  }
   const activateMatch = pathname.match(/^\/api\/p3\/models\/(.+)\/activate$/);
   if (activateMatch && method === 'POST') {
     const entry = modelVersions.find((m) => m.version === activateMatch[1]);
