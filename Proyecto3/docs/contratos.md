@@ -285,7 +285,7 @@ El PNG de un recorte del **test del manifiesto de la corrida elegida**, para las
 - **422** si el id no tiene la forma de un recorte (impide salir de la carpeta).
 - **503** con el comando que falta si el manifiesto no está descargado (`dvc pull`) o faltan los recortes (`scripts/generate_crops.py`).
 
-Lee `manifest.jsonl` (`P3_MANIFESTS_DIR`) y `crops.jsonl` con los PNG (`P3_CROPS_DIR`); en Docker, `Proyecto3/data/crops` se monta en solo lectura en `/opt/p3/crops`.
+Lee `manifest.jsonl` (`P3_MANIFESTS_DIR`), verifica que sea el congelado (**409** si sus bytes no coinciden), y lee `crops.jsonl` con los PNG (`P3_CROPS_DIR`). En Docker la app monta `Proyecto3/data` en solo lectura en `/opt/p3/data`, como el worker.
 
 - **Cambios F6 (aditivos):** `f1` en `per_class`, `passes_threshold`, `threshold`, `majority_class`, `most_confused`, `evaluated_at` y `examples_uri`. `predictions_uri` apunta a `GET /api/p3/evaluation/predictions`, que devuelve el CSV de abajo (`text/csv`), no un `predictions.jsonl`.
 - `GET /api/p3/evaluation/examples`: `{"correct": [...], "errors": [...]}`. Cada ejemplo trae `crop_id`, `crop_path` (relativo a `data/crops/<release>/`), `true`, `predicted` y `probability`; todos son de `test`.
