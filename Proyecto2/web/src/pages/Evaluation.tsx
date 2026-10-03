@@ -272,6 +272,16 @@ export default function Evaluation() {
               </a>
             }
           >
+            {report.most_confused != null ? (
+              <p className="hint" style={{ marginTop: 0 }}>
+                {`Par más confundido: ${report.most_confused.true} → ${report.most_confused.predicted} ` +
+                  `(${report.most_confused.count} ${report.most_confused.count === 1 ? 'caso' : 'casos'})`}
+              </p>
+            ) : (
+              <p className="hint" style={{ marginTop: 0 }}>
+                No hubo errores en el test.
+              </p>
+            )}
             {examples ? (
               <div className="cols-2">
                 <div>

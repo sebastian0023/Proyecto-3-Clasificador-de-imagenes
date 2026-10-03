@@ -35,4 +35,12 @@ describe('Evaluation — miniaturas (4.4)', () => {
     fireEvent.error(imgs[0]!);
     expect(await screen.findByText(/sin recorte/i)).toBeInTheDocument();
   });
+
+  it('muestra la clase más confundida con su conteo (most_confused)', async () => {
+    render(<Evaluation />);
+    // Lo que daría el backend con esta matriz (errores=1, desempate alfabético): cat → dog.
+    expect(
+      await screen.findByText(/par más confundido: cat → dog.*1 caso/i),
+    ).toBeInTheDocument();
+  });
 });

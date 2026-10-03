@@ -492,6 +492,13 @@ export interface ConfusionMatrix {
   rows_true_cols_pred: number[][];
 }
 
+/** El par de clases que más se confunde en el test (`null` si no hubo errores). */
+export interface MostConfused {
+  true: string;
+  predicted: string;
+  count: number;
+}
+
 /** Evaluación única en el test congelado. `GET /evaluation` da 409 sin selección. */
 export interface EvaluationReport {
   run_id: string;
@@ -505,7 +512,7 @@ export interface EvaluationReport {
   confusion_matrix: ConfusionMatrix;
   majority_baseline: number;
   majority_class: string;
-  most_confused?: unknown;
+  most_confused?: MostConfused | null;
   evaluated_at: string;
   predictions_uri: string;
   examples_uri: string;
