@@ -144,6 +144,29 @@ def test_solo_lee_la_corrida_seleccionada() -> None:
     assert body["accuracy"] != 0.1
 
 
+PNG = bytes.fromhex("89504e470d0a1a0a")  # firma PNG; basta para la prueba
+
+
+def evaluated_with_crops() -> FakeMlflow:
+    fake = evaluated()
+    # El recorte del ejemplo 0.1.3:a1 se guardo como artefacto con nombre seguro.
+    fake.artifacts[("r10", "evaluation/crops/0.1.3_a1.png")] = PNG
+    return fake
+
+
+def test_miniatura_del_recorte_se_sirve_desde_mlflow() -> None:
+    response = client_with(evaluated_with_crops()).get("/api/p3/evaluation/crops/0.1.3:a1")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/png")
+    assert response.content == PNG
+
+
+def test_recorte_ausente_responde_404_y_no_503() -> None:
+    # Sin el artefacto del recorte, 404 (la UI muestra el aviso), no 500/503.
+    response = client_with(evaluated()).get("/api/p3/evaluation/crops/0.1.3:a1")
+    assert response.status_code == 404
+
+
 def test_predicciones_por_muestra_en_csv_para_auditar() -> None:
     response = client_with(evaluated()).get("/api/p3/evaluation/predictions")
     assert response.status_code == 200
