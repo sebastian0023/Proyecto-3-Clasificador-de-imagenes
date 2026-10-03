@@ -8,6 +8,7 @@ deja en estado `pending` para anotarla. Solo libreria estandar.
 from __future__ import annotations
 
 import json
+import urllib.error
 import urllib.request
 import uuid
 from typing import Any, Protocol
@@ -19,6 +20,14 @@ class AnnotationQueue(Protocol):
 
 class AnnotationUnavailableError(RuntimeError):
     """P1 no responde o rechazo la imagen (HTTP 502)."""
+
+
+# Arranque ligero de P1 (README, "Cola de anotacion"): sin el seeder, que descarga
+# el dataset de Hugging Face.
+START_P1 = (
+    "cd Proyecto1 && npm install && cp -n .env.example .env && docker compose up -d --wait "
+    "&& npm run db:migrate && npm run dev:api"
+)
 
 
 class P1Annotation:
@@ -47,5 +56,13 @@ class P1Annotation:
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 return json.loads(response.read())["data"]
+        except urllib.error.HTTPError as error:
+            raise AnnotationUnavailableError(
+                f"P1 respondio {error.code} al subir la imagen a su cola de anotacion "
+                f"({self.base_url}/api/images/upload); revisa los logs de su API."
+            ) from error
         except OSError as error:
-            raise AnnotationUnavailableError(f"P1 no acepto la imagen: {error}") from error
+            raise AnnotationUnavailableError(
+                f"P1 (la cola de anotacion) no responde en {self.base_url} "
+                f"(P3_ANNOTATION_URL): {error}. Levantalo con: {START_P1}"
+            ) from error
