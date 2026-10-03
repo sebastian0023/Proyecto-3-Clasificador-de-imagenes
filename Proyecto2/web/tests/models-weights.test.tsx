@@ -21,7 +21,8 @@ describe('Models — descargar pesos (6.4)', () => {
 
     const links = await screen.findAllByRole('link', { name: /descargar pesos/i });
     const href = (l: HTMLElement) => l.getAttribute('href') ?? '';
-    expect(links.some((l) => href(l).includes('/api/p3/models/1.0.0/weights'))).toBe(true);
+    // C2 (#28): la descarga es /download, con el SHA-256 verificado por el backend.
+    expect(links.some((l) => href(l).includes('/api/p3/models/1.0.0/download'))).toBe(true);
 
     // Su SHA-256 (fixture: "10" + ceros) está a la vista.
     expect(await screen.findByText(/100000000000/)).toBeInTheDocument();
