@@ -275,7 +275,9 @@ export const evaluation: EvaluationReport = {
   },
   majority_baseline: 0.3333,
   majority_class: 'cat',
-  most_confused: { true: 'person', predicted: 'cat', count: 1 },
+  // Con esta matriz todos los errores valen 1; el backend desempata alfabético
+  // por (real, predicho), así que el par más confundido es cat → dog (no person → cat).
+  most_confused: { true: 'cat', predicted: 'dog', count: 1 },
   evaluated_at: '2026-09-29T19:00:00Z',
   predictions_uri: '/api/p3/evaluation/predictions',
   examples_uri: '/api/p3/evaluation/examples',

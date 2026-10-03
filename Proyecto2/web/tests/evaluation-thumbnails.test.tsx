@@ -38,9 +38,9 @@ describe('Evaluation — miniaturas (4.4)', () => {
 
   it('muestra la clase más confundida con su conteo (most_confused)', async () => {
     render(<Evaluation />);
-    // Fixture real: person → cat, 1 caso.
+    // Lo que daría el backend con esta matriz (errores=1, desempate alfabético): cat → dog.
     expect(
-      await screen.findByText(/par más confundido: person → cat.*1 caso/i),
+      await screen.findByText(/par más confundido: cat → dog.*1 caso/i),
     ).toBeInTheDocument();
   });
 });
