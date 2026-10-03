@@ -22,6 +22,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Response
 
+from p3.eval.crop_names import safe_crop_name
 from p3.train.selection import EXPERIMENT, MlflowDep, RunSummary, get_mlflow
 
 router = APIRouter(prefix="/api/p3/evaluation", tags=["p3-evaluation"])
@@ -69,6 +70,10 @@ def _no_evaluation(run: RunSummary) -> HTTPException:
     )
 
 
+def _no_crop(crop_id: str) -> HTTPException:
+    return HTTPException(404, f"El recorte {crop_id} no está en la evaluación.")
+
+
 @router.get("")
 def read_evaluation(mlflow: MlflowDep) -> dict[str, Any]:
     run = _selected(mlflow)
@@ -106,3 +111,26 @@ def read_predictions(mlflow: MlflowDep) -> Response:
 def read_examples(mlflow: MlflowDep) -> dict[str, Any]:
     run = _selected(mlflow)
     return json.loads(_artifact(mlflow, run, "errors.json"))
+
+
+@router.get("/crops/{crop_id:path}")
+def read_crop(crop_id: str, mlflow: MlflowDep) -> Response:
+    """Miniatura PNG de un recorte de ejemplo (4.4).
+
+    Sale de los artefactos `evaluation/crops/` de la corrida seleccionada. Si el
+    recorte no está logueado responde 404 (la UI muestra un aviso en lugar de
+    una imagen rota), nunca 500.
+    """
+    run = _selected(mlflow)
+    name = f"crops/{safe_crop_name(crop_id)}.png"
+    try:
+        data = mlflow.artifact_bytes(run, f"{FOLDER}/{name}")
+    except FileNotFoundError as error:
+        raise _no_crop(crop_id) from error
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            raise _no_crop(crop_id) from error
+        raise _mlflow_down(error) from error
+    except OSError as error:
+        raise _mlflow_down(error) from error
+    return Response(data, media_type="image/png")
