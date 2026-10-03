@@ -6,6 +6,7 @@ la reenvia. Contra el almacen falso de `test_publish`: nada toca S3 real.
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 
 import pytest
@@ -87,6 +88,72 @@ def test_no_se_activa_un_objeto_inexistente_409(store) -> None:
     assert read_registry(store, bucket=BUCKET, prefix=PREFIX).active_version == "1.0.0"
 
 
+# --- Descarga de pesos (contrato C2, F13; criterio 6.4) ----------------------------------
+
+
+def test_descarga_sirve_el_model_pt_publicado_con_su_sha256(store, checkpoints) -> None:
+    response = client_with(store).get("/api/p3/models/1.0.0/download")
+    assert response.status_code == 200
+    assert response.content == checkpoints[0]
+    assert response.headers["content-type"] == "application/octet-stream"
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="clasificador-1.0.0-model.pt"'
+    )
+    registered = next(
+        e
+        for e in read_registry(store, bucket=BUCKET, prefix=PREFIX).versions
+        if e.version == "1.0.0"
+    ).sha256
+    assert response.headers["x-model-sha256"] == registered
+    assert hashlib.sha256(response.content).hexdigest() == registered
+
+
+def test_descarga_de_una_version_anterior(store, checkpoints) -> None:
+    response = client_with(store).get("/api/p3/models/0.9.0/download")
+    assert response.status_code == 200
+    assert response.content == checkpoints[1]
+
+
+def test_descarga_de_version_no_publicada_404(store) -> None:
+    assert client_with(store).get("/api/p3/models/7.7.7/download").status_code == 404
+
+
+def test_descarga_de_objeto_inexistente_409(store) -> None:
+    store.delete(BUCKET, f"{PREFIX}/0.9.0/model.pt")
+    response = client_with(store).get("/api/p3/models/0.9.0/download")
+    assert response.status_code == 409
+    assert "no existe" in response.json()["detail"]
+
+
+def test_descarga_con_sha256_distinto_409_y_no_sirve_bytes(store) -> None:
+    store.corrupt_on_get.add(f"{PREFIX}/1.0.0/model.pt")
+    response = client_with(store).get("/api/p3/models/1.0.0/download")
+    assert response.status_code == 409
+    assert "SHA-256" in response.json()["detail"]
+    assert "content-disposition" not in response.headers
+
+
+def test_descarga_si_la_version_actual_no_es_la_registrada_409(store) -> None:
+    from p3.registry.s3 import VersionMismatchError
+
+    class Sobrescrito:
+        def head(self, bucket: str, key: str) -> dict[str, Any] | None:
+            return store.head(bucket, key)
+
+        def get_bytes(self, bucket: str, key: str, version_id: str | None = None) -> bytes:
+            if key.endswith("model.pt"):
+                raise VersionMismatchError(f"s3://{bucket}/{key} no es la version registrada")
+            return store.get_bytes(bucket, key, version_id)
+
+    response = client_with(Sobrescrito()).get("/api/p3/models/1.0.0/download")
+    assert response.status_code == 409
+
+
+@pytest.mark.parametrize("version", ["1.0", "../1.0.0", "1.0.0;rm"])
+def test_descarga_con_version_invalida_no_llega_a_s3(store, version: str) -> None:
+    assert client_with(store).get(f"/api/p3/models/{version}/download").status_code in (404, 422)
+
+
 @pytest.mark.parametrize("version", ["1.0", "../1.0.0", "1.0.0;rm"])
 def test_version_con_formato_invalido_422(store, version: str) -> None:
     response = client_with(store).post(f"/api/p3/models/{version}/activate")
@@ -130,6 +197,7 @@ def s3_errors() -> list[Exception]:
         ("GET", "/api/p3/models"),
         ("GET", "/api/p3/models/1.0.0/card"),
         ("POST", "/api/p3/models/1.0.0/activate"),
+        ("GET", "/api/p3/models/1.0.0/download"),
     ],
 )
 def test_s3_no_disponible_responde_503_con_motivo(error, method: str, path: str) -> None:

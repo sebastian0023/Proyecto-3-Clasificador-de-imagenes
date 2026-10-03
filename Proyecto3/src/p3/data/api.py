@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from p3.data import releases
-from p3.data.frozen import FROZEN_MANIFESTS, TRAINING_SEED, frozen_for
+from p3.data.frozen import FROZEN_MANIFESTS, SWEEP_MANIFEST, manifests_for
 from p3.data.releases import Release, ReleaseCounts
 
 router = APIRouter(prefix="/api/p3/releases", tags=["p3-releases"])
@@ -52,14 +52,21 @@ RemoteDep = Annotated[str, Depends(get_releases_remote)]
 def training_block(release: Release, frozen: Mapping[str, str]) -> str | None:
     """Por que no se puede entrenar con este release, o `None` si se puede.
 
-    Sin `archive_sha256` su archivo no se puede verificar; sin manifiesto
-    congelado con la semilla de entrenamiento el worker lo rechaza.
+    Sin `archive_sha256` su archivo no se puede verificar; sin ningun manifiesto
+    congelado el worker lo rechaza.
     """
     if not release.archive_sha256:
         return "no registra archive_sha256"
-    if frozen_for(release.release_id, TRAINING_SEED, frozen) is None:
+    if not manifests_for(release.release_id, frozen):
         return "sin manifiesto congelado"
     return None
+
+
+class ManifestRef(BaseModel):
+    manifest_id: str
+    seed: int
+    # El del barrido de `p3-clasificador`; los demas se entrenan en `p3-pruebas`.
+    sweep: bool
 
 
 class ReleaseView(BaseModel):
@@ -75,6 +82,8 @@ class ReleaseView(BaseModel):
     # Training deshabilita los que no se pueden entrenar y muestra el motivo.
     trainable: bool
     blocked_reason: str | None
+    # Manifiestos congelados con los que se puede entrenar (vacia si no es entrenable).
+    manifests: list[ManifestRef]
 
     @classmethod
     def build(
@@ -82,6 +91,7 @@ class ReleaseView(BaseModel):
     ) -> ReleaseView:
         in_bucket = remote in release.published_in
         blocked = training_block(release, frozen)
+        trainable_with = manifests_for(release.release_id, frozen) if blocked is None else []
         return cls(
             release_id=release.release_id,
             dataset_fingerprint=release.dataset_fingerprint,
@@ -92,6 +102,10 @@ class ReleaseView(BaseModel):
             published_in=list(release.published_in),
             trainable=blocked is None,
             blocked_reason=blocked,
+            manifests=[
+                ManifestRef(manifest_id=m, seed=seed, sweep=m == SWEEP_MANIFEST)
+                for m, seed in trainable_with
+            ],
         )
 
 

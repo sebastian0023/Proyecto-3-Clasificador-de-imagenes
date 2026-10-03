@@ -15,7 +15,8 @@ afterEach(() => {
 describe('Página Training — release y manifiesto', () => {
   it('lista el release aprobado 0.1.3 con su huella de dataset', async () => {
     render(<Training />);
-    expect(await screen.findByText(/0\.1\.3/)).toBeInTheDocument();
+    // La opción del release (el manifiesto `m-0.1.3-…` también contiene "0.1.3").
+    expect(await screen.findByRole('option', { name: /^v0\.1\.3/ })).toBeInTheDocument();
     expect(await screen.findByText(/2200274d/)).toBeInTheDocument();
   });
 

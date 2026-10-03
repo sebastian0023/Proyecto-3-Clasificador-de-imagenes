@@ -161,6 +161,8 @@ export interface Config {
   app_env: string;
   database: { host: string; port: number; name: string; user: string };
   object_storage: { endpoint_url: string; buckets: string[] };
+  /** URL de la UI de MLflow alcanzable desde el navegador (vacía si no se configuró). */
+  mlflow_url?: string;
 }
 
 // --- quality.yaml -----------------------------------------------------------
@@ -286,6 +288,16 @@ export interface P3ReleaseSummary {
   trainable: boolean;
   /** Motivo por el que NO es entrenable (p. ej. sin paquete en prod), o `null`. */
   blocked_reason: string | null;
+  /** Manifiestos congelados con los que se puede entrenar, el del barrido primero. */
+  manifests: P3ManifestRef[];
+}
+
+/** Un manifiesto congelado de un release (`GET /releases`, F12). */
+export interface P3ManifestRef {
+  manifest_id: string;
+  seed: number;
+  /** El del barrido de `p3-clasificador`; los demás se entrenan en `p3-pruebas`. */
+  sweep: boolean;
 }
 
 /** Procedencia completa de un release aprobado (`GET /releases/{id}`). */
@@ -480,6 +492,13 @@ export interface ConfusionMatrix {
   rows_true_cols_pred: number[][];
 }
 
+/** El par de clases que más se confunde en el test (`null` si no hubo errores). */
+export interface MostConfused {
+  true: string;
+  predicted: string;
+  count: number;
+}
+
 /** Evaluación única en el test congelado. `GET /evaluation` da 409 sin selección. */
 export interface EvaluationReport {
   run_id: string;
@@ -493,7 +512,7 @@ export interface EvaluationReport {
   confusion_matrix: ConfusionMatrix;
   majority_baseline: number;
   majority_class: string;
-  most_confused?: unknown;
+  most_confused?: MostConfused | null;
   evaluated_at: string;
   predictions_uri: string;
   examples_uri: string;
@@ -677,6 +696,9 @@ export const api = {
     evaluation: () => request<EvaluationReport>('/api/p3/evaluation'),
     /** Aciertos y errores de ejemplo del test (para la galería). */
     evaluationExamples: () => request<EvaluationExamples>('/api/p3/evaluation/examples'),
+    /** URL de la miniatura de un recorte. No es una petición: la resuelve el <img>. */
+    evaluationCropUrl: (cropId: string) =>
+      `/api/p3/evaluation/crops/${encodeURIComponent(cropId)}`,
     /** URL de descarga del CSV de predicciones (no es una petición: la usa un <a>). */
     evaluationPredictionsUrl: () => '/api/p3/evaluation/predictions',
     /** Versiones de modelo publicadas y la versión activa. */
@@ -684,6 +706,9 @@ export const api = {
     /** URL de la tarjeta (MODEL_CARD.md) de una versión. La usa un `<a>`. */
     modelCardUrl: (version: string) =>
       `/api/p3/models/${encodeURIComponent(version)}/card`,
+    /** URL de descarga de los pesos (`model.pt`), contrato C2: el backend verifica el SHA-256. */
+    modelWeightsUrl: (version: string) =>
+      `/api/p3/models/${encodeURIComponent(version)}/download`,
     /** Marca una versión como activa para inferencia. 404/409/422 si no procede. */
     activateModel: (version: string) =>
       request<{ active_version: string }>(

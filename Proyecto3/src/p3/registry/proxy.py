@@ -29,12 +29,22 @@ def get_upstream() -> str:
 UpstreamDep = Annotated[str, Depends(get_upstream)]
 
 
+# Encabezados del servicio que llegan al navegador: los de la descarga (contrato C2).
+FORWARDED_HEADERS = ("Content-Disposition", "X-Model-SHA256")
+
+
 def send(method: str, url: str, body: bytes, headers: dict[str, str]) -> Response:
     request = urllib.request.Request(url, data=body or None, headers=headers, method=method)
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as answer:
+            kept = {
+                name: answer.headers[name] for name in FORWARDED_HEADERS if answer.headers[name]
+            }
             return Response(
-                answer.read(), answer.status, media_type=answer.headers.get_content_type()
+                answer.read(),
+                answer.status,
+                headers=kept,
+                media_type=answer.headers.get_content_type(),
             )
     except urllib.error.HTTPError as error:
         return Response(error.read(), error.code, media_type=error.headers.get_content_type())
@@ -59,6 +69,11 @@ async def read_models(upstream: UpstreamDep) -> Response:
 @router.get("/{version}/card")
 async def read_card(version: Version, upstream: UpstreamDep) -> Response:
     return await _forward("GET", upstream, f"/api/p3/models/{version}/card")
+
+
+@router.get("/{version}/download")
+async def download(version: Version, upstream: UpstreamDep) -> Response:
+    return await _forward("GET", upstream, f"/api/p3/models/{version}/download")
 
 
 @router.post("/{version}/activate")

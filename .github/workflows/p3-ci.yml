@@ -9,6 +9,9 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  # El recorrido E2E real (job `p3-e2e-portal`) necesita Docker + MinIO + MLflow y
+  # es lento: se dispara a mano. El resto de jobs corre en cada push/PR.
+  workflow_dispatch:
 
 jobs:
   p3-python:
@@ -73,6 +76,56 @@ jobs:
       # activa solo cuando esas fases estén en main.
       - name: E2E de integración
         run: pytest tests/test_e2e.py -v -s
+
+  # Recorrido E2E con infraestructura REAL (MinIO + MLflow + p3-inference), manual
+  # (`workflow_dispatch`): levanta el stack de prueba y corre `scripts/e2e_portal.py`.
+  # El job en memoria `p3-e2e` sigue cubriendo cada push. Usa el fixture del repo,
+  # así que no necesita `dvc pull`.
+  p3-e2e-portal:
+    name: P3 · E2E portal (manual, infra real)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Proyecto3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: Proyecto3/requirements.lock.txt
+
+      - name: Instalar dependencias (fijadas)
+        run: pip install -r requirements.lock.txt
+
+      - name: Instalar el paquete
+        run: pip install --no-deps -e .
+
+      # `--wait` bloquea hasta que MinIO/MLflow/p3-inference estén healthy y
+      # minio-init haya terminado; si algo no arranca, el job falla aquí.
+      - name: Levantar el stack de prueba (MinIO + MLflow + p3-inference)
+        run: docker compose -f docker-compose.e2e.yml up -d --build --wait
+
+      - name: Recorrido E2E del portal (imprime la cadena de IDs)
+        env:
+          P3_S3_ENDPOINT: http://localhost:9100
+          P3_S3_ACCESS_KEY: minioadmin
+          P3_S3_SECRET_KEY: minioadmin
+          P3_MODELS_BUCKET: p3-e2e
+          P3_MODELS_PREFIX: models/clasificador
+          P3_MLFLOW_URL: http://localhost:5500
+          P3_INFERENCE_API: http://localhost:8010
+        run: python scripts/e2e_portal.py
+
+      - name: Logs del stack si algo falló
+        if: failure()
+        run: docker compose -f docker-compose.e2e.yml logs --no-color --tail 200
+
+      - name: Apagar el stack
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down -v
 
   secrets:
     name: gitleaks (secretos)

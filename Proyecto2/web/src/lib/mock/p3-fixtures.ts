@@ -12,6 +12,7 @@
 import type {
   EvaluationExamples,
   EvaluationReport,
+  ManifestCreated,
   ManifestMeta,
   ModelEntry,
   P3ReleaseDetail,
@@ -40,6 +41,10 @@ export const releaseSummary: P3ReleaseSummary = {
   published_in: ['dev', 'prod'],
   trainable: true,
   blocked_reason: null,
+  manifests: [
+    { manifest_id: 'm-0.1.3-s42-1', seed: 42, sweep: true },
+    { manifest_id: 'm-0.1.3-s7-1', seed: 7, sweep: false },
+  ],
 };
 
 export const releaseDetail: P3ReleaseDetail = {
@@ -61,6 +66,7 @@ const release011: P3ReleaseSummary = {
   published_in: ['dev'],
   trainable: false,
   blocked_reason: 'no registra archive_sha256',
+  manifests: [],
 };
 
 const release012: P3ReleaseSummary = {
@@ -73,6 +79,7 @@ const release012: P3ReleaseSummary = {
   published_in: ['dev'],
   trainable: false,
   blocked_reason: 'sin manifiesto congelado',
+  manifests: [],
 };
 
 /** Lo que responde `GET /releases?approved=true`, en orden. */
@@ -268,7 +275,9 @@ export const evaluation: EvaluationReport = {
   },
   majority_baseline: 0.3333,
   majority_class: 'cat',
-  most_confused: { true: 'person', predicted: 'cat', count: 1 },
+  // Con esta matriz todos los errores valen 1; el backend desempata alfabético
+  // por (real, predicho), así que el par más confundido es cat → dog (no person → cat).
+  most_confused: { true: 'cat', predicted: 'dog', count: 1 },
   evaluated_at: '2026-09-29T19:00:00Z',
   predictions_uri: '/api/p3/evaluation/predictions',
   examples_uri: '/api/p3/evaluation/examples',
@@ -318,3 +327,22 @@ export const modelVersions: ModelEntry[] = [
     card_uri: `${BUCKET_URI}/0.8.0/MODEL_CARD.md`,
   },
 ];
+
+/** Segundo manifiesto congelado de 0.1.3 (seed 7), con sus conteos reales (F12). */
+export const MANIFEST_ID_SEED_7 = 'm-0.1.3-s7-1';
+export const manifestSeed7: ManifestCreated = {
+  manifest_id: MANIFEST_ID_SEED_7,
+  manifest_hash: 'c7319207ae60b636e8ef45cd0a6f904e3c2b07755e9536fd2eded140a5089f01',
+  counts: {
+    crops: {
+      train: { cat: 230, dog: 275, person: 515 },
+      val: { cat: 67, dog: 69, person: 155 },
+      test: { cat: 32, dog: 35, person: 81 },
+    },
+    originals: {
+      train: { cat: 219, dog: 252, person: 304 },
+      val: { cat: 63, dog: 63, person: 93 },
+      test: { cat: 30, dog: 33, person: 44 },
+    },
+  },
+};
