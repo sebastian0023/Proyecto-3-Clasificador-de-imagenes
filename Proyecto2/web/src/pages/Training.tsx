@@ -330,7 +330,11 @@ export default function Training() {
               {blockReason ?? 'Genera el manifiesto 70/20/10 antes de lanzar un entrenamiento.'}
             </p>
           ) : (
-            <TrainingConfigForm manifestId={manifest.manifest_id} onLaunched={handleLaunched} />
+            <TrainingConfigForm
+              manifestId={manifest.manifest_id}
+              sweep={manifestOptions.find((m) => m.manifest_id === manifest.manifest_id)?.sweep ?? true}
+              onLaunched={handleLaunched}
+            />
           )}
         </Card>
       ) : null}
