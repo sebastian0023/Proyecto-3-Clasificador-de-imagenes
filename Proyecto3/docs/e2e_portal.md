@@ -70,5 +70,5 @@ docker compose -f docker-compose.e2e.yml down -v
 ## Notas
 
 - **Se niega contra AWS:** sin `P3_S3_ENDPOINT`, o con un endpoint no local, o con el bucket de producción, el script sale con código 2 y un mensaje, sin tocar nada. La guarda tiene prueba unitaria (`tests/test_e2e_portal_guard.py`), que sí corre en CI.
-- **Miniaturas de la evaluación (4.4):** este recorrido genera una evaluación fresca cuyos recortes de ejemplo quedan en `evaluation/crops/`. En la corrida real ya publicada, para que `GET /api/p3/evaluation/crops/{crop_id}` sirva las miniaturas hay que re-loguear esa carpeta a MLflow (`scripts/log_evaluation_mlflow.py`, que ahora sube `evaluation/crops/`); mientras tanto el portal muestra el aviso «sin recorte».
-- **Descargar pesos (6.4):** la ruta `GET /api/p3/models/{version}/weights` sirve el `model.pt` real. En producción, el de `1.0.0` tiene SHA-256 `e4acca42…` (ver [publicacion_s3.md](publicacion_s3.md)); descárgalo y verifica con `sha256sum`.
+- **Miniaturas de la evaluación (4.4):** las sirve `GET /api/p3/evaluation/crops/{crop_id}` (contrato C1, #29) desde los recortes en disco (`P3_CROPS_DIR`), solo para el test del manifiesto elegido. No se re-registra nada en la corrida evaluada: la evaluación de test se hace una sola vez (4.1).
+- **Descargar pesos (6.4):** `GET /api/p3/models/{version}/download` (contrato C2, #28) sirve el `model.pt` solo si su SHA-256 es el registrado, con `X-Model-SHA256`. En producción, el de `1.0.0` tiene SHA-256 `e4acca42…` (ver [publicacion_s3.md](publicacion_s3.md)); descárgalo y verifica con `sha256sum`.
