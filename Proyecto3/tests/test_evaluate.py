@@ -251,6 +251,26 @@ def test_errores_y_aciertos_de_ejemplo_solo_de_test(workspace, evaluated) -> Non
     )
 
 
+def test_recortes_de_ejemplo_se_escriben_para_las_miniaturas(workspace, evaluated) -> None:
+    # Los PNG de los ejemplos de errors.json quedan en out_dir/crops/ con el
+    # nombre seguro, para que log_evaluation_mlflow los suba y la API los sirva (4.4).
+    from p3.eval.crop_names import safe_crop_name
+
+    errors = json.loads((evaluated["out"] / "errors.json").read_text(encoding="utf-8"))
+    ejemplos = errors["correct"] + errors["errors"]
+    assert ejemplos  # el fixture produce ejemplos
+    index = {
+        json.loads(line)["crop_id"]: workspace["crops_dir"] / json.loads(line)["crop_path"]
+        for line in (workspace["crops_dir"] / "crops.jsonl").read_text().splitlines()
+    }
+    crops_out = evaluated["out"] / "crops"
+    for e in ejemplos:
+        png = crops_out / f"{safe_crop_name(e['crop_id'])}.png"
+        assert png.is_file(), e["crop_id"]
+        assert png.read_bytes() == index[e["crop_id"]].read_bytes()
+        assert png.read_bytes()[:8] == bytes.fromhex("89504e470d0a1a0a")  # firma PNG
+
+
 # --- Una sola corrida ------------------------------------------------------------------------
 
 
@@ -259,18 +279,24 @@ def test_segunda_evaluacion_se_rechaza(workspace, evaluated) -> None:
         _run(workspace, evaluated["out"])
 
 
+def _files(directory: Path) -> dict[str, bytes]:
+    # Solo archivos: out_dir tiene ademas el subdirectorio crops/ (miniaturas).
+    return {p.name: p.read_bytes() for p in directory.iterdir() if p.is_file()}
+
+
 def test_auditoria_recalcula_y_no_sobrescribe(workspace, evaluated) -> None:
-    antes = {p.name: p.read_bytes() for p in evaluated["out"].iterdir()}
+    antes = _files(evaluated["out"])
     resultado = _run(workspace, evaluated["out"], audit=True)
     assert resultado["audit_matches"] is True
-    assert {p.name: p.read_bytes() for p in evaluated["out"].iterdir()} == antes
+    assert _files(evaluated["out"]) == antes
 
 
 def test_auditoria_detecta_un_csv_alterado(workspace, evaluated, tmp_path: Path) -> None:
     copia = tmp_path / "alterado"
     copia.mkdir()
     for p in evaluated["out"].iterdir():
-        (copia / p.name).write_bytes(p.read_bytes())
+        if p.is_file():
+            (copia / p.name).write_bytes(p.read_bytes())
     csv_path = copia / "predictions_test.csv"
     lineas = csv_path.read_text(encoding="utf-8").splitlines()
     campos = lineas[1].split(",")
