@@ -170,10 +170,11 @@ Lee `Proyecto2/reports/versions.json`. Con `approved=true` solo devuelve `qualit
 - Sin `approved` (o con `approved=false`) devuelve todos, incluidos los de compuerta fallida.
 - **Cambio aditivo (1 oct):** `trainable` (bool) y `blocked_reason` (string o `null`) por release, para que Training deshabilite los que no se pueden entrenar y muestre el motivo. Las reglas se aplican en este orden:
   1. sin `archive_sha256` → `false`, `"no registra archive_sha256"` (su archivo no se puede verificar);
-  2. sin manifiesto congelado con seed 42 en `p3.data.frozen` → `false`, `"sin manifiesto congelado"` (el worker lo rechazaría);
+  2. sin ningún manifiesto congelado en `p3.data.frozen` → `false`, `"sin manifiesto congelado"` (el worker lo rechazaría);
   3. si no → `true`, `null`.
 
   Con el registro actual: 0.1.1 `"no registra archive_sha256"`; 0.1.2, 0.1.4 y 0.1.5 `"sin manifiesto congelado"`; **0.1.3 `true`**. Congelar un manifiesto nuevo (por PR) habilita su release sin tocar esta API. `GET /api/p3/releases/{release_id}` trae los mismos dos campos.
+- **Cambio aditivo (F12, 1.1):** `manifests`, la lista de manifiestos congelados con los que se puede entrenar el release (vacía si no es entrenable), con el del barrido primero: `[{"manifest_id": "m-0.1.3-s42-1", "seed": 42, "sweep": true}, {"manifest_id": "m-0.1.3-s7-1", "seed": 7, "sweep": false}]`. Training la usa como selector de manifiesto y genera el elegido con `POST /api/p3/manifests` y su `seed`. Antes la regla 2 pedía un congelado con seed 42; ahora basta cualquiera.
 
 ### `GET /api/p3/releases/{release_id}` (nuevo en F2 T05)
 
@@ -202,6 +203,8 @@ Leer el COCO del release (`p3.data.releases.open_release_archive`) exige que el 
 **200** con el contenido de `manifest.meta.json`, o **404**.
 
 ### `POST /api/p3/training/jobs`
+
+**Regla del barrido (F12):** con `experiment: "p3-clasificador"` solo se acepta el manifiesto del barrido (`p3.data.frozen.SWEEP_MANIFEST`, `m-0.1.3-s42-1`); otro manifiesto congelado responde **409** y pide `p3-pruebas`. Así las 12 corridas de `/api/p3/runs` y la selección no se mezclan con corridas de otro split.
 
 ```json
 // request (F4)

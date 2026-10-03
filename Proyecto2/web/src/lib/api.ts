@@ -286,6 +286,16 @@ export interface P3ReleaseSummary {
   trainable: boolean;
   /** Motivo por el que NO es entrenable (p. ej. sin paquete en prod), o `null`. */
   blocked_reason: string | null;
+  /** Manifiestos congelados con los que se puede entrenar, el del barrido primero. */
+  manifests: P3ManifestRef[];
+}
+
+/** Un manifiesto congelado de un release (`GET /releases`, F12). */
+export interface P3ManifestRef {
+  manifest_id: string;
+  seed: number;
+  /** El del barrido de `p3-clasificador`; los demás se entrenan en `p3-pruebas`. */
+  sweep: boolean;
 }
 
 /** Procedencia completa de un release aprobado (`GET /releases/{id}`). */

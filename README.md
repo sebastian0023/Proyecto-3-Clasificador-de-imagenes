@@ -58,10 +58,10 @@ Desde `Proyecto3/`, con el mismo perfil de AWS (usa el `dvc` del venv de Proyect
 
 ```bash
 ../Proyecto2/.venv/Scripts/dvc remote modify --local prod profile <tu-perfil>
-../Proyecto2/.venv/Scripts/dvc pull data/manifests/m-0.1.3-s42-1.dvc mlflow_snapshot.dvc
+../Proyecto2/.venv/Scripts/dvc pull data/manifests/m-0.1.3-s42-1.dvc data/manifests/m-0.1.3-s7-1.dvc mlflow_snapshot.dvc
 ```
 
-Nombra los dos punteros: un `dvc pull` sin argumentos trae el snapshot de MLflow pero no el manifiesto congelado.
+Nombra los tres punteros: un `dvc pull` sin argumentos trae el snapshot de MLflow pero no los manifiestos congelados. `m-0.1.3-s42-1` es el del barrido; `m-0.1.3-s7-1` (mismo release, seed 7) sirve para ver en Training que otro manifiesto cambia el split, y se entrena solo en `p3-pruebas`. Sin él, elegirlo en Training responde 503 con el comando que falta.
 
 Los recortes se regeneran desde el release (idénticos byte a byte, ver `Proyecto3/docs/verificacion_recortes.md`). Desde `Proyecto2/`:
 

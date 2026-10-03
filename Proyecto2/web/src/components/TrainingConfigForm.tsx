@@ -19,6 +19,8 @@ import {
 
 interface Props {
   manifestId: string;
+  /** Si es el manifiesto del barrido; los demás solo se entrenan en `p3-pruebas` (F12). */
+  sweep?: boolean;
   onLaunched: (jobId: string) => void;
 }
 
@@ -27,10 +29,12 @@ function numValue(value: number): string {
   return Number.isNaN(value) ? '' : String(value);
 }
 
-export default function TrainingConfigForm({ manifestId, onLaunched }: Props) {
+export default function TrainingConfigForm({ manifestId, sweep = true, onLaunched }: Props) {
   const [config, setConfig] = useState<TrainingConfig>(DEFAULT_TRAINING_CONFIG);
   const [hiddenText, setHiddenText] = useState(DEFAULT_TRAINING_CONFIG.hidden_layers.join(', '));
   const [experiment, setExperiment] = useState<ExperimentName>('p3-pruebas');
+  // Fuera del barrido el worker rechaza `p3-clasificador` (409): no se ofrece.
+  const effectiveExperiment: ExperimentName = sweep ? experiment : 'p3-pruebas';
   const [serverError, setServerError] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
 
@@ -60,7 +64,7 @@ export default function TrainingConfigForm({ manifestId, onLaunched }: Props) {
         kind: 'train',
         manifest_id: manifestId,
         config,
-        experiment,
+        experiment: effectiveExperiment,
       });
       onLaunched(job_id);
     } catch (err: unknown) {
@@ -79,11 +83,13 @@ export default function TrainingConfigForm({ manifestId, onLaunched }: Props) {
         <span>experiment</span>
         <select
           className="campo"
-          value={experiment}
+          value={effectiveExperiment}
           onChange={(e) => setExperiment(e.target.value as ExperimentName)}
         >
           <option value="p3-pruebas">p3-pruebas</option>
-          <option value="p3-clasificador">p3-clasificador</option>
+          <option value="p3-clasificador" disabled={!sweep}>
+            p3-clasificador
+          </option>
         </select>
       </label>
 
