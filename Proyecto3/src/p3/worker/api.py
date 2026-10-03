@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from p3.data.frozen import FROZEN_MANIFESTS
+from p3.data.frozen import FROZEN_MANIFESTS, SWEEP_MANIFEST
 from p3.train.config import TrainingConfig
 from p3.worker import jobs
 
@@ -110,6 +110,19 @@ def create_job(body: JobCreate, session: SessionDep) -> JobCreated:
             detail=(
                 f"El manifiesto {body.manifest_id} no esta congelado; "
                 f"solo se entrena con {sorted(FROZEN_MANIFESTS)}."
+            ),
+        )
+    if (
+        isinstance(body, TrainJobCreate)
+        and body.experiment == "p3-clasificador"
+        and body.manifest_id != SWEEP_MANIFEST
+    ):
+        # Las corridas de `p3-clasificador` (/runs y la seleccion) son del barrido.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"El experimento p3-clasificador es el barrido sobre {SWEEP_MANIFEST}; "
+                f"entrena {body.manifest_id} en p3-pruebas."
             ),
         )
     job = jobs.enqueue(session, kind=body.kind, config=body.stored_config())

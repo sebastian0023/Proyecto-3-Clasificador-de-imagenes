@@ -139,7 +139,7 @@ def test_train_valido_se_encola_con_la_config_efectiva(
 def test_train_con_manifiesto_no_congelado_da_409_y_no_crea_trabajo(
     client: TestClient, session_factory: sessionmaker[Session]
 ) -> None:
-    body = {"kind": "train", "manifest_id": "m-0.1.3-s7-1", "config": CONFIG_VALIDA}
+    body = {"kind": "train", "manifest_id": "m-0.1.3-s99-1", "config": CONFIG_VALIDA}
 
     response = client.post("/api/p3/training/jobs", json=body)
 
@@ -171,3 +171,25 @@ def test_train_puede_ir_al_experimento_de_pruebas_y_nada_mas(
 
     otro = client.post("/api/p3/training/jobs", json={**base, "experiment": "cualquiera"})
     assert otro.status_code == 422
+
+
+def test_otro_manifiesto_congelado_no_entra_al_experimento_del_barrido(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    # Las 12 corridas de `p3-clasificador` son del manifiesto del barrido; un trabajo
+    # con otro manifiesto ensuciaria /runs y la seleccion (F12, 1.1).
+    base = {"kind": "train", "manifest_id": "m-0.1.3-s7-1", "config": CONFIG_VALIDA}
+
+    response = client.post("/api/p3/training/jobs", json={**base, "experiment": "p3-clasificador"})
+    assert response.status_code == 409
+    assert "p3-pruebas" in response.json()["detail"]
+    assert _cuantos_trabajos(session_factory) == 0
+
+    ok = client.post("/api/p3/training/jobs", json={**base, "experiment": "p3-pruebas"})
+    assert ok.status_code == 202
+
+
+def test_sin_experimento_otro_manifiesto_tambien_se_rechaza(client: TestClient) -> None:
+    # El experimento por defecto es `p3-clasificador`.
+    body = {"kind": "train", "manifest_id": "m-0.1.3-s7-1", "config": CONFIG_VALIDA}
+    assert client.post("/api/p3/training/jobs", json=body).status_code == 409

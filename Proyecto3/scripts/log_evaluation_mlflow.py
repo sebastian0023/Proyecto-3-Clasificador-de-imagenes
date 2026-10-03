@@ -69,12 +69,6 @@ def main() -> None:
         client.set_tag(run_id, key, value)
     for name in ARTIFACTS:
         client.log_artifact(run_id, str(folder / name), artifact_path="evaluation")
-    # Miniaturas de los ejemplos (4.4): la carpeta crops/ se sube entera para que
-    # la API (`GET /evaluation/crops/{crop_id}`) las sirva. Puede no existir en
-    # evaluaciones viejas: entonces la UI muestra el aviso "sin recorte".
-    crops_dir = folder / "crops"
-    if crops_dir.is_dir():
-        client.log_artifacts(run_id, str(crops_dir), artifact_path="evaluation/crops")
 
     logged = client.get_run(run_id)
     print(f"run {run_id}: status {logged.info.status}")

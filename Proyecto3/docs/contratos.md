@@ -149,9 +149,11 @@ Todos los campos son obligatorios, salvo los que tienen valor por defecto. Un va
 | `GET /api/p3/evaluation` | evaluación final en test | **implementado** (F6) |
 | `GET /api/p3/evaluation/predictions` | `predictions_test.csv` por muestra | **implementado** (F6) |
 | `GET /api/p3/evaluation/examples` | aciertos y errores de test (`errors.json`) | **implementado** (F6) |
+| `GET /api/p3/evaluation/crops/{crop_id}` | PNG de un recorte del test elegido | **implementado** (F12, contrato C1) |
 | `GET /api/p3/models` | versiones de modelo | **implementado** (F7) |
 | `GET /api/p3/models/{version}/card` | tarjeta de una versión | **implementado** (F7) |
 | `POST /api/p3/models/{version}/activate` | elige la versión para inferencia | **implementado** (F7) |
+| `GET /api/p3/models/{version}/download` | descarga el `model.pt` publicado (C2) | **implementado** (F13) |
 | `POST /api/p3/inference` | predice una imagen | **implementado** (F4 T24); página en F9 |
 | `POST /api/p3/inference/{inference_id}/send-to-annotation` | crea el elemento en la cola de anotación | **implementado** (F4 T24); página en F9 |
 
@@ -168,10 +170,11 @@ Lee `Proyecto2/reports/versions.json`. Con `approved=true` solo devuelve `qualit
 - Sin `approved` (o con `approved=false`) devuelve todos, incluidos los de compuerta fallida.
 - **Cambio aditivo (1 oct):** `trainable` (bool) y `blocked_reason` (string o `null`) por release, para que Training deshabilite los que no se pueden entrenar y muestre el motivo. Las reglas se aplican en este orden:
   1. sin `archive_sha256` → `false`, `"no registra archive_sha256"` (su archivo no se puede verificar);
-  2. sin manifiesto congelado con seed 42 en `p3.data.frozen` → `false`, `"sin manifiesto congelado"` (el worker lo rechazaría);
+  2. sin ningún manifiesto congelado en `p3.data.frozen` → `false`, `"sin manifiesto congelado"` (el worker lo rechazaría);
   3. si no → `true`, `null`.
 
   Con el registro actual: 0.1.1 `"no registra archive_sha256"`; 0.1.2, 0.1.4 y 0.1.5 `"sin manifiesto congelado"`; **0.1.3 `true`**. Congelar un manifiesto nuevo (por PR) habilita su release sin tocar esta API. `GET /api/p3/releases/{release_id}` trae los mismos dos campos.
+- **Cambio aditivo (F12, 1.1):** `manifests`, la lista de manifiestos congelados con los que se puede entrenar el release (vacía si no es entrenable), con el del barrido primero: `[{"manifest_id": "m-0.1.3-s42-1", "seed": 42, "sweep": true}, {"manifest_id": "m-0.1.3-s7-1", "seed": 7, "sweep": false}]`. Training la usa como selector de manifiesto y genera el elegido con `POST /api/p3/manifests` y su `seed`. Antes la regla 2 pedía un congelado con seed 42; ahora basta cualquiera.
 
 ### `GET /api/p3/releases/{release_id}` (nuevo en F2 T05)
 
@@ -200,6 +203,8 @@ Leer el COCO del release (`p3.data.releases.open_release_archive`) exige que el 
 **200** con el contenido de `manifest.meta.json`, o **404**.
 
 ### `POST /api/p3/training/jobs`
+
+**Regla del barrido (F12):** con `experiment: "p3-clasificador"` solo se acepta el manifiesto del barrido (`p3.data.frozen.SWEEP_MANIFEST`, `m-0.1.3-s42-1`); otro manifiesto congelado responde **409** y pide `p3-pruebas`. Así las 12 corridas de `/api/p3/runs` y la selección no se mezclan con corridas de otro split.
 
 ```json
 // request (F4)
@@ -272,6 +277,20 @@ Lee de MLflow la corrida `selected=true` y sus artefactos `evaluation/` (los reg
 {"run_id": "9f9b62c2…", "manifest_id": "m-0.1.3-s42-1", "test_size": 145, "accuracy": 0.9793103448275862, "passes_threshold": true, "threshold": 0.85, "f1_macro": 0.9743519475145314, "per_class": [{"class": "cat", "precision": 1.0, "recall": 0.9375, "f1": 0.9677, "support": 32}], "confusion_matrix": {"labels": ["cat", "dog", "person"], "rows_true_cols_pred": [[30, 2, 0], [0, 38, 0], [0, 1, 74]]}, "majority_baseline": 0.5172413793103449, "majority_class": "person", "most_confused": {"true": "cat", "predicted": "dog", "count": 2}, "evaluated_at": "2026-09-28T02:25:07Z", "predictions_uri": "/api/p3/evaluation/predictions", "examples_uri": "/api/p3/evaluation/examples"}
 ```
 
+**Cambio aditivo (F12, contrato C1):** la respuesta suma la procedencia de las cifras (6.3): `release_id` (tag de la corrida), `manifest_hash` (de `metrics.json`), `checkpoint_sha256` y `selected_at` (de la selección guardada en la corrida). Con los datos reales: `"release_id": "0.1.3"`, `"manifest_hash": "45600f29…"`, `"checkpoint_sha256": "e4acca42…"`, `"selected_at": "2026-09-27T03:39:45Z"`.
+
+### `GET /api/p3/evaluation/crops/{crop_id}` (F12, contrato C1)
+
+El PNG de un recorte del **test del manifiesto de la corrida elegida**, para las miniaturas de la galería de Evaluation (4.4). `crop_id` es `<release_id>:a<annotation_id>` (por ejemplo `0.1.3:a1574`), igual que en `errors.json` y `predictions_test.csv`.
+
+- **200** `image/png`.
+- **409** `{"detail": "La selección del modelo no está cerrada"}` antes de cerrar la selección, como el resto de la evaluación.
+- **404** si el recorte no es del test de ese manifiesto (de train o val, o de otro manifiesto).
+- **422** si el id no tiene la forma de un recorte (impide salir de la carpeta).
+- **503** con el comando que falta si el manifiesto no está descargado (`dvc pull`) o faltan los recortes (`scripts/generate_crops.py`).
+
+Lee `manifest.jsonl` (`P3_MANIFESTS_DIR`), verifica que sea el congelado (**409** si sus bytes no coinciden), y lee `crops.jsonl` con los PNG (`P3_CROPS_DIR`). En Docker la app monta `Proyecto3/data` en solo lectura en `/opt/p3/data`, como el worker.
+
 - **Cambios F6 (aditivos):** `f1` en `per_class`, `passes_threshold`, `threshold`, `majority_class`, `most_confused`, `evaluated_at` y `examples_uri`. `predictions_uri` apunta a `GET /api/p3/evaluation/predictions`, que devuelve el CSV de abajo (`text/csv`), no un `predictions.jsonl`.
 - `GET /api/p3/evaluation/examples`: `{"correct": [...], "errors": [...]}`. Cada ejemplo trae `crop_id`, `crop_path` (relativo a `data/crops/<release>/`), `true`, `predicted` y `probability`; todos son de `test`.
 
@@ -300,6 +319,18 @@ Viven en el servicio `p3-inference` (el que tiene el perfil de AWS); la app de P
 - `POST /api/p3/models/{version}/activate`: **200** con la misma forma que `GET /api/p3/models` (antes decía `{"active_version": …}`; ahora devuelve también la lista); **404** si la versión no está publicada; **409** si el objeto de S3 no existe o su SHA-256 no coincide; **422** si `version` no es semántica.
 - `registry.json` lo escribe `p3.registry.publish` con, por versión, además de los campos de la sección 6: `release_id`, `card_key` y `files` (SHA-256 y `s3_version_id` de cada archivo del paquete).
 
+### `GET /api/p3/models/{version}/download` (C2, F13: Edith → Andrés)
+
+Descarga los pesos publicados de una versión para la acción «Descargar pesos» de Models (criterio 6.4). Lo atiende `p3-inference` y el portal lo reenvía conservando los encabezados.
+
+- **200** `application/octet-stream` con los bytes de `model.pt` leídos de S3 (la versión registrada, como en la inferencia), solo si su SHA-256 es el del registro.
+  - `Content-Disposition: attachment; filename="clasificador-<version>-model.pt"`
+  - `X-Model-SHA256: <sha256 del registro>` (el mismo que muestra `GET /api/p3/models` en `s3.sha256`).
+- **404** si la versión no está en `registry.json`.
+- **409** si el objeto no existe en S3, su `VersionId` no es el registrado o su SHA-256 no coincide: nunca se sirve un archivo distinto del publicado.
+- **422** si `version` no es semántica.
+- **503** si S3 no está disponible, con el motivo y qué configurar (igual que los demás endpoints de modelos).
+
 ### `POST /api/p3/inference`
 
 **Implementado (F4 T24).** Lo atiende el servicio `p3-inference` (el único con PyTorch); la app del portal le reenvía la petición.
@@ -323,6 +354,7 @@ Viven en el servicio `p3-inference` (el que tiene el perfil de AWS); la app de P
 - **201** `{"annotation_queue_item": {"image_id": 91, "status": "pending"}}`.
 - **200** con el mismo elemento si ya se había enviado: no se duplica.
 - **404** si la inferencia no existe; **502** si P1 no responde o rechaza la imagen.
+- **Cambio (F13):** el `detail` del 502 dice en español qué pasó y qué hacer: si P1 no responde, nombra la URL (`P3_ANNOTATION_URL`) y los comandos del README para levantarlo; si P1 respondió con error, incluye su código.
 
 ## 5. `selection.json` — contrato (F5)
 

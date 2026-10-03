@@ -64,18 +64,6 @@ def test_tarjeta_se_reenvia_como_markdown() -> None:
     assert calls[0][:2] == ("GET", "http://servicio:8010/api/p3/models/1.0.0/card")
 
 
-def test_pesos_se_reenvian_como_binario() -> None:
-    calls: list = []
-    client = client_with(calls, (200, b"BINARIO-DE-PESOS", "application/octet-stream"))
-    try:
-        response = client.get("/api/p3/models/1.0.0/weights")
-    finally:
-        client.restore()
-    assert response.status_code == 200
-    assert response.content == b"BINARIO-DE-PESOS"
-    assert calls[0][:2] == ("GET", "http://servicio:8010/api/p3/models/1.0.0/weights")
-
-
 def test_version_con_caracteres_raros_no_se_reenvia() -> None:
     calls: list = []
     client = client_with(calls, (200, b"{}", "application/json"))
@@ -99,3 +87,76 @@ def test_servicio_caido_responde_503(monkeypatch) -> None:
     app.dependency_overrides[proxy.get_upstream] = lambda: "http://servicio:8010"
     response = TestClient(app).get("/api/p3/models")
     assert response.status_code == 503
+
+
+# --- Descarga de pesos (contrato C2, F13) -------------------------------------------------
+
+
+class _Answer:
+    """Respuesta de `urlopen` con encabezados, como la de `http.client`."""
+
+    def __init__(self, status: int, body: bytes, headers: dict[str, str]) -> None:
+        from email.message import Message
+
+        self.status = status
+        self._body = body
+        self.headers = Message()
+        for name, value in headers.items():
+            self.headers[name] = value
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc) -> None:
+        return None
+
+
+def test_la_descarga_se_reenvia_con_nombre_y_sha256(monkeypatch) -> None:
+    import urllib.request
+
+    seen: list[str] = []
+
+    def fake_urlopen(request, timeout=None):
+        seen.append(request.full_url)
+        return _Answer(
+            200,
+            b"pesos",
+            {
+                "Content-Type": "application/octet-stream",
+                "Content-Disposition": 'attachment; filename="clasificador-1.0.0-model.pt"',
+                "X-Model-SHA256": "e4acca42" + "0" * 56,
+                "Server": "uvicorn",
+            },
+        )
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    app = FastAPI()
+    app.include_router(proxy.router)
+    app.dependency_overrides[proxy.get_upstream] = lambda: "http://servicio:8010"
+    response = TestClient(app).get("/api/p3/models/1.0.0/download")
+    assert seen == ["http://servicio:8010/api/p3/models/1.0.0/download"]
+    assert response.status_code == 200
+    assert response.content == b"pesos"
+    assert response.headers["content-type"] == "application/octet-stream"
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="clasificador-1.0.0-model.pt"'
+    )
+    assert response.headers["x-model-sha256"] == "e4acca42" + "0" * 56
+    # Solo pasan los encabezados del contrato, no los del servidor de atras.
+    assert response.headers.get("server") != "uvicorn"
+
+
+def test_la_descarga_con_version_invalida_no_se_reenvia(monkeypatch) -> None:
+    import urllib.request
+
+    def fail(*args, **kwargs):  # pragma: no cover
+        raise AssertionError("no debe reenviar")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fail)
+    app = FastAPI()
+    app.include_router(proxy.router)
+    app.dependency_overrides[proxy.get_upstream] = lambda: "http://servicio:8010"
+    assert TestClient(app).get("/api/p3/models/1.0;rm/download").status_code in (404, 422)

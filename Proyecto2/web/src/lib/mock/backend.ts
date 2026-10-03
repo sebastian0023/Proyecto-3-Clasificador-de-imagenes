@@ -20,6 +20,7 @@ import {
   evaluation,
   evaluationExamples,
   manifestMeta,
+  manifestSeed7,
   modelVersions,
   releaseDetailFor,
   releaseSummaries,
@@ -184,6 +185,10 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
   if (pathname === '/api/p3/manifests' && method === 'POST') {
     if (body?.release_id !== releaseSummary.release_id)
       return detail(`El release ${body?.release_id} no existe`, 404);
+    // Como la API real: el congelado de ese release y esa semilla, o 409.
+    if (body?.seed === 7) return json(manifestSeed7, 201);
+    if (body?.seed !== 42)
+      return detail(`No hay manifiesto congelado para el release ${body?.release_id} con seed ${body?.seed}.`, 409);
     return json({ manifest_id: MANIFEST_ID, manifest_hash: manifestMeta.manifest_hash, counts: manifestMeta.counts }, 201);
   }
   const manifestMatch = pathname.match(/^\/api\/p3\/manifests\/(.+)$/);

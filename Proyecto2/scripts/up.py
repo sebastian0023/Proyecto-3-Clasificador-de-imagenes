@@ -175,6 +175,26 @@ def wait_for_health(url: str, timeout_seconds: int = 90) -> dict[str, object] | 
     return last_body
 
 
+P1_START = (
+    "cd ../Proyecto1 && npm install && cp -n .env.example .env && docker compose up -d --wait "
+    "&& npm run db:migrate && npm run dev:api"
+)
+
+
+def p1_hint(url: str) -> str | None:
+    """`None` si P1 responde; si no, como levantarlo para "Enviar a cola" (Proyecto 3)."""
+    try:
+        with urllib.request.urlopen(f"{url}/api/images", timeout=3):
+            return None
+    except urllib.error.HTTPError:
+        return None  # responde, aunque sea con error: esta arriba
+    except (urllib.error.URLError, OSError):
+        return (
+            f'P1 (cola de anotacion) no responde en {url}: "Enviar a cola" de Inference '
+            f"dara 502. Levantalo en otra terminal, desde Proyecto2/:\n    {P1_START}"
+        )
+
+
 def wait_for_mlflow(url: str, timeout_seconds: int = 90) -> bool:
     """MLflow responde `OK` en texto plano, no JSON: basta con un 200."""
     deadline = time.monotonic() + timeout_seconds
@@ -269,6 +289,10 @@ def main() -> None:
   Apagar            python scripts/down.py
 """
     )
+
+    hint = p1_hint(env.get("MP1_BASE_URL", "http://localhost:3000").rstrip("/"))
+    if hint:
+        log(hint)
 
     if args.logs:
         log("Siguiendo logs de la app (Ctrl+C corta los logs, no los contenedores)...")

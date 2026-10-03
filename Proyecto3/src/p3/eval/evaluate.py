@@ -35,7 +35,6 @@ from PIL import Image
 from p3.data.dataset import load_crop_index, load_manifest
 from p3.data.transforms import EVAL_RESIZE, build_eval_transform
 from p3.eval import metrics
-from p3.eval.crop_names import safe_crop_name
 from p3.model.build import load_checkpoint
 
 THRESHOLD = 0.85
@@ -43,7 +42,6 @@ REQUIRED_SELECTION = ("run_id", "checkpoint_sha256", "manifest_hash")
 PREDICTIONS = "predictions_test.csv"
 METRICS = "metrics.json"
 ERRORS = "errors.json"
-CROPS = "crops"
 EXAMPLES_PER_KIND = 12
 
 
@@ -150,21 +148,6 @@ def error_examples(
     }
 
 
-def write_example_crops(
-    examples: Mapping[str, Sequence[Mapping[str, Any]]],
-    crop_index: Mapping[str, Path],
-    dest: Path,
-) -> None:
-    """Copia los PNG de los ejemplos (aciertos y errores) a `dest` con el nombre
-    seguro, para que `log_evaluation_mlflow` los suba y la API sirva las
-    miniaturas (4.4). Un recorte que falte en el indice simplemente se omite."""
-    dest.mkdir(parents=True, exist_ok=True)
-    for example in (*examples["correct"], *examples["errors"]):
-        source = crop_index.get(example["crop_id"])
-        if source is not None:
-            (dest / f"{safe_crop_name(example['crop_id'])}.png").write_bytes(source.read_bytes())
-
-
 def predictions_csv(predictions: Sequence[Mapping[str, Any]], class_names: Sequence[str]) -> str:
     fields = ["crop_id", "clase_real", "clase_predicha", *(f"prob_{c}" for c in class_names)]
     buffer = io.StringIO()
@@ -248,7 +231,6 @@ def run_evaluation(
     (out_dir / ERRORS).write_text(
         json.dumps(errors, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n"
     )
-    write_example_crops(errors, crop_index, out_dir / CROPS)
     # metrics.json al final: su existencia marca la evaluacion como hecha.
     (out_dir / METRICS).write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n"

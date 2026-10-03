@@ -269,6 +269,7 @@ def test_get_releases_aprobados_con_la_forma_del_contrato(client: TestClient) ->
         "published_in",
         "trainable",
         "blocked_reason",
+        "manifests",
     }
     assert first["quality_status"] == "pass"
     assert first["counts"] == {"images": 30, "annotations": 31, "categories": 3}

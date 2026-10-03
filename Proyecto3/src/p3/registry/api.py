@@ -6,6 +6,9 @@ la reenvia (`p3.registry.proxy`).
 - `GET /api/p3/models`: versiones del `registry.json` con su estado REAL en S3
   (`exists` sale de `head-object`, no del registro).
 - `GET /api/p3/models/{version}/card`: la `MODEL_CARD.md` de esa version.
+- `GET /api/p3/models/{version}/download`: el `model.pt` publicado, solo si es el
+  registrado (`VersionId` y SHA-256), con `Content-Disposition` y `X-Model-SHA256`
+  (contrato C2, F13).
 - `POST /api/p3/models/{version}/activate`: cambia la version activa solo si su
   `model.pt` existe y su SHA-256 coincide (`p3.registry.publish`). El servicio
   de inferencia lee el registro en cada prediccion, asi que el cambio aplica sin
@@ -32,6 +35,7 @@ from p3.registry.publish import (
     list_versions,
     read_registry,
 )
+from p3.registry.s3 import VersionMismatchError
 
 router = APIRouter(prefix="/api/p3/models", tags=["p3-models"])
 Version = Annotated[str, Path(pattern=r"^\d+\.\d+\.\d+$")]
@@ -118,30 +122,37 @@ def _card(version: str, models: ModelsStore) -> Response:
     return Response(data, media_type="text/markdown; charset=utf-8")
 
 
-@router.get("/{version}/weights")
-def read_weights(version: Version, models: StoreDep) -> Response:
+@router.get("/{version}/download")
+def download(version: Version, models: StoreDep) -> Response:
     with s3_available():
-        return _weights(version, models)
+        return _download(version, models)
 
 
-def _weights(version: str, models: ModelsStore) -> Response:
+def _download(version: str, models: ModelsStore) -> Response:
+    """Los bytes de `model.pt` solo si son los registrados (contrato C2)."""
     registry = read_registry(models.store, bucket=models.bucket, prefix=models.prefix)
     entry = next((e for e in registry.versions if e.version == version), None)
     if entry is None:
         raise HTTPException(404, f"La version de modelo {version} no esta publicada.")
+    uri = f"s3://{models.bucket}/{entry.key}"
     if models.store.head(models.bucket, entry.key) is None:
+        raise HTTPException(409, f"El objeto {uri} no existe en S3.")
+    try:
+        data = models.store.get_bytes(models.bucket, entry.key, entry.s3_version_id)
+    except VersionMismatchError as error:
+        raise HTTPException(409, str(error)) from error
+    actual = hashlib.sha256(data).hexdigest()
+    if actual != entry.sha256:
         raise HTTPException(
-            409, f"s3://{models.bucket}/{entry.key} no existe: no hay pesos que descargar."
-        )
-    data = models.store.get_bytes(models.bucket, entry.key, entry.s3_version_id)
-    if hashlib.sha256(data).hexdigest() != entry.sha256:
-        raise HTTPException(
-            409, f"El SHA-256 de s3://{models.bucket}/{entry.key} no es el registrado."
+            409, f"SHA-256 de {uri} = {actual}; el registro de {version} dice {entry.sha256}."
         )
     return Response(
         data,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="p3-clasificador-{version}.pt"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="clasificador-{version}-model.pt"',
+            "X-Model-SHA256": entry.sha256,
+        },
     )
 
 
