@@ -677,6 +677,9 @@ export const api = {
     evaluation: () => request<EvaluationReport>('/api/p3/evaluation'),
     /** Aciertos y errores de ejemplo del test (para la galería). */
     evaluationExamples: () => request<EvaluationExamples>('/api/p3/evaluation/examples'),
+    /** URL de la miniatura de un recorte. No es una petición: la resuelve el <img>. */
+    evaluationCropUrl: (cropId: string) =>
+      `/api/p3/evaluation/crops/${encodeURIComponent(cropId)}`,
     /** URL de descarga del CSV de predicciones (no es una petición: la usa un <a>). */
     evaluationPredictionsUrl: () => '/api/p3/evaluation/predictions',
     /** Versiones de modelo publicadas y la versión activa. */

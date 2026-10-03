@@ -23,13 +23,37 @@ import {
 
 const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
 
-/** Una fila de la galería: recorte, real → predicho y probabilidad. */
+/**
+ * Una fila de la galería: miniatura del recorte, real → predicho y probabilidad.
+ *
+ * La miniatura la sirve el backend (`/evaluation/crops/{crop_id}`). Si el recorte
+ * falta (404), `onError` muestra un aviso en lugar de una imagen rota (4.4). Los
+ * errores de clasificación se resaltan con `crop-error`.
+ */
 function ExampleRow({ example }: { example: EvalExample }) {
   const hit = example.true === example.predicted;
+  const [broken, setBroken] = useState(false);
   return (
-    <div className="row">
-      <span className="mono" style={{ fontSize: 12 }}>
-        {example.crop_id}
+    <div className={`crop-row row${hit ? '' : ' crop-error'}`}>
+      <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+        {broken ? (
+          <span className="crop-missing" title={example.crop_id}>
+            sin recorte
+          </span>
+        ) : (
+          <img
+            className="crop-thumb"
+            src={api.p3.evaluationCropUrl(example.crop_id)}
+            alt={`${example.true} → ${example.predicted}`}
+            width={44}
+            height={44}
+            loading="lazy"
+            onError={() => setBroken(true)}
+          />
+        )}
+        <span className="mono" style={{ fontSize: 12 }}>
+          {example.crop_id}
+        </span>
       </span>
       <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
         <Pill kind={hit ? 'pass' : 'fail'}>
