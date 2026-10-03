@@ -35,4 +35,12 @@ describe('Evaluation — miniaturas (4.4)', () => {
     fireEvent.error(imgs[0]!);
     expect(await screen.findByText(/sin recorte/i)).toBeInTheDocument();
   });
+
+  it('muestra la clase más confundida con su conteo (most_confused)', async () => {
+    render(<Evaluation />);
+    // Fixture real: person → cat, 1 caso.
+    expect(
+      await screen.findByText(/par más confundido: person → cat.*1 caso/i),
+    ).toBeInTheDocument();
+  });
 });
