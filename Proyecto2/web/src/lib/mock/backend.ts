@@ -290,7 +290,8 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
         })
       : detail(`La version ${cardMatch[1]} no esta publicada`, 404);
   }
-  const weightsMatch = pathname.match(/^\/api\/p3\/models\/(.+)\/weights$/);
+  // Descarga de pesos, como `GET /api/p3/models/{version}/download` (contrato C2).
+  const weightsMatch = pathname.match(/^\/api\/p3\/models\/(.+)\/download$/);
   if (weightsMatch && method === 'GET') {
     const entry = modelVersions.find((m) => m.version === weightsMatch[1]);
     if (!entry) return detail(`La version ${weightsMatch[1]} no esta publicada`, 404);
@@ -301,7 +302,8 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
       status: 200,
       headers: {
         'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="p3-clasificador-${entry.version}.pt"`,
+        'Content-Disposition': `attachment; filename="clasificador-${entry.version}-model.pt"`,
+        'X-Model-SHA256': entry.s3.sha256,
       },
     });
   }

@@ -699,9 +699,9 @@ export const api = {
     /** URL de la tarjeta (MODEL_CARD.md) de una versión. La usa un `<a>`. */
     modelCardUrl: (version: string) =>
       `/api/p3/models/${encodeURIComponent(version)}/card`,
-    /** URL de descarga de los pesos (`model.pt`) de una versión. La usa un `<a download>`. */
+    /** URL de descarga de los pesos (`model.pt`), contrato C2: el backend verifica el SHA-256. */
     modelWeightsUrl: (version: string) =>
-      `/api/p3/models/${encodeURIComponent(version)}/weights`,
+      `/api/p3/models/${encodeURIComponent(version)}/download`,
     /** Marca una versión como activa para inferencia. 404/409/422 si no procede. */
     activateModel: (version: string) =>
       request<{ active_version: string }>(
