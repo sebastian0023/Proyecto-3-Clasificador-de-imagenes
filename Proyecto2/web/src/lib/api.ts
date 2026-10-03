@@ -161,6 +161,8 @@ export interface Config {
   app_env: string;
   database: { host: string; port: number; name: string; user: string };
   object_storage: { endpoint_url: string; buckets: string[] };
+  /** URL de la UI de MLflow alcanzable desde el navegador (vacía si no se configuró). */
+  mlflow_url?: string;
 }
 
 // --- quality.yaml -----------------------------------------------------------

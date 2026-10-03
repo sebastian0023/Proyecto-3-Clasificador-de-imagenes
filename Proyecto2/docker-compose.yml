@@ -125,6 +125,10 @@ services:
       MINIO_ENDPOINT: minio
       MINIO_PORT: "9000"
       MCP_SERVER_URL: http://mcp:8001/mcp
+      # URL de la UI de MLflow alcanzable desde el navegador (no la de tracking
+      # interna). El portal la usa para enlazar a los runs sin hornear el 5000:
+      # el puerto sale de MLFLOW_PORT, no del codigo del front.
+      MLFLOW_UI_URL: ${MLFLOW_UI_URL:-http://localhost:${MLFLOW_PORT:-5000}}
       # Proyecto 3 vive en el mismo portal: su paquete `p3` se monta en
       # `/opt/p3/src` (ver `volumes`) y la app monta su router `/api/p3/...`.
       PYTHONPATH: /app/src:/opt/p3/src

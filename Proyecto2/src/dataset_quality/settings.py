@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8000, gt=0, lt=65536)
     log_level: str = "info"
 
+    # URL de la UI de MLflow **alcanzable desde el navegador** (no la de tracking
+    # interna del contenedor). La expone /api/config para que el portal enlace a
+    # los runs sin hornear el puerto 5000: el despliegue la fija por entorno.
+    mlflow_ui_url: str = ""
+
     # --- Dataset Copilot ---------------------------------------------------
     # No se exige al arranque: calidad, versionado y la UI siguen funcionando
     # aunque el entorno aun no tenga una clave de Gemini. El endpoint del
@@ -110,6 +115,7 @@ class Settings(BaseSettings):
                 "endpoint_url": self.minio_endpoint_url,
                 "buckets": list(self.buckets),
             },
+            "mlflow_url": self.mlflow_ui_url,
         }
 
 
