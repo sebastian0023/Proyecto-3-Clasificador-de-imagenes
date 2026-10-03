@@ -12,6 +12,7 @@ los recortes en disco, 503 con el comando que falta.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -46,6 +47,13 @@ METRICS = {
     "evaluated_at": "2026-09-28T02:25:07Z",
 }
 PNG = b"\x89PNG\r\n\x1a\n" + b"recorte"
+ROWS = [
+    {"crop_id": "0.1.3:a1", "split": "test", "category_name": "cat"},
+    {"crop_id": "0.1.3:a2", "split": "train", "category_name": "dog"},
+]
+MANIFEST_BYTES = "".join(json.dumps(r) + "\n" for r in ROWS).encode("utf-8")
+# El manifiesto de la prueba es el "congelado": su SHA-256 es el registrado.
+FROZEN = {MANIFEST: hashlib.sha256(MANIFEST_BYTES).hexdigest()}
 
 
 def run(run_id: str, *, selected: bool) -> RunSummary:
@@ -84,14 +92,11 @@ class FakeMlflow:
 @pytest.fixture
 def data(tmp_path: Path) -> tuple[Path, Path]:
     manifests, crops = tmp_path / "manifests", tmp_path / "crops"
-    rows = [
-        {"crop_id": "0.1.3:a1", "split": "test", "category_name": "cat"},
-        {"crop_id": "0.1.3:a2", "split": "train", "category_name": "dog"},
-    ]
+    rows = ROWS
     (manifests / MANIFEST).mkdir(parents=True)
-    (manifests / MANIFEST / "manifest.jsonl").write_text(
-        "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
-    )
+    (manifests / MANIFEST / "manifest.jsonl").write_bytes(MANIFEST_BYTES)
+    meta = {"manifest_id": MANIFEST, "manifest_hash": FROZEN[MANIFEST]}
+    (manifests / MANIFEST / "manifest.meta.json").write_text(json.dumps(meta), encoding="utf-8")
     release = crops / "0.1.3"
     for row, folder in zip(rows, ("cat", "dog"), strict=True):
         (release / folder).mkdir(parents=True)
@@ -114,6 +119,7 @@ def client_with(fake: FakeMlflow, dirs: tuple[Path, Path]) -> TestClient:
     app.include_router(api.router)
     app.dependency_overrides[api.get_mlflow] = lambda: fake
     app.dependency_overrides[api.get_data_dirs] = lambda: api.DataDirs(*dirs)
+    app.dependency_overrides[api.get_frozen] = lambda: FROZEN
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -199,3 +205,16 @@ def test_usa_el_manifiesto_de_la_corrida_elegida(data) -> None:
     )
     response = client_with(selected(), data).get("/api/p3/evaluation/crops/0.1.3:a2")
     assert response.status_code == 404
+
+
+def test_un_manifiesto_editado_no_decide_que_es_test(data) -> None:
+    # Revision de Edith (#29): si alguien pasa a2 (de train) a test, el manifiesto ya
+    # no es el congelado y no se sirve nada: no se exponen recortes de train como test.
+    manifests, _ = data
+    edited = [dict(r, split="test") for r in ROWS]
+    (manifests / MANIFEST / "manifest.jsonl").write_text(
+        "".join(json.dumps(r) + "\n" for r in edited), encoding="utf-8"
+    )
+    response = client_with(selected(), data).get("/api/p3/evaluation/crops/0.1.3:a2")
+    assert response.status_code == 409
+    assert "SHA-256" in response.json()["detail"]
