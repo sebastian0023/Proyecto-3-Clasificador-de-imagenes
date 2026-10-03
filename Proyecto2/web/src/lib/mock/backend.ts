@@ -44,6 +44,10 @@ interface ValidationError {
   input: unknown;
 }
 
+/** PNG 1×1 transparente: miniatura de relleno del mock (solo dev). */
+const PNG_1X1 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -254,6 +258,16 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
   if (pathname === '/api/p3/evaluation/examples' && method === 'GET') {
     return json(evaluationExamples);
   }
+  const cropMatch = pathname.match(/^\/api\/p3\/evaluation\/crops\/(.+)$/);
+  if (cropMatch && method === 'GET') {
+    const cropId = decodeURIComponent(cropMatch[1] ?? '');
+    const known = [...evaluationExamples.correct, ...evaluationExamples.errors].some(
+      (e) => e.crop_id === cropId,
+    );
+    if (!known) return detail(`El recorte ${cropId} no está disponible.`, 404);
+    const bytes = Uint8Array.from(atob(PNG_1X1), (c) => c.charCodeAt(0));
+    return new Response(bytes, { status: 200, headers: { 'Content-Type': 'image/png' } });
+  }
   if (pathname === '/api/p3/evaluation/predictions' && method === 'GET') {
     const csv = 'crop_id,clase_real,clase_predicha,prob_cat,prob_dog,prob_person\n0.1.3:a4,cat,cat,0.97,0.02,0.01\n';
     return new Response(csv, {
@@ -275,6 +289,23 @@ async function route(input: FetchInput, init: FetchInit): Promise<Response> {
           headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
         })
       : detail(`La version ${cardMatch[1]} no esta publicada`, 404);
+  }
+  // Descarga de pesos, como `GET /api/p3/models/{version}/download` (contrato C2).
+  const weightsMatch = pathname.match(/^\/api\/p3\/models\/(.+)\/download$/);
+  if (weightsMatch && method === 'GET') {
+    const entry = modelVersions.find((m) => m.version === weightsMatch[1]);
+    if (!entry) return detail(`La version ${weightsMatch[1]} no esta publicada`, 404);
+    if (!entry.s3.exists)
+      return detail(`s3://.../${entry.version}/model.pt no existe: no hay pesos que descargar`, 409);
+    const bytes = new TextEncoder().encode(`mock model.pt ${entry.version}`);
+    return new Response(bytes, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="clasificador-${entry.version}-model.pt"`,
+        'X-Model-SHA256': entry.s3.sha256,
+      },
+    });
   }
   const activateMatch = pathname.match(/^\/api\/p3\/models\/(.+)\/activate$/);
   if (activateMatch && method === 'POST') {

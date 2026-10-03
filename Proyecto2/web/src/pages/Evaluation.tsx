@@ -11,17 +11,49 @@
 
 import { useEffect, useState } from 'react';
 import { Card, Pill, Tile } from '../components/ui';
-import { ApiError, api, type EvalExample, type EvaluationExamples, type EvaluationReport } from '../lib/api';
+import {
+  ApiError,
+  api,
+  type EvalExample,
+  type EvaluationExamples,
+  type EvaluationReport,
+  type ManifestMeta,
+  type Selection,
+} from '../lib/api';
 
 const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
 
-/** Una fila de la galería: recorte, real → predicho y probabilidad. */
+/**
+ * Una fila de la galería: miniatura del recorte, real → predicho y probabilidad.
+ *
+ * La miniatura la sirve el backend (`/evaluation/crops/{crop_id}`). Si el recorte
+ * falta (404), `onError` muestra un aviso en lugar de una imagen rota (4.4). Los
+ * errores de clasificación se resaltan con `crop-error`.
+ */
 function ExampleRow({ example }: { example: EvalExample }) {
   const hit = example.true === example.predicted;
+  const [broken, setBroken] = useState(false);
   return (
-    <div className="row">
-      <span className="mono" style={{ fontSize: 12 }}>
-        {example.crop_id}
+    <div className={`crop-row row${hit ? '' : ' crop-error'}`}>
+      <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+        {broken ? (
+          <span className="crop-missing" title={example.crop_id}>
+            sin recorte
+          </span>
+        ) : (
+          <img
+            className="crop-thumb"
+            src={api.p3.evaluationCropUrl(example.crop_id)}
+            alt={`${example.true} → ${example.predicted}`}
+            width={44}
+            height={44}
+            loading="lazy"
+            onError={() => setBroken(true)}
+          />
+        )}
+        <span className="mono" style={{ fontSize: 12 }}>
+          {example.crop_id}
+        </span>
       </span>
       <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
         <Pill kind={hit ? 'pass' : 'fail'}>
@@ -36,6 +68,11 @@ function ExampleRow({ example }: { example: EvalExample }) {
 export default function Evaluation() {
   const [report, setReport] = useState<EvaluationReport | null>(null);
   const [examples, setExamples] = useState<EvaluationExamples | null>(null);
+  // Procedencia del candidato (6.3): el hash del manifiesto y el checkpoint salen
+  // de selection.json; el release, del manifiesto congelado. Son opcionales: si
+  // no cargan, la página muestra igual las métricas.
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [manifest, setManifest] = useState<ManifestMeta | null>(null);
   const [blocked, setBlocked] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +83,15 @@ export default function Evaluation() {
       .then(async (r) => {
         if (cancelled) return;
         setReport(r);
+        // Procedencia (tolerante a fallo): candidato y manifiesto de la evaluación.
+        api.p3
+          .selection()
+          .then((s) => !cancelled && setSelection(s))
+          .catch(() => {});
+        api.p3
+          .manifest(r.manifest_id)
+          .then((m) => !cancelled && setManifest(m))
+          .catch(() => {});
         try {
           const ex = await api.p3.evaluationExamples();
           if (!cancelled) setExamples(ex);
@@ -102,6 +148,53 @@ export default function Evaluation() {
             <Tile value={report.test_size} label="Recortes de test" tone="d" />
             <Tile value={pct(report.majority_baseline)} label="Baseline (mayoritaria)" tone="c" />
           </div>
+
+          <Card
+            title="Procedencia"
+            hint="El candidato evaluado y de dónde sale: run de MLflow, manifiesto congelado, release y checkpoint con su hash."
+          >
+            <div className="row">
+              <span>Run</span>
+              <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                <span className="mono" style={{ fontSize: 11 }} title={report.run_id}>
+                  {report.run_id.slice(0, 12)}…
+                </span>
+                <a href="#/experiments">Ver en Experiments</a>
+              </span>
+            </div>
+            <div className="row">
+              <span>Manifiesto</span>
+              <span className="mono" style={{ fontSize: 12 }}>
+                {report.manifest_id}
+              </span>
+            </div>
+            {selection && (
+              <div className="row">
+                <span>Hash del manifiesto</span>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
+                  {selection.manifest_hash.slice(0, 16)}…
+                </span>
+              </div>
+            )}
+            {manifest && (
+              <div className="row">
+                <span>Release</span>
+                <span className="mono">{manifest.release.release_id}</span>
+              </div>
+            )}
+            {selection && (
+              <div className="row">
+                <span>Checkpoint</span>
+                <span
+                  className="mono"
+                  style={{ fontSize: 11, color: 'var(--muted)', wordBreak: 'break-all' }}
+                  title={selection.checkpoint_uri}
+                >
+                  {selection.checkpoint_uri} · {selection.checkpoint_sha256.slice(0, 16)}…
+                </span>
+              </div>
+            )}
+          </Card>
 
           <div className="cols-2">
             <Card

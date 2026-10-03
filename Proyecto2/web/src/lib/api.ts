@@ -161,6 +161,8 @@ export interface Config {
   app_env: string;
   database: { host: string; port: number; name: string; user: string };
   object_storage: { endpoint_url: string; buckets: string[] };
+  /** URL de la UI de MLflow alcanzable desde el navegador (vacía si no se configuró). */
+  mlflow_url?: string;
 }
 
 // --- quality.yaml -----------------------------------------------------------
@@ -687,6 +689,9 @@ export const api = {
     evaluation: () => request<EvaluationReport>('/api/p3/evaluation'),
     /** Aciertos y errores de ejemplo del test (para la galería). */
     evaluationExamples: () => request<EvaluationExamples>('/api/p3/evaluation/examples'),
+    /** URL de la miniatura de un recorte. No es una petición: la resuelve el <img>. */
+    evaluationCropUrl: (cropId: string) =>
+      `/api/p3/evaluation/crops/${encodeURIComponent(cropId)}`,
     /** URL de descarga del CSV de predicciones (no es una petición: la usa un <a>). */
     evaluationPredictionsUrl: () => '/api/p3/evaluation/predictions',
     /** Versiones de modelo publicadas y la versión activa. */
@@ -694,6 +699,9 @@ export const api = {
     /** URL de la tarjeta (MODEL_CARD.md) de una versión. La usa un `<a>`. */
     modelCardUrl: (version: string) =>
       `/api/p3/models/${encodeURIComponent(version)}/card`,
+    /** URL de descarga de los pesos (`model.pt`), contrato C2: el backend verifica el SHA-256. */
+    modelWeightsUrl: (version: string) =>
+      `/api/p3/models/${encodeURIComponent(version)}/download`,
     /** Marca una versión como activa para inferencia. 404/409/422 si no procede. */
     activateModel: (version: string) =>
       request<{ active_version: string }>(

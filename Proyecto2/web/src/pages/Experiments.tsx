@@ -11,15 +11,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LineChart, seriesColor } from '../components/charts';
 import { Card, Pill } from '../components/ui';
-import { api, type RunDetail, type RunSummary, type Selection } from '../lib/api';
+import { api, type Config, type RunDetail, type RunSummary, type Selection } from '../lib/api';
 
 /** Métricas por las que se puede ordenar la tabla. */
 type SortKey = 'best_val_accuracy' | 'best_val_loss' | 'best_epoch';
 
-/** Dónde vive la UI de MLflow para enlazar a un run (configurable por entorno). */
-const MLFLOW_URL = import.meta.env.VITE_MLFLOW_URL ?? 'http://localhost:5000';
-const mlflowRunUrl = (experimentId: string, runId: string): string =>
-  `${MLFLOW_URL}/#/experiments/${experimentId}/runs/${runId}`;
+/**
+ * Base de la UI de MLflow para enlazar a un run, SIN hornear el puerto 5000:
+ *  1. `VITE_MLFLOW_URL` en tiempo de build (si el despliegue la fija ahí),
+ *  2. `mlflow_url` de `/api/config` en tiempo de ejecución (el preferido: el
+ *     despliegue la cambia sin recompilar el portal),
+ *  3. `http://localhost:5000` solo como comodín de desarrollo local.
+ */
+const MLFLOW_URL_BUILD: string | undefined = import.meta.env.VITE_MLFLOW_URL;
+const MLFLOW_URL_DEV_FALLBACK = 'http://localhost:5000';
+const mlflowRunUrl = (base: string, experimentId: string, runId: string): string =>
+  `${base.replace(/\/$/, '')}/#/experiments/${experimentId}/runs/${runId}`;
 
 const fmt = (n: number): string => n.toFixed(3);
 const shortId = (id: string): string => id.slice(0, 8);
@@ -35,6 +42,8 @@ export default function Experiments() {
   const [openRunId, setOpenRunId] = useState<string | null>(null);
   const [detail, setDetail] = useState<RunDetail | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  // Base de la UI de MLflow: build-time si existe, si no la de /api/config.
+  const [mlflowBase, setMlflowBase] = useState<string>(MLFLOW_URL_BUILD ?? '');
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +55,13 @@ export default function Experiments() {
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Error desconocido');
       });
+    // Sin override de build, el despliegue dice dónde está MLflow en /api/config.
+    if (!MLFLOW_URL_BUILD) {
+      api
+        .config()
+        .then((c: Config) => !cancelled && c.mlflow_url && setMlflowBase(c.mlflow_url))
+        .catch(() => {});
+    }
     // La selección puede no existir aún (menos de 10 corridas): no es un error.
     api.p3
       .selection()
@@ -299,6 +315,7 @@ export default function Experiments() {
             <span>MLflow</span>
             <a
               href={mlflowRunUrl(
+                mlflowBase || MLFLOW_URL_DEV_FALLBACK,
                 detail?.experiment_id ?? runs?.find((r) => r.run_id === openRunId)?.experiment_id ?? '0',
                 openRunId,
               )}

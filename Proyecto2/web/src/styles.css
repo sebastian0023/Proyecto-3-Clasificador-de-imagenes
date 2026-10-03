@@ -681,3 +681,30 @@ button.ghost:disabled {
 details summary::-webkit-details-marker {
   color: var(--muted);
 }
+
+/* Galería de evaluación (4.4): miniatura por ejemplo y resaltado de errores. */
+.crop-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+.crop-error .crop-thumb {
+  border-color: var(--fail);
+  box-shadow: 0 0 0 2px var(--fail-soft);
+}
+.crop-missing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  border: 1px dashed var(--line-2);
+  color: var(--muted);
+  font-size: 9px;
+  text-align: center;
+  line-height: 1.1;
+}
