@@ -17,6 +17,7 @@ denegado) responde 503 con el motivo y que configurar, nunca 500.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -115,6 +116,33 @@ def _card(version: str, models: ModelsStore) -> Response:
     card_key = entry.model_dump().get("card_key") or f"{models.prefix}/{version}/MODEL_CARD.md"
     data = models.store.get_bytes(models.bucket, card_key)
     return Response(data, media_type="text/markdown; charset=utf-8")
+
+
+@router.get("/{version}/weights")
+def read_weights(version: Version, models: StoreDep) -> Response:
+    with s3_available():
+        return _weights(version, models)
+
+
+def _weights(version: str, models: ModelsStore) -> Response:
+    registry = read_registry(models.store, bucket=models.bucket, prefix=models.prefix)
+    entry = next((e for e in registry.versions if e.version == version), None)
+    if entry is None:
+        raise HTTPException(404, f"La version de modelo {version} no esta publicada.")
+    if models.store.head(models.bucket, entry.key) is None:
+        raise HTTPException(
+            409, f"s3://{models.bucket}/{entry.key} no existe: no hay pesos que descargar."
+        )
+    data = models.store.get_bytes(models.bucket, entry.key, entry.s3_version_id)
+    if hashlib.sha256(data).hexdigest() != entry.sha256:
+        raise HTTPException(
+            409, f"El SHA-256 de s3://{models.bucket}/{entry.key} no es el registrado."
+        )
+    return Response(
+        data,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="p3-clasificador-{version}.pt"'},
+    )
 
 
 @router.post("/{version}/activate")

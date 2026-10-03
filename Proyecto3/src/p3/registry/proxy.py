@@ -61,6 +61,11 @@ async def read_card(version: Version, upstream: UpstreamDep) -> Response:
     return await _forward("GET", upstream, f"/api/p3/models/{version}/card")
 
 
+@router.get("/{version}/weights")
+async def read_weights(version: Version, upstream: UpstreamDep) -> Response:
+    return await _forward("GET", upstream, f"/api/p3/models/{version}/weights")
+
+
 @router.post("/{version}/activate")
 async def activate(version: Version, upstream: UpstreamDep) -> Response:
     return await _forward("POST", upstream, f"/api/p3/models/{version}/activate")
