@@ -27,13 +27,13 @@ class DataSettings(BaseSettings):
     )
     # Remote de `published_in` que corresponde a ese bucket.
     releases_remote: str = Field(default="prod", min_length=1, alias="P3_RELEASES_REMOTE")
-    # Manifiestos de F3 (`dvc pull`). Relativo a `Proyecto2/`; en Docker, el
-    # montaje de solo lectura `/opt/p3/manifests`.
+    # Manifiestos de F3 (`dvc pull`). Relativo a `Proyecto2/`; en Docker,
+    # `/opt/p3/data/manifests` (montaje de solo lectura de `Proyecto3/data`).
     manifests_dir: Path = Field(
         default=Path("../Proyecto3/data/manifests"), alias="P3_MANIFESTS_DIR"
     )
     # Recortes de F2 (`generate_crops.py`), para las miniaturas de Evaluation. En
-    # Docker, el montaje de solo lectura `/opt/p3/crops`.
+    # Docker, `/opt/p3/data/crops`.
     crops_dir: Path = Field(default=Path("../Proyecto3/data/crops"), alias="P3_CROPS_DIR")
 
 

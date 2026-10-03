@@ -21,12 +21,16 @@ from __future__ import annotations
 
 import json
 import urllib.error
+from collections.abc import Mapping
+from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, NamedTuple
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi import Path as PathParam
 
+from p3.data.api import get_frozen
+from p3.data.frozen import ManifestNotFrozenError, verify_frozen
 from p3.train.selection import EXPERIMENT, MlflowDep, RunSummary, get_mlflow
 
 router = APIRouter(prefix="/api/p3/evaluation", tags=["p3-evaluation"])
@@ -35,7 +39,7 @@ NOT_SELECTED = "La selección del modelo no está cerrada"
 FOLDER = "evaluation"
 PER_CLASS_FIELDS = ("class", "precision", "recall", "f1", "support")
 
-__all__ = ["get_mlflow", "router"]
+__all__ = ["get_frozen", "get_mlflow", "router"]
 
 
 class DataDirs(NamedTuple):
@@ -51,6 +55,7 @@ def get_data_dirs() -> DataDirs:
 
 
 DataDirsDep = Annotated[DataDirs, Depends(get_data_dirs)]
+FrozenDep = Annotated[Mapping[str, str], Depends(get_frozen)]
 # `<release_id>:a<annotation_id>` (`p3.data.crops.crop_id`); tambien impide salir de la carpeta.
 CropId = Annotated[str, PathParam(pattern=r"^\d+\.\d+\.\d+:a\d+$")]
 
@@ -137,9 +142,9 @@ def read_examples(mlflow: MlflowDep) -> dict[str, Any]:
 
 
 @router.get("/crops/{crop_id}")
-def read_crop(crop_id: CropId, mlflow: MlflowDep, dirs: DataDirsDep) -> Response:
+def read_crop(crop_id: CropId, mlflow: MlflowDep, dirs: DataDirsDep, frozen: FrozenDep) -> Response:
     run = _selected(mlflow)
-    if crop_id not in _test_crops(dirs.manifests, run.manifest_id):
+    if crop_id not in _test_crops(dirs.manifests, run.manifest_id, frozen):
         raise HTTPException(
             404, f"El recorte {crop_id} no es del test del manifiesto {run.manifest_id}."
         )
@@ -150,7 +155,12 @@ def read_crop(crop_id: CropId, mlflow: MlflowDep, dirs: DataDirsDep) -> Response
     return Response(path.read_bytes(), media_type="image/png")
 
 
-def _test_crops(folder: Path, manifest_id: str) -> set[str]:
+def _test_crops(folder: Path, manifest_id: str, frozen: Mapping[str, str]) -> frozenset[str]:
+    """Los recortes de test del manifiesto, solo si sus bytes son los congelados.
+
+    Un manifiesto editado podria pasar recortes de train a test; por eso se
+    verifica el SHA-256 (`verify_frozen`) antes de leer el split.
+    """
     manifest = folder / manifest_id / "manifest.jsonl"
     if not manifest.is_file():
         raise HTTPException(
@@ -158,18 +168,42 @@ def _test_crops(folder: Path, manifest_id: str) -> set[str]:
             f"El manifiesto {manifest_id} no está descargado; corre "
             f"`dvc pull data/manifests/{manifest_id}.dvc` en Proyecto3.",
         )
-    with manifest.open(encoding="utf-8") as lines:
-        rows = (json.loads(line) for line in lines if line.strip())
-        return {row["crop_id"] for row in rows if row["split"] == "test"}
+    try:
+        return _frozen_test_crops(manifest.parent, _stamp(manifest), frozen.get(manifest_id))
+    except ManifestNotFrozenError as error:
+        raise HTTPException(409, str(error)) from error
 
 
 def _crop_paths(folder: Path, release_id: str) -> dict[str, Path]:
     index = folder / release_id / "crops.jsonl"
     if not index.is_file():
         raise _missing_crops(release_id)
+    return _crop_index(index, _stamp(index))
+
+
+# Una pagina pide ~15 miniaturas: el manifiesto (1459 filas) y `crops.jsonl` se
+# leen y verifican una vez por version del archivo (ruta, mtime y tamano).
+def _stamp(path: Path) -> tuple[int, int]:
+    info = path.stat()
+    return info.st_mtime_ns, info.st_size
+
+
+@lru_cache(maxsize=8)
+def _frozen_test_crops(
+    manifest_dir: Path, stamp: tuple[int, int], expected: str | None
+) -> frozenset[str]:
+    verify_frozen(manifest_dir, {manifest_dir.name: expected} if expected else {})
+    with (manifest_dir / "manifest.jsonl").open(encoding="utf-8") as lines:
+        rows = (json.loads(line) for line in lines if line.strip())
+        return frozenset(row["crop_id"] for row in rows if row["split"] == "test")
+
+
+@lru_cache(maxsize=8)
+def _crop_index(index: Path, stamp: tuple[int, int]) -> dict[str, Path]:
+    release = index.parent
     with index.open(encoding="utf-8") as lines:
         rows = (json.loads(line) for line in lines if line.strip())
-        return {row["crop_id"]: folder / release_id / row["crop_path"] for row in rows}
+        return {row["crop_id"]: release / row["crop_path"] for row in rows}
 
 
 def _missing_crops(release_id: str) -> HTTPException:
