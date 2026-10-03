@@ -61,6 +61,38 @@ Cadena de IDs del recorrido E2E del portal:
 
 El recorrido es un **control de flujo**, no de exactitud del modelo: entrena pocas épocas sobre el fixture de 3 clases, así que las métricas son bajas a propósito. Lo que valida es que cada eslabón conecta con el siguiente y que la inferencia usa el modelo recién publicado (comprueba que `model_sha256` de la respuesta coincide con el `checkpoint_sha256`).
 
+### Corrida real — 2 oct 2026 (rama `feat/f14-portal-e2e`, `5b72e3e`)
+
+Docker Desktop 29.8 en Windows, `docker compose -f docker-compose.e2e.yml up -d --build` (los cuatro servicios `healthy`) y el comando del paso 2. Terminó con código 0:
+
+```text
+Recorrido E2E del portal contra MinIO (http://localhost:9100, bucket p3-e2e).
+  [1/6] manifiesto m-0.1.3-s42-1 (1e13542647f16ffa...), 28 recortes
+  [2/6] run 35a93d101155487088b27465dc72238c en MLflow (p3-pruebas)
+  [3/6] evaluacion: accuracy 0.3333 (test_size 3)
+  [4/6] publicado 1.0.0 en MinIO (activa: 1.0.0)
+  [5/6] inferencia 0485674280a24a588ae8dbfbec13271b -> cat
+  [6/6] el servicio uso el modelo publicado (SHA-256 coincide)
+
+Cadena de IDs del recorrido E2E del portal:
+  release_id:        0.1.3
+  manifest_id:       m-0.1.3-s42-1
+  manifest_hash:     1e13542647f16ffa8b9a2f7942653ebfdff425db9fbdefdd3bacb6633a652cdf
+  run_id (MLflow):   35a93d101155487088b27465dc72238c  [experimento p3-pruebas]
+  val_accuracy:      0.3333
+  checkpoint_sha256: dfc462b1e759b8623ceb65ad60b0f4a69303b6a6ddd34a8e208dd9ef4d5af060
+  test_accuracy:     0.3333 (test_size 3)
+  model_version:     1.0.0  [activa]
+  inference_id:      0485674280a24a588ae8dbfbec13271b -> cat
+  almacen:           http://localhost:9100/p3-e2e/models/clasificador  (MinIO de prueba, NO AWS)
+```
+
+- El manifiesto es el del **fixture** de 3 clases (`tests/fixtures/p3`, 28 recortes) con el id `m-0.1.3-s42-1`; por eso su hash (`1e135426…`) no es el del manifiesto congelado real (`45600f29…`), y las métricas son bajas a propósito.
+- El paso 6 compara el `model_sha256` que devuelve `POST /api/p3/inference` con el `checkpoint_sha256` publicado: la inferencia salió del archivo recién publicado en MinIO.
+- **La guarda contra AWS**, comprobada a mano en la misma sesión: sin `P3_S3_ENDPOINT` y con `P3_S3_ENDPOINT=https://s3.amazonaws.com`, el script responde `E2E RECHAZADO` sin tocar nada.
+- En Windows, con la salida redirigida a un archivo, conviene `PYTHONIOENCODING=utf-8`: MLflow imprime un emoji que la consola cp1252 no puede escribir.
+- Después: `docker compose -f docker-compose.e2e.yml down -v` (contenedores y volúmenes de prueba eliminados).
+
 ## 4. Limpieza
 
 ```bash
