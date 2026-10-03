@@ -64,6 +64,18 @@ def test_tarjeta_se_reenvia_como_markdown() -> None:
     assert calls[0][:2] == ("GET", "http://servicio:8010/api/p3/models/1.0.0/card")
 
 
+def test_pesos_se_reenvian_como_binario() -> None:
+    calls: list = []
+    client = client_with(calls, (200, b"BINARIO-DE-PESOS", "application/octet-stream"))
+    try:
+        response = client.get("/api/p3/models/1.0.0/weights")
+    finally:
+        client.restore()
+    assert response.status_code == 200
+    assert response.content == b"BINARIO-DE-PESOS"
+    assert calls[0][:2] == ("GET", "http://servicio:8010/api/p3/models/1.0.0/weights")
+
+
 def test_version_con_caracteres_raros_no_se_reenvia() -> None:
     calls: list = []
     client = client_with(calls, (200, b"{}", "application/json"))

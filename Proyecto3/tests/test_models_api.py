@@ -66,6 +66,26 @@ def test_tarjeta_de_version_desconocida_404(store) -> None:
     assert client_with(store).get("/api/p3/models/7.7.7/card").status_code == 404
 
 
+def test_descarga_los_pesos_con_su_contenido_real(store, checkpoints) -> None:
+    # 6.4: «Descargar pesos» sirve el model.pt real de esa version.
+    response = client_with(store).get("/api/p3/models/1.0.0/weights")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/octet-stream")
+    assert "attachment" in response.headers.get("content-disposition", "")
+    assert response.content == checkpoints[0]  # el model.pt publicado para 1.0.0
+
+
+def test_descarga_de_version_desconocida_404(store) -> None:
+    assert client_with(store).get("/api/p3/models/7.7.7/weights").status_code == 404
+
+
+def test_no_descarga_pesos_si_el_objeto_no_existe_409(store) -> None:
+    store.delete(BUCKET, f"{PREFIX}/0.9.0/model.pt")
+    response = client_with(store).get("/api/p3/models/0.9.0/weights")
+    assert response.status_code == 409
+    assert "no existe" in response.json()["detail"]
+
+
 def test_activar_cambia_la_version_activa(store) -> None:
     response = client_with(store).post("/api/p3/models/0.9.0/activate")
     assert response.status_code == 200
@@ -129,6 +149,7 @@ def s3_errors() -> list[Exception]:
     [
         ("GET", "/api/p3/models"),
         ("GET", "/api/p3/models/1.0.0/card"),
+        ("GET", "/api/p3/models/1.0.0/weights"),
         ("POST", "/api/p3/models/1.0.0/activate"),
     ],
 )
