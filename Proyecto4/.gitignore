@@ -1,0 +1,34 @@
+# Secretos y credenciales
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials
+.aws/
+
+# Pesos y artefactos de modelo: se distribuyen por enlace con SHA-256 (ver docs/decisiones.md)
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.engine
+*.pb
+*.h5
+*.keras
+*.mlmodel
+*.safetensors
+
+# Capturas locales del dispositivo y paquetes de evidencias
+capturas/
+evidencias/*.zip
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Sistema
+.DS_Store
