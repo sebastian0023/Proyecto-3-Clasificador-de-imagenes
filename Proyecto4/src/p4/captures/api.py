@@ -9,8 +9,12 @@ silencio.
 from __future__ import annotations
 
 import hmac
+from functools import lru_cache
 from typing import Annotated
 
+import boto3
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
@@ -20,6 +24,7 @@ from starlette.formparsers import MultiPartException
 from p4.captures.errors import CaptureError
 from p4.captures.event import CaptureEvent, parse_event
 from p4.captures.image import ReceivedImage, inspect_image
+from p4.captures.s3_store import S3CaptureStore, UnavailableStore
 from p4.captures.settings import CaptureSettings, get_settings
 from p4.captures.store import CaptureStore
 from p4.captures.validation import validate_event
@@ -27,12 +32,29 @@ from p4.captures.validation import validate_event
 router = APIRouter(prefix="/api/p4/captures", tags=["p4-captures"])
 
 
-def get_store() -> CaptureStore | None:
-    """Almacen de capturas; `None` mientras no haya destino configurado."""
-    return None
-
-
 SettingsDep = Annotated[CaptureSettings, Depends(get_settings)]
+
+
+@lru_cache
+def _s3_store(bucket: str, prefix: str, profile: str | None, region: str) -> CaptureStore:
+    # Perfil vacio = cadena estandar de boto3 (rol de instancia en el despliegue).
+    try:
+        session = boto3.Session(profile_name=profile)
+    except BotoCoreError as error:
+        return UnavailableStore(f"perfil de AWS {profile!r} no disponible ({type(error).__name__})")
+    client = session.client(
+        "s3", region_name=region, config=Config(retries={"max_attempts": 3, "mode": "standard"})
+    )
+    return S3CaptureStore(client, bucket, prefix)
+
+
+def get_store(settings: SettingsDep) -> CaptureStore | None:
+    """Almacen de capturas en S3; `None` si no hay bucket configurado."""
+    if not settings.bucket.strip():
+        return None
+    return _s3_store(settings.bucket, settings.prefix, settings.aws_profile, settings.aws_region)
+
+
 StoreDep = Annotated[CaptureStore | None, Depends(get_store)]
 
 

@@ -64,7 +64,9 @@ def test_receptor_sin_token_configurado_503(store):
     assert answer.json()["error"] == "receptor_no_configurado"
 
 
-def test_receptor_sin_almacen_503(settings):
+def test_receptor_sin_bucket_503():
+    # Sin bucket no se construye cliente de S3: ninguna prueba toca AWS.
+    settings = CaptureSettings(P4_DEVICE_TOKEN=TOKEN, P4_CAPTURES_BUCKET="")
     app = FastAPI()
     app.include_router(api.router)
     app.dependency_overrides[api.get_settings] = lambda: settings

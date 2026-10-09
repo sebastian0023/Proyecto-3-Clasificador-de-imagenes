@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+from datetime import UTC, datetime
 
 import pytest
 from fastapi import FastAPI
@@ -14,10 +15,15 @@ from PIL import Image
 from p4.captures import api
 from p4.captures.event import CaptureEvent
 from p4.captures.image import ReceivedImage
+from p4.captures.s3_store import S3CaptureStore
 from p4.captures.settings import CaptureSettings
 from p4.captures.store import SaveResult
 
 TOKEN = "token-de-prueba"  # valor falso, solo para pruebas
+BUCKET = "bucket-de-prueba"
+PREFIX = "edge-captures/"
+RECEIVED = datetime(2026, 10, 8, 23, 0, 0, 123000, tzinfo=UTC)
+CID = "edge01-20261009T153012-0007"
 MODEL_SHA = "ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0"
 
 
@@ -83,3 +89,24 @@ def post(client: TestClient, event: object, image: bytes | None, token: str | No
     data = {} if event is None else {"event": text}
     files = {} if image is None else {"image": ("captura.jpg", image, "image/jpeg")}
     return client.post("/api/p4/captures", headers=headers, data=data, files=files)
+
+
+@pytest.fixture
+def s3():
+    from fake_s3 import FakeS3
+
+    return FakeS3()
+
+
+@pytest.fixture
+def s3_store(s3) -> S3CaptureStore:
+    return S3CaptureStore(s3, BUCKET, PREFIX, clock=lambda: RECEIVED)
+
+
+@pytest.fixture
+def s3_client(settings: CaptureSettings, s3_store: S3CaptureStore) -> TestClient:
+    app = FastAPI()
+    app.include_router(api.router)
+    app.dependency_overrides[api.get_settings] = lambda: settings
+    app.dependency_overrides[api.get_store] = lambda: s3_store
+    return TestClient(app)
