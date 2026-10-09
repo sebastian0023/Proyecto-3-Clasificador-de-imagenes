@@ -1,4 +1,4 @@
-"""`/api/p4/captures`: recepcion de capturas del dispositivo (F4, `docs/contratos.md`).
+"""`/api/p4/captures`: recepcion y consulta de capturas del dispositivo (F4, `docs/contratos.md`).
 
 `POST` multipart con dos partes, `event` (JSON) e `image` (JPEG), y el header
 `Authorization: Bearer <P4_DEVICE_TOKEN>`. Cada rechazo responde con
@@ -9,18 +9,20 @@ silencio.
 from __future__ import annotations
 
 import hmac
+from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal
 
 import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Path, Query, Request
+from fastapi.responses import JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 from starlette.formparsers import MultiPartException
 
+from p4.captures import export
 from p4.captures.errors import CaptureError
 from p4.captures.event import CaptureEvent, parse_event
 from p4.captures.image import ReceivedImage, inspect_image
@@ -127,4 +129,74 @@ async def receive_capture(request: Request, settings: SettingsDep, store: StoreD
     return JSONResponse(
         status_code=201 if result.status == "created" else 200,
         content=_created(result.record, result.record_key, result.status),
+    )
+
+
+# --- lectura: portal (F5) y exportacion (bloque 6) ----------------------------
+# Sin token: el portal no tiene inicio de sesion (decision 6). Solo lectura.
+
+CaptureId = Annotated[str, Path(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")]
+
+
+def _readable(store: CaptureStore | None) -> CaptureStore:
+    if store is None:
+        raise CaptureError(
+            503, "receptor_no_configurado", "El almacenamiento de capturas no esta configurado"
+        )
+    return store
+
+
+@router.get("")
+async def list_captures(
+    store: StoreDep, limit: Annotated[int, Query(ge=1, le=1000)] = 100
+) -> JSONResponse:
+    """Capturas de mas reciente a mas antigua (`captured_at` en UTC)."""
+    try:
+        records, problems = await run_in_threadpool(_readable(store).list_records)
+    except CaptureError as error:
+        return error.response()
+    return JSONResponse({"items": records[:limit], "total": len(records), "errores": problems})
+
+
+# Antes de `/{capture_id}`: "export" tambien cumple el patron de un capture_id.
+@router.get("/export")
+async def export_captures(
+    store: StoreDep, format: Annotated[Literal["csv", "json"], Query()] = "json"
+) -> Response:
+    """Todos los eventos con los campos del contrato, en CSV o JSON."""
+    try:
+        records, problems = await run_in_threadpool(_readable(store).list_records)
+    except CaptureError as error:
+        return error.response()
+    now = datetime.now(UTC)
+    headers = {
+        "Content-Disposition": f'attachment; filename="{export.filename(now, format)}"',
+        # Registros ilegibles: visibles tambien en CSV, donde no caben en el cuerpo.
+        "X-Capturas-Con-Error": str(len(problems)),
+    }
+    if format == "csv":
+        return Response(export.to_csv(records), media_type="text/csv", headers=headers)
+    return Response(
+        export.to_json(records, problems, now), media_type="application/json", headers=headers
+    )
+
+
+@router.get("/{capture_id}")
+async def read_capture(capture_id: CaptureId, store: StoreDep) -> JSONResponse:
+    try:
+        record = await run_in_threadpool(_readable(store).get_record, capture_id)
+    except CaptureError as error:
+        return error.response()
+    return JSONResponse(record)
+
+
+@router.get("/{capture_id}/image")
+async def read_capture_image(capture_id: CaptureId, store: StoreDep) -> Response:
+    """La fotografia, leida de S3 por el servidor: el navegador no recibe URLs ni llaves."""
+    try:
+        data = await run_in_threadpool(_readable(store).get_image, capture_id)
+    except CaptureError as error:
+        return error.response()
+    return Response(
+        data, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=300"}
     )

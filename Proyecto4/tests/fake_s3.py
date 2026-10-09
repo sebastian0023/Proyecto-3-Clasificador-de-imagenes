@@ -35,6 +35,8 @@ class FakeS3:
     calls: list[tuple[str, str]] = field(default_factory=list)
     # Errores a lanzar en la proxima llamada a una operacion: {"put_object": ClientError}.
     fail_next: dict[str, Exception] = field(default_factory=dict)
+    # Llaves por pagina de `list_objects_v2` (S3 real: 1000), chico para probar la paginacion.
+    page_size: int = 1000
 
     def _maybe_fail(self, operation: str) -> None:
         error = self.fail_next.pop(operation, None)
@@ -67,6 +69,26 @@ class FakeS3:
             raise client_error("NoSuchKey", 404, "GetObject")
         stored = self.objects[Key]
         return {"Body": io.BytesIO(stored.body), "ContentType": stored.content_type}
+
+    def list_objects_v2(
+        self,
+        *,
+        Bucket: str,  # noqa: N803
+        Prefix: str = "",  # noqa: N803
+        ContinuationToken: str | None = None,  # noqa: N803
+    ) -> dict[str, Any]:
+        self.calls.append(("list_objects_v2", Prefix))
+        self._maybe_fail("list_objects_v2")
+        keys = self.keys(Prefix)
+        start = int(ContinuationToken or 0)
+        page = keys[start : start + self.page_size]
+        answer: dict[str, Any] = {
+            "Contents": [{"Key": key, "Size": len(self.objects[key].body)} for key in page],
+            "IsTruncated": start + self.page_size < len(keys),
+        }
+        if answer["IsTruncated"]:
+            answer["NextContinuationToken"] = str(start + self.page_size)
+        return answer
 
     def keys(self, prefix: str = "") -> list[str]:
         return sorted(key for key in self.objects if key.startswith(prefix))
