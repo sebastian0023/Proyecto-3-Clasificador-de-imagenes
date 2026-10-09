@@ -77,6 +77,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
+      # La etapa `prod` (con P3 y P4 dentro) es solo para `docker-compose.prod.yml`.
+      target: app
     container_name: dq_mcp
     restart: unless-stopped
     environment:
@@ -97,6 +99,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
+      target: app
     container_name: dq_app
     restart: unless-stopped
     env_file:
