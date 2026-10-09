@@ -22,12 +22,12 @@
 
 ## Bloques de trabajo
 
-- **Recepción:** recibir fotografía y metadatos según el contrato, reutilizando los servicios existentes.
-- **Validación del evento:** rechazar o señalar eventos sin zona horaria, con confianza fuera de 0 a 1 o sin versión del artefacto.
-- **Persistencia:** guardar imagen y registro; agregar fecha de recepción y clave de la imagen.
-- **Idempotencia:** un reintento con el mismo ID de captura no crea un duplicado.
-- **Consulta de solo lectura:** dejar lista la consulta que el equipo ejecutará en la demostración para mostrar un registro y el recurso de AWS donde vive, sin entregar credenciales.
-- **Consulta y exportación:** listado ordenado por fecha para el portal y exportación de eventos en CSV o JSON.
+- [x] **Recepción:** recibir fotografía y metadatos según el contrato, reutilizando los servicios existentes. — `POST /api/p4/captures` en el FastAPI del portal ([`src/p4/captures/api.py`](../../src/p4/captures/api.py)); pruebas en [`tests/test_recepcion.py`](../../tests/test_recepcion.py) (16 pasan).
+- [ ] **Validación del evento:** rechazar o señalar eventos sin zona horaria, con confianza fuera de 0 a 1 o sin versión del artefacto.
+- [ ] **Persistencia:** guardar imagen y registro; agregar fecha de recepción y clave de la imagen.
+- [ ] **Idempotencia:** un reintento con el mismo ID de captura no crea un duplicado.
+- [ ] **Consulta de solo lectura:** dejar lista la consulta que el equipo ejecutará en la demostración para mostrar un registro y el recurso de AWS donde vive, sin entregar credenciales.
+- [ ] **Consulta y exportación:** listado ordenado por fecha para el portal y exportación de eventos en CSV o JSON.
 
 ## Cómo se cierra
 
@@ -43,3 +43,4 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 2026-10-08 | Emilio | Recepción | Router `POST /api/p4/captures` (multipart `event` + `image`, token Bearer, JPEG ≤ 5 MB, forma del evento con campos desconocidos rechazados) montado en el portal; compose monta `Proyecto4/src` y `~/.aws` (solo lectura); variables `P4_*` en `.env.example`. 16 pruebas. | Validación semántica (bloque 2); escritura en S3 (bloque 3): hasta entonces responde 503 `receptor_no_configurado`. |
