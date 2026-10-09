@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import io
 import json
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from conftest import TOKEN, make_jpeg, post, valid_event
 from p4.captures import api
@@ -141,3 +143,71 @@ def test_confianza_como_texto_422(client):
     answer = post(client, valid_event(image, confidence="0.93"), image)
     assert answer.status_code == 422
     assert answer.json()["detalles"][0]["campo"] == "confidence"
+
+
+# --- tope de la parte `event` (revision de Edith) ----------------------------
+
+
+def test_evento_real_queda_muy_por_debajo_del_tope(settings):
+    assert len(json.dumps(valid_event(make_jpeg())).encode()) < 1024 < settings.max_event_bytes
+
+
+def test_evento_de_texto_demasiado_grande_413(client, store, settings):
+    image = make_jpeg()
+    event = valid_event(image, image_ref="x" * settings.max_event_bytes)
+    answer = post(client, event, image)
+    assert answer.status_code == 413
+    body = answer.json()
+    assert body["error"] == "evento_demasiado_grande"
+    assert str(settings.max_event_bytes) in body["mensaje"]
+    assert body["detalles"] == []
+    assert store.saved == []
+
+
+def test_evento_como_archivo_demasiado_grande_413(client, store, settings):
+    image = make_jpeg()
+    big = json.dumps(valid_event(image, image_ref="x" * settings.max_event_bytes))
+    answer = client.post(
+        "/api/p4/captures",
+        headers={"Authorization": f"Bearer {TOKEN}"},
+        files={
+            "event": ("event.json", big, "application/json"),
+            "image": ("captura.jpg", image, "image/jpeg"),
+        },
+    )
+    assert answer.status_code == 413
+    assert answer.json()["error"] == "evento_demasiado_grande"
+    assert store.saved == []
+
+
+def test_evento_justo_en_el_tope_no_es_413(client, settings):
+    image = make_jpeg()
+    base = json.dumps(valid_event(image, image_ref=""))
+    padding = settings.max_event_bytes - len(base.encode())
+    event = valid_event(image, image_ref="x" * padding)
+    assert len(json.dumps(event).encode()) == settings.max_event_bytes
+    # Llega entero: se valida como evento normal (aqui, aceptado).
+    assert post(client, event, image).status_code == 201
+
+
+def test_el_tope_no_afecta_a_la_imagen(client, settings):
+    """La imagen llega como archivo: solo la limita su propio tope (200 KB en estas pruebas)."""
+    buffer = io.BytesIO()
+    Image.effect_noise((200, 200), 100).convert("RGB").save(buffer, format="JPEG", quality=95)
+    image = buffer.getvalue()
+    assert settings.max_event_bytes < len(image) < settings.max_image_bytes
+    assert post(client, valid_event(image), image).status_code == 201
+
+
+def test_multipart_mal_formado_400_con_formato_del_contrato(client):
+    answer = client.post(
+        "/api/p4/captures",
+        headers={
+            "Authorization": f"Bearer {TOKEN}",
+            "Content-Type": "multipart/form-data; boundary=xyz",
+        },
+        # Una parte sin `name`: python-multipart la rechaza al parsear.
+        content=b"--xyz\r\nContent-Disposition: form-data\r\n\r\nsin nombre\r\n--xyz--\r\n",
+    )
+    assert answer.status_code == 400
+    assert answer.json()["error"] == "solicitud_invalida"

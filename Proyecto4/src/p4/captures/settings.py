@@ -32,6 +32,8 @@ class CaptureSettings(BaseSettings):
     # `version=sha256` separados por coma.
     accepted_models: str = Field(default=DEFAULT_ACCEPTED_MODELS, alias="P4_ACCEPTED_MODELS")
     max_image_bytes: int = Field(default=5 * 1024 * 1024, alias="P4_MAX_IMAGE_BYTES")
+    # El evento real pesa menos de 1 KB; 16 KiB deja margen (p. ej. rutas largas en image_ref).
+    max_event_bytes: int = Field(default=16 * 1024, alias="P4_MAX_EVENT_BYTES")
 
     @field_validator("aws_profile", "device_token", mode="before")
     @classmethod

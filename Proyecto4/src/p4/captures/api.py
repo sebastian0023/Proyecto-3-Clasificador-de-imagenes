@@ -9,8 +9,9 @@ silencio.
 from __future__ import annotations
 
 import hmac
+import threading
+import time
 from datetime import UTC, datetime
-from functools import lru_cache
 from typing import Annotated, Literal
 
 import boto3
@@ -20,6 +21,7 @@ from fastapi import APIRouter, Depends, Path, Query, Request
 from fastapi.responses import JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
+from starlette.exceptions import HTTPException
 from starlette.formparsers import MultiPartException
 
 from p4.captures import export
@@ -37,17 +39,50 @@ router = APIRouter(prefix="/api/p4/captures", tags=["p4-captures"])
 SettingsDep = Annotated[CaptureSettings, Depends(get_settings)]
 
 
-@lru_cache
+# Pausa minima entre intentos de crear el cliente S3 cuando fallo (perfil inexistente,
+# credenciales aun no montadas): no se reintenta en cada peticion, pero tampoco hace
+# falta reiniciar el portal cuando se corrige la configuracion.
+STORE_RETRY_S = 5.0
+_StoreKey = tuple[str, str, str | None, str]
+_stores: dict[_StoreKey, CaptureStore] = {}
+_failures: dict[_StoreKey, tuple[float, UnavailableStore]] = {}
+_stores_lock = threading.Lock()
+_clock = time.monotonic  # sustituible en pruebas
+
+
+def reset_stores() -> None:
+    with _stores_lock:
+        _stores.clear()
+        _failures.clear()
+
+
 def _s3_store(bucket: str, prefix: str, profile: str | None, region: str) -> CaptureStore:
-    # Perfil vacio = cadena estandar de boto3 (rol de instancia en el despliegue).
-    try:
-        session = boto3.Session(profile_name=profile)
-    except BotoCoreError as error:
-        return UnavailableStore(f"perfil de AWS {profile!r} no disponible ({type(error).__name__})")
-    client = session.client(
-        "s3", region_name=region, config=Config(retries={"max_attempts": 3, "mode": "standard"})
-    )
-    return S3CaptureStore(client, bucket, prefix)
+    """Cliente S3 compartido. Si crearlo falla, 503 visible y nuevo intento tras `STORE_RETRY_S`."""
+    key = (bucket, prefix, profile, region)
+    with _stores_lock:
+        if key in _stores:
+            return _stores[key]
+        failed = _failures.get(key)
+        if failed is not None and _clock() - failed[0] < STORE_RETRY_S:
+            return failed[1]
+        # Perfil vacio = cadena estandar de boto3 (rol de instancia en el despliegue).
+        try:
+            session = boto3.Session(profile_name=profile)
+            client = session.client(
+                "s3",
+                region_name=region,
+                config=Config(retries={"max_attempts": 3, "mode": "standard"}),
+            )
+        except BotoCoreError as error:
+            store = UnavailableStore(
+                f"perfil de AWS {profile!r} no disponible ({type(error).__name__}); "
+                f"se reintenta en {STORE_RETRY_S:g} s"
+            )
+            _failures[key] = (_clock(), store)
+            return store
+        _failures.pop(key, None)
+        _stores[key] = S3CaptureStore(client, bucket, prefix)
+        return _stores[key]
 
 
 def get_store(settings: SettingsDep) -> CaptureStore | None:
@@ -73,13 +108,30 @@ def check_token(header: str | None, settings: CaptureSettings) -> None:
         raise CaptureError(401, "no_autorizado", "Falta el token del dispositivo o no es valido")
 
 
-async def read_parts(request: Request, max_image_bytes: int) -> tuple[str, bytes]:
-    """Partes `event` e `image` del multipart. 400 si falta alguna o el cuerpo no es multipart."""
+def event_too_large(max_event_bytes: int) -> CaptureError:
+    return CaptureError(
+        413,
+        "evento_demasiado_grande",
+        f"La parte 'event' pasa de {max_event_bytes} bytes; "
+        "el evento del contrato pesa menos de 1 KB",
+    )
+
+
+async def read_parts(
+    request: Request, max_image_bytes: int, max_event_bytes: int
+) -> tuple[str, bytes]:
+    """Partes `event` e `image` del multipart. 400 si falta alguna; 413 si `event` es enorme."""
     try:
-        form = await request.form(max_files=2, max_fields=2)
-    except MultiPartException as error:
+        # `max_part_size` limita las partes de texto (no la imagen, que llega como archivo).
+        form = await request.form(max_files=2, max_fields=2, max_part_size=max_event_bytes)
+    except (MultiPartException, HTTPException) as error:
+        # Dentro de una app, Starlette envuelve el MultiPartException en un HTTPException(400):
+        # se traduce aqui al formato del contrato.
+        reason = str(getattr(error, "message", None) or getattr(error, "detail", error))
+        if "exceeded maximum size" in reason:
+            raise event_too_large(max_event_bytes) from error
         raise CaptureError(
-            400, "solicitud_invalida", f"El cuerpo no es multipart valido: {error.message}"
+            400, "solicitud_invalida", f"El cuerpo no es multipart valido: {reason}"
         ) from error
     event = form.get("event")
     image = form.get("image")
@@ -92,7 +144,10 @@ async def read_parts(request: Request, max_image_bytes: int) -> tuple[str, bytes
     # Se lee un byte de mas para saber si pasa del tope sin cargar archivos enormes.
     data = await image.read(max_image_bytes + 1)
     if isinstance(event, UploadFile):
-        event = (await event.read()).decode("utf-8", errors="replace")
+        raw = await event.read(max_event_bytes + 1)
+        if len(raw) > max_event_bytes:
+            raise event_too_large(max_event_bytes)
+        event = raw.decode("utf-8", errors="replace")
     return event, data
 
 
@@ -112,7 +167,9 @@ async def receive_capture(request: Request, settings: SettingsDep, store: StoreD
     """Recibe una captura: token, partes, imagen, forma y reglas del evento, y almacenamiento."""
     try:
         check_token(request.headers.get("authorization"), settings)
-        event_text, data = await read_parts(request, settings.max_image_bytes)
+        event_text, data = await read_parts(
+            request, settings.max_image_bytes, settings.max_event_bytes
+        )
         image: ReceivedImage = inspect_image(data, settings.max_image_bytes)
         event: CaptureEvent = parse_event(event_text)
         validate_event(event, image, settings)

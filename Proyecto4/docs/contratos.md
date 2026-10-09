@@ -12,7 +12,7 @@ Lo produce el dispositivo (F3), lo recibe y persiste AWS (F4) y lo muestra Captu
 
 | Parte | Contenido |
 |---|---|
-| `event` | Campo de texto con el JSON del evento (tabla de abajo). |
+| `event` | Campo de texto con el JSON del evento (tabla de abajo), máximo 16 KiB (16 384 bytes); el evento real pesa menos de 1 KB. |
 | `image` | Archivo JPEG (`image/jpeg`), máximo 5 MB. Son los bytes de la fotografía tal como se guardaron en el dispositivo. |
 
 Header obligatorio: `Authorization: Bearer <P4_DEVICE_TOKEN>`. El token vive en una variable de entorno del dispositivo y en el `.env` del portal; nunca en Git ni en el chat.
@@ -78,7 +78,7 @@ Los errores siempre tienen la forma `{"error": "<código>", "mensaje": "<texto>"
 | Reintento idéntico (mismo `capture_id`, mismos campos e imagen) | 200 | `{"status": "duplicate", ...}` con el `received_at` original; no se escribe nada |
 | Mismo `capture_id` con otros datos o con otra imagen | 409 | `conflicto_capture_id`: "El capture_id ya existe con otros datos", con cada campo distinto (guardado contra recibido) en `detalles`. No se sobrescribe |
 | Sin token o token incorrecto | 401 | `no_autorizado` |
-| Falta la parte `event` o `image`, o el JSON está mal formado | 400 | `solicitud_invalida`, por ejemplo "Falta la parte 'image'" |
+| Falta la parte `event` o `image`, el multipart está mal formado o el JSON no es válido | 400 | `solicitud_invalida`, por ejemplo "Falta la parte 'image'" |
 | `captured_at` sin zona (`2026-10-09T15:30:12`) | 422 | `evento_invalido`: "captured_at debe incluir zona horaria (ej. -06:00)" |
 | `confidence` fuera de [0, 1] (`1.2`) | 422 | `evento_invalido`: "confidence debe estar entre 0 y 1; llegó 1.2" |
 | Sin `model_version` | 422 | `evento_invalido`: "model_version es obligatorio" |
@@ -87,8 +87,9 @@ Los errores siempre tienen la forma `{"error": "<código>", "mensaje": "<texto>"
 | `image_sha256` distinto del de la imagen recibida | 422 | `evento_invalido`: "image_sha256 no coincide con la imagen recibida" |
 | Campo desconocido o `region` fuera de la imagen | 422 | `evento_invalido` con el campo en `detalles` |
 | La imagen no es JPEG | 415 | `imagen_no_soportada` |
+| La parte `event` pasa de 16 KiB (16 384 bytes) | 413 | `evento_demasiado_grande`: "La parte 'event' pasa de 16384 bytes; el evento del contrato pesa menos de 1 KB" |
 | La imagen pasa de 5 MB | 413 | `imagen_demasiado_grande` |
-| S3 no responde o el receptor no está configurado (sin bucket o sin token) | 503 | `almacenamiento_no_disponible` / `receptor_no_configurado`: "Reintenta con el mismo capture_id" |
+| S3 no responde o el receptor no está configurado (sin bucket, sin token o perfil de AWS que no se pudo cargar) | 503 | `almacenamiento_no_disponible` / `receptor_no_configurado`: "Reintenta con el mismo capture_id". Si falló la creación del cliente S3, el receptor la vuelve a intentar en el siguiente envío, como máximo una vez cada 5 s, sin reiniciar el portal |
 
 **Reintentos:** el dispositivo reintenta **solo** ante 503 o un error de red (sin respuesta, timeout), siempre con el mismo evento y el mismo `capture_id`. Un 4xx no se reintenta: se muestra el error y se corrige. El reintento es seguro: si el primer envío sí llegó, la respuesta es `200 duplicate`.
 

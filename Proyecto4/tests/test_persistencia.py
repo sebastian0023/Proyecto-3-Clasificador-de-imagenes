@@ -6,8 +6,10 @@ import hashlib
 import json
 
 import boto3
+import pytest
 from botocore import UNSIGNED
 from botocore.config import Config
+from botocore.exceptions import ProfileNotFound
 from botocore.stub import ANY, Stubber
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -120,10 +122,70 @@ def test_perfil_inexistente_responde_503(settings):
     assert "no-existe" in answer.json()["mensaje"]
 
 
-def test_perfil_inexistente_no_rompe_el_arranque():
-    api._s3_store.cache_clear()
+# --- cliente S3 que no se pudo crear: 503 visible y nuevo intento sin reiniciar ------------
+
+
+@pytest.fixture
+def fresh_stores(monkeypatch):
+    """Fabrica de clientes vacia y reloj controlado; boto3.Session sustituible."""
+    api.reset_stores()
+    now = {"t": 1000.0}
+    monkeypatch.setattr(api, "_clock", lambda: now["t"])
+    yield now
+    api.reset_stores()
+
+
+def test_perfil_inexistente_no_rompe_el_arranque(fresh_stores):
     store = api._s3_store(BUCKET, PREFIX, "perfil-que-no-existe-en-ninguna-maquina", "us-east-1")
     assert isinstance(store, UnavailableStore)
+    assert "se reintenta en 5 s" in store.reason
+
+
+def test_perfil_inexistente_se_reintenta_tras_la_pausa_y_se_recupera(fresh_stores, monkeypatch):
+    attempts = {"n": 0}
+    real_session = boto3.Session
+
+    def session(profile_name=None):
+        attempts["n"] += 1
+        if attempts["n"] == 1:
+            raise ProfileNotFound(profile="p4-emilio")
+        # Crear el cliente no resuelve credenciales: la prueba no toca AWS.
+        return real_session(region_name="us-east-1")
+
+    monkeypatch.setattr(api.boto3, "Session", session)
+    first = api._s3_store(BUCKET, PREFIX, "p4-emilio", "us-east-1")
+    assert isinstance(first, UnavailableStore)
+
+    # Dentro de la pausa: no se vuelve a intentar y el 503 sigue visible.
+    fresh_stores["t"] += api.STORE_RETRY_S - 0.1
+    assert api._s3_store(BUCKET, PREFIX, "p4-emilio", "us-east-1") is first
+    assert attempts["n"] == 1
+
+    # Pasada la pausa: nuevo intento; ahora funciona y el cliente queda guardado.
+    fresh_stores["t"] += 0.2
+    recovered = api._s3_store(BUCKET, PREFIX, "p4-emilio", "us-east-1")
+    assert isinstance(recovered, S3CaptureStore)
+    assert api._s3_store(BUCKET, PREFIX, "p4-emilio", "us-east-1") is recovered
+    assert attempts["n"] == 2
+
+
+def test_mientras_falla_el_post_sigue_respondiendo_503(fresh_stores, settings, monkeypatch):
+    def broken(profile_name=None):
+        raise ProfileNotFound(profile="p4-emilio")
+
+    monkeypatch.setattr(api.boto3, "Session", broken)
+    app = FastAPI()
+    app.include_router(api.router)
+    app.dependency_overrides[api.get_settings] = lambda: settings.model_copy(
+        update={"aws_profile": "p4-emilio"}
+    )
+    client = TestClient(app)
+    image = make_jpeg()
+    for _ in range(2):
+        answer = post(client, valid_event(image), image)
+        assert answer.status_code == 503
+        assert answer.json()["error"] == "receptor_no_configurado"
+        assert "p4-emilio" in answer.json()["mensaje"]
 
 
 def test_llamadas_reales_a_s3_con_los_parametros_del_contrato():
