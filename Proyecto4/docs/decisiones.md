@@ -11,7 +11,7 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 | 3 | Datos de comparación de calidad | Edith | | pendiente | F7 |
 | 4 | Modo de captura | Bryan | | pendiente | F3, F9 |
 | 5 | Servicios de AWS | Emilio | 8 oct | cerrada | F4, F5 |
-| 6 | Ubicación de Capturas Edge en el portal | Emilio | 8 oct | cerrada (URL desplegada: pendiente de dato) | F5 |
+| 6 | Ubicación de Capturas Edge en el portal | Emilio | 8 oct (URL y acceso: 9 oct) | cerrada | F5 |
 | 7 | Hardware y entorno del dispositivo | Bryan | | pendiente | F3, F8 |
 | 8 | Qué cabe en Git y qué se distribuye por enlace | Edith y Emilio | | pendiente | F2, F10 |
 
@@ -68,8 +68,8 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 - **Entrada del menú y ruta:** entrada `Capturas Edge` (`id: 'edge-captures'`) en la lista `PAGES` de `Proyecto2/web/src/App.tsx`, después de `Inference` y antes de `Settings`; ruta `#/edge-captures`. Es el mismo portal de P2 y P3 (la app web de P2 con las páginas de P3).
 - **Imágenes:** las sirve `GET /api/p4/captures/{id}/image`, que las lee de S3 del lado del servidor. El navegador no recibe URLs públicas ni credenciales.
-- **Dónde está desplegado el portal (URL) y quién lo administra:** **pendiente de dato.** Hoy el portal solo corre en local con Docker Compose; el despliegue en AWS lo hace Emilio con los permisos que gestione el PM (Sebastián).
-- **Acceso limitado para el evaluador:** el portal no tiene inicio de sesión; los `GET` de Capturas Edge son de lectura. Se define junto con el despliegue (pendiente).
+- **Dónde está desplegado el portal (URL) y quién lo administra:** **`https://174-129-84-80.sslip.io`** (Capturas Edge en `#/edge-captures`; MLflow en `https://mlflow.174-129-84-80.sslip.io`). EC2 `i-0348c123c4c126267` (t3.medium, us-east-1) con IP elástica `174.129.84.80`, Docker Compose (`Proyecto2/docker-compose.prod.yml`) y Caddy con HTTPS de Let's Encrypt; rol de instancia `p4-portal-ec2`, sin llaves personales. Lo administra Emilio; los permisos los gestiona el PM (Sebastián). Guía: [`despliegue.md`](despliegue.md). P1 **no** se despliega (confirmado con el PM el 9 oct): solo el portal de P2 y P3 con Capturas Edge.
+- **Acceso limitado para el evaluador:** usuario y contraseña de Caddy (`basic_auth`) en **todo** el portal (web, API, imágenes, exportación y MLflow), **excepto** `POST /api/p4/captures`, que usa el dispositivo y está protegido por su token (`P4_DEVICE_TOKEN`). Confirmado con el PM el 9 oct. El usuario es `evaluador`; la contraseña se entrega por un canal privado y solo su hash bcrypt vive en la EC2 (`/opt/p4/secretos/caddy.env`, 600, root). El evaluador no recibe llaves de AWS.
 
 ## 7. Hardware y entorno del dispositivo
 

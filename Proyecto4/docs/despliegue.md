@@ -200,8 +200,19 @@ La captura de prueba por HTTPS (con ID aprobado) se envía con `Proyecto4/script
 
 Lo que queda en S3 (`edge-captures/`) no se borra: es la evidencia de la entrega.
 
+## Despliegue actual (9 oct de 2026)
+
+| Recurso | Valor |
+|---|---|
+| URL | `https://174-129-84-80.sslip.io` (MLflow: `https://mlflow.174-129-84-80.sslip.io`) |
+| Commit desplegado | `978681ab0c0f0884e94d52b321ea387d9e1711b9` |
+| Instancia | `i-0348c123c4c126267` (t3.medium, us-east-1a), volumen `vol-0e820472328aa1584` |
+| Security group | `sg-03ef1c4d438238594` (`p4-portal-sg`) |
+| IP elástica | `174.129.84.80` (`eipalloc-028fd049cafd50d82`) |
+
 ## Limitaciones conocidas
 
 - P1 no se despliega: «Enviar a cola» de Inference responde 502.
 - Sin `dvc pull` (paso 7, opcional) Experiments no muestra las corridas del barrido y Training no lista manifiestos; Exploración y las miniaturas de Evaluation necesitan además el dataset y los recortes, que no se llevan a la instancia.
 - `quality.yaml` y `reports/` se pueden modificar desde Settings dentro del contenedor, pero esos cambios se pierden al recrearlo (los versionados están en Git).
+- Mejora opcional: el `401` que responde `basic_auth` no incluye `Strict-Transport-Security` (las respuestas de la app sí). No es un riesgo práctico porque el puerto 80 solo redirige a HTTPS.
