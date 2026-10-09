@@ -10,8 +10,8 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 | 2 | Técnica y objetivo de optimización | Edith | | pendiente | F2, F7, F8 |
 | 3 | Datos de comparación de calidad | Edith | | pendiente | F7 |
 | 4 | Modo de captura | Bryan | | pendiente | F3, F9 |
-| 5 | Servicios de AWS | Emilio | | pendiente | F4, F5 |
-| 6 | Ubicación de Capturas Edge en el portal | Emilio | | pendiente | F5 |
+| 5 | Servicios de AWS | Emilio | 8 oct | cerrada | F4, F5 |
+| 6 | Ubicación de Capturas Edge en el portal | Emilio | 8 oct | cerrada (URL desplegada: pendiente de dato) | F5 |
 | 7 | Hardware y entorno del dispositivo | Bryan | | pendiente | F3, F8 |
 | 8 | Qué cabe en Git y qué se distribuye por enlace | Edith y Emilio | | pendiente | F2, F10 |
 
@@ -42,17 +42,34 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 ## 5. Servicios de AWS
 
-- Cuenta y región:
-- Dónde se guarda la imagen y dónde el registro del evento:
-- Cómo recibe el dispositivo (endpoint, función o servicio):
-- Identidad del dispositivo y permisos mínimos (sin claves en Git):
-- Consulta de solo lectura para la demostración:
+**Decisión:** reutilizar el bucket S3 de releases del P2/P3 con un prefijo nuevo y recibir los eventos en el FastAPI del portal existente. Sin servicios nuevos de AWS (la rúbrica no los exige) y sin recursos con costo fijo.
+
+- **Cuenta y región:** `750702272375`, `us-east-1` (las de `Proyecto3/docs/almacenamiento.md`).
+- **Dónde se guarda la imagen y el registro:** `s3://dataset-quality-releases-750702272375/edge-captures/` (versionado, cifrado SSE, sin acceso público, por Terraform en `Proyecto2/terraform/modules/s3`):
+
+  ```
+  edge-captures/images/{capture_id}.jpg     fotografía, bytes tal cual llegaron
+                                            metadatos S3: sha256, capture-id
+  edge-captures/events/{capture_id}.json    registro: evento + campos del servidor
+  ```
+
+  El `capture_id` va en la llave porque la idempotencia es una escritura condicional sobre una llave exacta. Nunca se sobrescribe ni se borra; la regla del bucket que expira versiones no actuales a los 90 días no afecta a objetos que no se reemplazan.
+- **Cómo recibe el dispositivo:** `POST /api/p4/captures` (multipart, token Bearer) en el FastAPI del portal (`Proyecto2/src/dataset_quality/main.py`), con un router de `Proyecto4/src/p4/` montado igual que los de P3. El contrato completo está en [`contratos.md`](contratos.md). El mismo router sirve el listado, la imagen y la exportación a Capturas Edge (F5).
+- **Idempotencia:** `PutObject` con `If-None-Match: *`, primero la imagen y después el registro. Si la llave ya existe (HTTP 412 de S3), se compara lo guardado con lo recibido: igual → `200 duplicate` sin escribir; distinto → `409 conflicto_capture_id` con los campos que difieren. Nunca se sobrescribe ni se responde 2xx a un conflicto. Una falla a la mitad (imagen escrita, registro no) se completa con el reintento del mismo ID; un registro nunca apunta a una imagen inexistente.
+- **Listado ordenado:** `ListObjectsV2` de `events/` y `GetObject` en paralelo, ordenado por `captured_at` en UTC (más reciente primero; desempate `received_at`, `capture_id`), con caché en memoria de unos 10 s. Con el volumen esperado (menos de 300 eventos) son centavos y menos de un segundo. Si creciera, se agrega un índice `edge-captures/by-date/{captured_at_utc}_{capture_id}` que S3 lista en orden lexicográfico (no implementado).
+- **Credenciales del receptor (sin llaves en Git):**
+  - Si `P4_AWS_PROFILE` tiene valor, boto3 usa ese perfil de `~/.aws`. **Solo para desarrollo local:** compose monta `~/.aws` en solo lectura, igual que en `p3-inference`.
+  - Si `P4_AWS_PROFILE` está vacío, boto3 usa la cadena estándar de credenciales (variables de entorno, rol de instancia, rol de tarea). Es el modo del despliegue: **en producción, nada de llaves personales**, el permiso viene de un rol.
+  - Permisos que necesita el receptor: `s3:PutObject` y `s3:GetObject` sobre `edge-captures/*`, y `s3:ListBucket` con prefijo `edge-captures/`. No necesita `DeleteObject`.
+- **Identidad del dispositivo:** `device_id` en el evento y un token compartido (`P4_DEVICE_TOKEN`) en el header `Authorization`. El token vive en `Proyecto2/.env` y en una variable de entorno de la Pi, nunca en Git. El dispositivo **no** tiene credenciales de AWS: solo habla con el receptor.
+- **Consulta de solo lectura para la demostración:** el equipo la ejecuta en vivo con `aws s3api head-object` y `get-object` sobre `edge-captures/events/{id}.json` e `edge-captures/images/{id}.jpg` (llave, `VersionId`, `LastModified`, `sha256` y contenido). Alternativa: el usuario `dataset-quality-evaluator`, que ya tiene solo lectura sobre el bucket. Nunca se entregan llaves. Los comandos exactos se documentan en F4 (bloque de consulta de solo lectura).
 
 ## 6. Ubicación de Capturas Edge
 
-- Entrada del menú y ruta en el portal de los Proyectos 1 a 3:
-- Dónde está desplegado el portal (URL) y quién lo administra:
-- Acceso limitado para el evaluador:
+- **Entrada del menú y ruta:** entrada `Capturas Edge` (`id: 'edge-captures'`) en la lista `PAGES` de `Proyecto2/web/src/App.tsx`, después de `Inference` y antes de `Settings`; ruta `#/edge-captures`. Es el mismo portal de P2 y P3 (la app web de P2 con las páginas de P3).
+- **Imágenes:** las sirve `GET /api/p4/captures/{id}/image`, que las lee de S3 del lado del servidor. El navegador no recibe URLs públicas ni credenciales.
+- **Dónde está desplegado el portal (URL) y quién lo administra:** **pendiente de dato.** Hoy el portal solo corre en local con Docker Compose; el despliegue en AWS lo hace Emilio con los permisos que gestione el PM (Sebastián).
+- **Acceso limitado para el evaluador:** el portal no tiene inicio de sesión; los `GET` de Capturas Edge son de lectura. Se define junto con el despliegue (pendiente).
 
 ## 7. Hardware y entorno del dispositivo
 
