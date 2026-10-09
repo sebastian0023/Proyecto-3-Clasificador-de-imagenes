@@ -18,6 +18,8 @@ credentials
 *.keras
 *.mlmodel
 *.safetensors
+# Salida local de modelo/convert.py (se publica en S3, ver docs/artefacto.md)
+/artifacts/
 
 # Capturas locales del dispositivo y paquetes de evidencias
 capturas/

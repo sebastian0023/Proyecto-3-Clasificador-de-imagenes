@@ -32,12 +32,12 @@
 
 ## Cómo se cierra
 
-- [ ] Variante cargable en el runtime del dispositivo
-- [ ] Registro de conversión que une el original del Proyecto 3 con la variante
-- [ ] Técnica explicada con evidencia de su efecto
-- [ ] Orden de clases y preprocesamiento idénticos al original
-- [ ] Conversión reproducible desde el repositorio
-- [ ] Ficha del artefacto con enlaces de descarga y hashes
+- [ ] Variante cargable en el runtime del dispositivo — carga en aarch64 emulado con onnxruntime 1.30.0 ([`arm64_check.txt`](../../modelo/registros/arm64_check.txt)); **falta confirmarlo en la Raspberry Pi física (Bryan, F3)**
+- [x] Registro de conversión que une el original del Proyecto 3 con la variante: [`conversion_log.json`](../../modelo/registros/conversion_log.json) (entrada `e4acca42…` run `9f9b62c2…` → salida `ca689c4e…`)
+- [x] Técnica explicada con evidencia de su efecto: INT8 estática QDQ por canal, 74.66 % menos bytes, 20 `QLinearConv` en el runtime ([`artefacto.md`](../artefacto.md#efecto-de-la-técnica))
+- [x] Orden de clases y preprocesamiento idénticos al original: salen del checkpoint (`model_package.json`); 3/3 entradas conocidas iguales ([`smoke_test.json`](../../modelo/registros/smoke_test.json))
+- [x] Conversión reproducible desde el repositorio: [`modelo/convert.py`](../../modelo/convert.py) + [`conversion.yaml`](../../modelo/conversion.yaml) + lockfile; dos corridas dan los mismos SHA-256
+- [x] Ficha del artefacto con enlaces de descarga y hashes: [`docs/artefacto.md`](../artefacto.md), objetos en S3 en [`publicacion.json`](../../modelo/registros/publicacion.json)
 - [ ] PR fusionado con review de Bryan
 - [ ] Estado de la tarjeta en **Hecho**
 
@@ -45,3 +45,4 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 2026-10-08 | Edith | Conversión, registro, técnica, reproducibilidad, calibración, prueba de humo y ficha | Variante `1.0.0-int8.1` publicada en `s3://…/models/clasificador-edge/1.0.0-int8.1/`; PR de F2 | Carga en la Pi física (Bryan, F3). La calidad INT8 se mide en aarch64, no en x86 (ver aviso en `artefacto.md`) |
