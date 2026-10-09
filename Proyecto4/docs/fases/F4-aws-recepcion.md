@@ -23,7 +23,7 @@
 ## Bloques de trabajo
 
 - [x] **Recepción:** recibir fotografía y metadatos según el contrato, reutilizando los servicios existentes. — `POST /api/p4/captures` en el FastAPI del portal ([`src/p4/captures/api.py`](../../src/p4/captures/api.py)); pruebas en [`tests/test_recepcion.py`](../../tests/test_recepcion.py) (16 pasan).
-- [ ] **Validación del evento:** rechazar o señalar eventos sin zona horaria, con confianza fuera de 0 a 1 o sin versión del artefacto.
+- [x] **Validación del evento:** rechazar o señalar eventos sin zona horaria, con confianza fuera de 0 a 1 o sin versión del artefacto. — [`src/p4/captures/validation.py`](../../src/p4/captures/validation.py): 422 `evento_invalido` con todos los problemas juntos; reloj adelantado más de 5 min se señala (`captured_at_en_el_futuro`) sin rechazar. Pruebas en [`tests/test_validacion.py`](../../tests/test_validacion.py).
 - [ ] **Persistencia:** guardar imagen y registro; agregar fecha de recepción y clave de la imagen.
 - [ ] **Idempotencia:** un reintento con el mismo ID de captura no crea un duplicado.
 - [ ] **Consulta de solo lectura:** dejar lista la consulta que el equipo ejecutará en la demostración para mostrar un registro y el recurso de AWS donde vive, sin entregar credenciales.
@@ -44,3 +44,4 @@
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
 | 2026-10-08 | Emilio | Recepción | Router `POST /api/p4/captures` (multipart `event` + `image`, token Bearer, JPEG ≤ 5 MB, forma del evento con campos desconocidos rechazados) montado en el portal; compose monta `Proyecto4/src` y `~/.aws` (solo lectura); variables `P4_*` en `.env.example`. 16 pruebas. | Validación semántica (bloque 2); escritura en S3 (bloque 3): hasta entonces responde 503 `receptor_no_configurado`. |
+| 2026-10-08 | Emilio | Validación del evento | Reglas del contrato antes de guardar: zona horaria obligatoria, confianza finita en [0, 1], versión aceptada y SHA-256 del modelo que le corresponde, clase `cat`/`dog`/`person`, `image_sha256` igual al de la imagen recibida, formato de `capture_id` y `device_id`, región dentro de la imagen. Aviso `captured_at_en_el_futuro` (sin rechazo) y `delivery_delay_s` informativo. 52 pruebas en total. | Escritura en S3 (bloque 3). |

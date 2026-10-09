@@ -22,6 +22,7 @@ from p4.captures.event import CaptureEvent, parse_event
 from p4.captures.image import ReceivedImage, inspect_image
 from p4.captures.settings import CaptureSettings, get_settings
 from p4.captures.store import CaptureStore
+from p4.captures.validation import validate_event
 
 router = APIRouter(prefix="/api/p4/captures", tags=["p4-captures"])
 
@@ -84,12 +85,13 @@ def _created(result_record: dict[str, object], record_key: str, status: str) -> 
 
 @router.post("", status_code=201)
 async def receive_capture(request: Request, settings: SettingsDep, store: StoreDep) -> JSONResponse:
-    """Recibe una captura: token, partes, imagen, evento y almacenamiento, en ese orden."""
+    """Recibe una captura: token, partes, imagen, forma y reglas del evento, y almacenamiento."""
     try:
         check_token(request.headers.get("authorization"), settings)
         event_text, data = await read_parts(request, settings.max_image_bytes)
         image: ReceivedImage = inspect_image(data, settings.max_image_bytes)
         event: CaptureEvent = parse_event(event_text)
+        validate_event(event, image, settings)
         if store is None:
             raise CaptureError(
                 503,
