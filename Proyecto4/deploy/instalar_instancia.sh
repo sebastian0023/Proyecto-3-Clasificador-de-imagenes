@@ -8,7 +8,10 @@
 # - 2 GiB de swap: margen ante picos (build de torch, inferencia), no memoria de trabajo.
 # - Clona el repositorio PUBLICO por HTTPS en /opt/p4/repo, sin tokens, fijado al commit dado.
 # - /opt/p4/secretos (solo root) para los secretos que escribe `preparar_secretos.sh`.
-# Es idempotente: correrlo otra vez no duplica nada.
+# Es idempotente: se puede volver a correr sobre una instancia a medio preparar (no
+# reinstala lo que ya esta, rehace un swapfile incompleto y no vuelve a clonar).
+# Solo usa opciones de util-linux 2.37, coreutils 8.32 y procps-ng de Amazon Linux 2023
+# (por ejemplo, `mkswap` de AL2023 no acepta `-q`).
 set -euo pipefail
 
 REF="${1:?uso: sudo bash instalar_instancia.sh <commit-o-rama>}"
@@ -16,11 +19,17 @@ REPO_URL="https://github.com/sebastian0023/Proyecto-3-Clasificador-de-imagenes.g
 COMPOSE_VERSION="v2.39.2"
 BUILDX_VERSION="v0.26.1"
 PLUGINS=/usr/local/lib/docker/cli-plugins
+SWAPFILE=/swapfile
+SWAP_BYTES=$((2 * 1024 * 1024 * 1024))
 
 [ "$(id -u)" -eq 0 ] || { echo "Correr con sudo." >&2; exit 1; }
 
 echo "==> Paquetes"
-dnf install -y -q docker git
+if rpm -q docker git >/dev/null 2>&1; then
+	echo "docker y git ya instalados"
+else
+	dnf install -y -q docker git
+fi
 systemctl enable --now docker
 
 echo "==> Plugins de Docker (compose ${COMPOSE_VERSION}, buildx ${BUILDX_VERSION})"
@@ -49,22 +58,46 @@ docker compose version
 docker buildx version
 
 echo "==> Swap de 2 GiB"
-if ! swapon --show | grep -q /swapfile; then
-	fallocate -l 2G /swapfile
-	chmod 600 /swapfile
-	mkswap -q /swapfile
-	swapon /swapfile
-	grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >>/etc/fstab
+if swapon --show=NAME --noheadings | grep -qx "$SWAPFILE"; then
+	echo "$SWAPFILE ya activo"
+else
+	# Un swapfile a medias (de una corrida que fallo) se rehace: otro tamano o sin
+	# firma de swap. Solo se borra ese archivo, que crea este mismo script.
+	if [ -e "$SWAPFILE" ]; then
+		tamano="$(stat -c %s "$SWAPFILE")"
+		tipo="$(blkid -p -s TYPE -o value "$SWAPFILE" 2>/dev/null || true)"
+		if [ "$tamano" -ne "$SWAP_BYTES" ] || [ "$tipo" != "swap" ]; then
+			echo "$SWAPFILE incompleto (bytes=$tamano, tipo=${tipo:-ninguno}): se rehace"
+			rm -f "$SWAPFILE"
+		fi
+	fi
+	if [ ! -e "$SWAPFILE" ]; then
+		fallocate -l "$SWAP_BYTES" "$SWAPFILE"
+		chmod 600 "$SWAPFILE"
+		mkswap "$SWAPFILE" >/dev/null
+	fi
+	chmod 600 "$SWAPFILE"
+	swapon "$SWAPFILE"
 fi
-sysctl -q vm.swappiness=10
-grep -q '^vm.swappiness' /etc/sysctl.conf || echo 'vm.swappiness=10' >>/etc/sysctl.conf
+grep -qs "^$SWAPFILE " /etc/fstab || echo "$SWAPFILE none swap defaults 0 0" >>/etc/fstab
+mkdir -p /etc/sysctl.d
+echo 'vm.swappiness=10' >/etc/sysctl.d/90-p4-swap.conf
+sysctl -q -p /etc/sysctl.d/90-p4-swap.conf
+swapon --show
 free -h
 
 echo "==> Repositorio (publico, sin credenciales) en /opt/p4/repo @ ${REF}"
 install -d -m 0755 /opt/p4
 install -d -m 0700 /opt/p4/secretos
 if [ ! -d /opt/p4/repo/.git ]; then
-	git clone --quiet "$REPO_URL" /opt/p4/repo
+	if [ -e /opt/p4/repo ]; then
+		echo "/opt/p4/repo existe pero no es un repositorio git: revisalo antes de seguir." >&2
+		exit 1
+	fi
+	# Se clona aparte y se mueve: un clon cortado no deja /opt/p4/repo a medias.
+	rm -rf /opt/p4/repo.clonando
+	git clone --quiet "$REPO_URL" /opt/p4/repo.clonando
+	mv /opt/p4/repo.clonando /opt/p4/repo
 fi
 git -C /opt/p4/repo fetch --quiet origin
 git -C /opt/p4/repo -c advice.detachedHead=false checkout --quiet "$REF" 2>/dev/null ||

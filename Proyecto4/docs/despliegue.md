@@ -52,7 +52,7 @@ El repositorio `sebastian0023/Proyecto-3-Clasificador-de-imagenes` es **público
 
 ## d) Plan paso a paso
 
-Comandos de AWS para Git Bash, siempre con `--profile p4-emilio --region us-east-1` (se omiten abajo por espacio). Cada paso que crea o modifica algo se autoriza por separado. Valores ya verificados con lecturas:
+Comandos de AWS para Git Bash, siempre con `--profile p4-emilio --region us-east-1` (se omiten abajo por espacio). En Git Bash, `run-instances` necesita `MSYS_NO_PATHCONV=1` delante: si no, convierte `/dev/xvda` en una ruta de Windows y AWS responde `InvalidBlockDeviceMapping`. Cada paso que crea o modifica algo se autoriza por separado. Valores ya verificados con lecturas:
 
 | Dato | Valor |
 |---|---|
@@ -132,10 +132,18 @@ La escritura va a `edge-captures/_verificacion/`, fuera de `events/` e `images/`
 
 ### 6. Preparar la instancia y escribir los secretos
 
+`<commit>` es el commit publicado que se despliega; el que se usó queda en el Registro de avance de F5.
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sebastian0023/Proyecto-3-Clasificador-de-imagenes/<commit>/Proyecto4/deploy/instalar_instancia.sh -o /tmp/instalar_instancia.sh
 sudo bash /tmp/instalar_instancia.sh <commit>
 sudo bash /opt/p4/repo/Proyecto4/deploy/preparar_secretos.sh
+```
+
+`instalar_instancia.sh` es idempotente: si una corrida se corta (por ejemplo, en el swap), se vuelve a correr igual. No reinstala paquetes ni plugins que ya estén, rehace un `/swapfile` incompleto (otro tamaño o sin firma de swap), no vuelve a clonar y no duplica `/etc/fstab`. Para ver el estado antes de reanudar:
+
+```bash
+swapon --show; ls -l /swapfile; sudo blkid -p -s TYPE -o value /swapfile; ls -d /opt/p4/repo/.git
 ```
 
 `preparar_secretos.sh` pide, **sin mostrarlos**: el token nuevo del dispositivo (generado en tu máquina con `python -c "import secrets; print(secrets.token_urlsafe(32))"`), el usuario y la contraseña de `basic_auth`. Escribe `/opt/p4/repo/Proyecto2/.env` y `/opt/p4/secretos/caddy.env` (600, root). Contraseñas internas de MariaDB y MinIO: al azar.
