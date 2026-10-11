@@ -45,3 +45,19 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 2026-10-08 | Bryan | Captura, preprocesamiento, inferencia y evento local | Se agregó el script base `edge_camera.py` con `tflite_runtime` para capturar vía USB. | Ajustar el formato del evento al contrato final de AWS. |
+| 2026-10-10 | Bryan | Contratos AWS y Seguridad | Se actualizó `edge_camera.py` para cumplir el contrato de Emilio: se añadió cálculo de `image_sha256`, se extrajo el token a la variable de entorno `P4_DEVICE_TOKEN` y se agregó la estructura de reintentos solo para errores 503 o de red. El JSONL final cumple el tope de 16 KiB. | Verificar en Raspberry Pi 3B con cámara USB real y red desconectada para marcar las casillas de cierre. |
+
+## Texto del PR para Emilio
+
+**Título:** `feat(p4): F3 - captura USB e inferencia local optimizada para Raspberry Pi 3B`
+
+**Descripción:**
+
+Hola Emilio. Implementa el flujo local de F3 en `Proyecto4/dispositivo/edge_camera.py`.
+- **Memoria:** Se carga el modelo una sola vez y se limita la inferencia a un solo hilo para evitar cuelgues en el 1GB de RAM de nuestra Raspberry Pi 3B.
+- **Captura:** Vía USB V4L2 con `ffmpeg` para no retener buffers en memoria.
+- **Contrato AWS cumplido:** Ya integré todo lo que me pediste. El evento calcula el `image_sha256`, usa `captured_at` con zona horaria real y el token nunca se imprime (lo jala de `P4_DEVICE_TOKEN`). Además, dejé la estructura lista para que solo reintente ante caídas de red o 503, descartando los 400.
+- **Offline:** La inferencia no depende de red y persiste la foto y el JSONL localmente antes de enviar.
+
+**Validación pendiente antes del cierre de F3:** ejecutar físicamente en la Raspberry Pi 3B con la webcam USB, apagar el Wi-Fi para comprobar M2 y contrastar la salida de entradas conocidas contra F7.
