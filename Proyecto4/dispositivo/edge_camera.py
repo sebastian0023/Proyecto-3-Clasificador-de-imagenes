@@ -76,7 +76,8 @@ def enviar_aws_con_reintentos(url, token, evento, ruta_imagen):
                 break
                 
         except requests.exceptions.RequestException as e:
-            print("Error de red o sin Wi-Fi. Reintentando en 5 segundos...")
+            # Imprime el error exacto de conexión (Timeout, SSL, Connection Refused, etc.)
+            print(f"Fallo de conexión ({e}). Reintentando en 5 segundos...")
             time.sleep(5)
 
 def main():
@@ -133,10 +134,12 @@ def main():
             outputs = session.run(None, {input_name: input_tensor})
             t_inferencia_ms = (time.time() - t0) * 1000
             
-            # Interpretar resultados
+            # Interpretar resultados con Softmax (para que esté entre 0 y 1)
             predicciones = outputs[0][0]
-            clase_idx = int(np.argmax(predicciones))
-            confianza = float(predicciones[clase_idx])
+            exp_preds = np.exp(predicciones - np.max(predicciones))
+            probabilidades = exp_preds / exp_preds.sum()
+            clase_idx = int(np.argmax(probabilidades))
+            confianza = float(probabilidades[clase_idx])
             clase_predicha = CLASES[clase_idx]
             
             # Generar metadatos y hashes
