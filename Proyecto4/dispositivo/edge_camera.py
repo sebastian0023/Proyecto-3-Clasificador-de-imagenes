@@ -1,181 +1,184 @@
-import argparse
-import time
 import os
 import sys
+import time
 import json
-import uuid
 import hashlib
-from datetime import datetime, timezone
-import requests
-
-import onnxruntime as ort
+import argparse
+import datetime
+import uuid
 import numpy as np
 import cv2
+import requests
+import onnxruntime as ort
 
-# Importamos el preprocesamiento de Edith (asegúrate de que esté en la misma carpeta o ruta accesible)
-try:
-    import preprocess
-except ImportError:
-    print("Advertencia: No se encontró preprocess.py, asegúrate de que esté en el directorio.")
+# ==========================================
+# CONFIGURACIÓN DEL DISPOSITIVO Y AWS
+# ==========================================
+API_URL = "https://174-129-84-80.sslip.io/api/p4/captures"
+TOKEN = os.environ.get("P4_DEVICE_TOKEN")
+CLASES = ["cat", "dog", "person"]  # Clases en inglés (Contrato AWS)
 
-# 1. Configuración de Clases (Cambio a inglés requerido por el PR)
-CLASSES = ["cat", "dog", "person"]
+def verificar_hash(ruta_modelo):
+    """Verifica que el modelo cargado sea exactamente el autorizado (Seguridad)"""
+    hash_esperado = "ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0"
+    with open(ruta_modelo, "rb") as f:
+        hash_calculado = hashlib.sha256(f.read()).hexdigest()
+    
+    if not hash_calculado.startswith(hash_esperado):
+        print("ERROR FATAL: El hash del modelo no coincide. Por seguridad, no se ejecutará.")
+        sys.exit(1)
+    return hash_calculado
 
-# 2. Configuración de Hash esperado por seguridad
-EXPECTED_MODEL_HASH = "ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0"
-AWS_ENDPOINT = "https://174-129-84-80.sslip.io/api/p4/captures"
+def preprocess_fallback(frame):
+    """Fallback si no existe preprocess.py. Transforma la imagen al formato ONNX (1, 3, 224, 224)"""
+    # 1. Redimensionar a 224x224
+    img = cv2.resize(frame, (224, 224))
+    # 2. Convertir BGR a RGB
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # 3. Normalizar a float32 entre 0 y 1
+    img = img.astype(np.float32) / 255.0
+    # 4. Transponer dimensiones: de (Alto, Ancho, Canales) a (Canales, Alto, Ancho)
+    img = np.transpose(img, (2, 0, 1))
+    # 5. Agregar dimensión de lote (Batch size = 1)
+    img = np.expand_dims(img, axis=0)
+    return img
 
-def get_file_hash(filepath):
-    """Calcula el hash SHA-256 de un archivo."""
-    sha256_hash = hashlib.sha256()
-    with open(filepath, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
-            sha256_hash.update(byte_block)
-    return sha256_hash.hexdigest()
+def enviar_aws_con_reintentos(url, token, evento, ruta_imagen):
+    """Envía el JSON y la imagen en multipart/form-data. Reintenta si hay fallo de red o 503."""
+    if not token:
+        print("Advertencia: No hay TOKEN configurado, se omite el envío a AWS.")
+        return
 
-def enviar_aws_con_reintentos(evento, ruta_imagen, token):
-    """
-    Envía los datos a la nube usando multipart/form-data y maneja reintentos 
-    si hay errores de red (Ej. Wi-Fi apagado) o errores 503.
-    """
     headers = {
         "Authorization": f"Bearer {token}"
-        # request.post se encarga automáticamente del Content-Type para multipart
+        # No poner Content-Type, 'requests' lo hace automático para multipart
     }
     
     while True:
         try:
             with open(ruta_imagen, 'rb') as img_file:
-                # Armamos el multipart con el JSON como string y la imagen binaria
                 archivos = {
                     'event': (None, json.dumps(evento), 'application/json'),
                     'image': (os.path.basename(ruta_imagen), img_file, 'image/jpeg')
                 }
                 
-                response = requests.post(AWS_ENDPOINT, headers=headers, files=archivos, timeout=10)
+                print(f"Enviando captura {evento['capture_id']} a AWS...")
+                response = requests.post(url, headers=headers, files=archivos, timeout=10)
             
             if response.status_code == 201:
-                # Envío exitoso
-                break 
+                print("¡Envío exitoso (201) a AWS!")
+                break
             elif response.status_code in [500, 502, 503, 504]:
-                print(f"  [!] Error de servidor {response.status_code}. Reintentando en 5s...")
+                print(f"Error {response.status_code} en servidor. Reintentando en 5 segundos...")
                 time.sleep(5)
             else:
-                print(f"  [x] Error rechazado ({response.status_code}): {response.text}")
-                break # Rechazado por formato o token, no reintenta
+                print(f"Rechazado por el servidor {response.status_code}: {response.text}")
+                break
                 
         except requests.exceptions.RequestException as e:
-            # Error de red (sin internet o servidor inalcanzable)
-            print(f"  [!] Error de red. Reintentando en 5s...")
+            print("Error de red o sin Wi-Fi. Reintentando en 5 segundos...")
             time.sleep(5)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True, help="Ruta al modelo ONNX")
+    parser.add_argument("--model", required=True, help="Ruta al modelo .onnx")
     parser.add_argument("--version", required=True, help="Versión del modelo")
     args = parser.parse_args()
 
-    token = os.environ.get("P4_DEVICE_TOKEN")
-    if not token:
-        print("ERROR: La variable de entorno P4_DEVICE_TOKEN no está configurada.")
-        sys.exit(1)
-
-    # 3. Validación de seguridad del Hash del modelo
+    # 1. Validación de seguridad
     print("Verificando integridad del modelo...")
-    if not os.path.exists(args.model):
-        print(f"ERROR: No existe el modelo en {args.model}")
-        sys.exit(1)
-        
-    model_hash = get_file_hash(args.model)
-    if not model_hash.startswith(EXPECTED_MODEL_HASH):
-        print(f"ERROR FATAL: El hash del modelo ({model_hash[:15]}...) no coincide con el esperado de F2.")
-        sys.exit(1)
-
-    # Iniciar ONNX Runtime
-    session = ort.InferenceSession(args.model)
-    input_name = session.get_inputs()[0].name
+    hash_modelo = verificar_hash(args.model)
+    print(f"modelo={args.version} sha256={hash_modelo} runtime=onnxruntime-{ort.__version__}")
+    print(f"clases={','.join(CLASES)} cámara=/dev/video0; Ctrl+C para salir")
     
-    print(f"modelo={args.version} sha256={model_hash} runtime=onnxruntime-{ort.__version__}")
-    print(f"clases={','.join(CLASSES)} cámara=/dev/video0; Ctrl+C para salir")
+    # 2. Intentar cargar módulo de preprocesamiento de Edith
+    try:
+        from preprocess import preprocess_image
+        has_preprocess = True
+    except ImportError:
+        print("Advertencia: No se encontró preprocess.py, asegúrate de que esté en el directorio.")
+        has_preprocess = False
 
-    # Crear carpeta de capturas
-    capturas_dir = os.path.join(os.path.dirname(__file__), "capturas")
-    os.makedirs(capturas_dir, exist_ok=True)
-    events_log = os.path.join(capturas_dir, "events.jsonl")
+    # 3. Configurar sesión de ONNX a 1 solo hilo (para no saturar la Raspberry Pi)
+    session_options = ort.SessionOptions()
+    session_options.intra_op_num_threads = 1
+    session_options.inter_op_num_threads = 1
+    session = ort.InferenceSession(args.model, sess_options=session_options)
+    input_name = session.get_inputs()[0].name
 
-    # Iniciar cámara
+    # 4. Inicializar cámara y directorios
     cap = cv2.VideoCapture(0)
-    device_id = "edge01"
+    if not cap.isOpened():
+        print("Error: No se pudo abrir la cámara web USB.")
+        return
+
+    os.makedirs("Proyecto4/dispositivo/capturas", exist_ok=True)
+    ruta_jsonl = "Proyecto4/dispositivo/capturas/events.jsonl"
 
     try:
         while True:
             ret, frame = cap.read()
             if not ret:
+                time.sleep(1)
                 continue
-
-            # Identificador y timestamp únicos de la captura
-            capture_id = str(uuid.uuid4())
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-            short_uuid = capture_id[:8]
             
-            # Realizar Inferencia
-            start_time = time.time()
+            # Preprocesar
+            t0 = time.time()
+            if has_preprocess:
+                input_tensor = preprocess_image(frame)
+            else:
+                input_tensor = preprocess_fallback(frame)
             
-            # Usamos el preprocesamiento de Edith (ajustar si tu método se llama distinto)
-            try:
-                input_tensor = preprocess.preprocesar_imagen(frame)
-            except NameError:
-                # Fallback rápido por si falta la importación (redimensionar genérico)
-                img_resized = cv2.resize(frame, (224, 224))
-                input_tensor = np.expand_dims(img_resized, axis=0).astype(np.float32)
-
+            # Inferencia
             outputs = session.run(None, {input_name: input_tensor})
-            inference_time_ms = (time.time() - start_time) * 1000
+            t_inferencia_ms = (time.time() - t0) * 1000
             
-            # Determinar clase
-            confidences = outputs[0][0]
-            class_idx = np.argmax(confidences)
-            predicted_class = CLASSES[class_idx]
-            confidence = confidences[class_idx]
-
-            # Guardar foto localmente
-            filename = f"{device_id}-{timestamp}-{short_uuid}.jpg"
-            filepath = os.path.join(capturas_dir, filename)
-            cv2.imwrite(filepath, frame)
+            # Interpretar resultados
+            predicciones = outputs[0][0]
+            clase_idx = int(np.argmax(predicciones))
+            confianza = float(predicciones[clase_idx])
+            clase_predicha = CLASES[clase_idx]
             
-            # Calcular hash de la imagen
-            image_hash = get_file_hash(filepath)
-
-            # 4. Estructurar evento JSON (Añadiendo schema_version: 1)
+            # Generar metadatos y hashes
+            capture_id = str(uuid.uuid4())
+            timestamp_ahora = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            nombre_img = f"edge01-{capture_id[:8]}.jpg"
+            ruta_img = os.path.join("Proyecto4/dispositivo/capturas", nombre_img)
+            
+            cv2.imwrite(ruta_img, frame)
+            with open(ruta_img, "rb") as f:
+                image_sha256 = hashlib.sha256(f.read()).hexdigest()
+            
+            # Estructurar evento (Contrato AWS)
             evento = {
                 "schema_version": 1,
                 "capture_id": capture_id,
-                "device_id": device_id,
-                "timestamp": timestamp,
+                "captured_at": timestamp_ahora,
+                "device_id": "edge01",
                 "model_version": args.version,
-                "predicted_class": predicted_class,
-                "confidence": float(confidence),
-                "inference_time_ms": float(inference_time_ms),
-                "image_hash": image_hash
+                "image_sha256": image_sha256,
+                "predicted_class": clase_predicha,
+                "confidence": round(confianza, 4),
+                "inference_time_ms": round(t_inferencia_ms, 2)
             }
-
-            # Guardar en events.jsonl localmente
-            with open(events_log, "a") as f:
+            
+            # Persistir localmente en JSONL
+            with open(ruta_jsonl, "a") as f:
                 f.write(json.dumps(evento) + "\n")
-
-            # Imprimir en consola con formato
-            print(f"{device_id}-{timestamp}-{short_uuid} {predicted_class} confianza={confidence:.4f} tiempo={inference_time_ms:.1f}ms foto=capturas/{filename}")
-
-            # Enviar a AWS (bloqueante, reintentará si no hay red)
-            enviar_aws_con_reintentos(evento, filepath, token)
-
-            # Pausa de 5 segundos antes de la siguiente captura
+            
+            print(f"{nombre_img} {clase_predicha} confianza={confianza:.4f} tiempo={t_inferencia_ms:.1f}ms")
+            
+            # Enviar si hay internet / token
+            enviar_aws_con_reintentos(API_URL, TOKEN, evento, ruta_img)
+            
+            # Pausa entre fotos
             time.sleep(5)
-
+            
     except KeyboardInterrupt:
-        print("\nSaliendo del programa...")
+        print("\nCaptura detenida de forma segura por el usuario.")
     finally:
         cap.release()
 
 if __name__ == "__main__":
     main()
+    
