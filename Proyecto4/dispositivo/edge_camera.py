@@ -15,10 +15,12 @@ from PIL import Image
 # ==========================================
 # CONFIGURACIÓN DEL DISPOSITIVO Y AWS
 # ==========================================
-# Permite sobreescribir la URL mediante argumento o variable de entorno para F6
 API_URL = os.environ.get("P4_API_URL", "https://174-129-84-80.sslip.io/api/p4/captures")
 TOKEN = os.environ.get("P4_DEVICE_TOKEN")
-CLASES = ["cat", "dog", "person"]  # Clases en inglés (Contrato AWS)
+CLASES = ["cat", "dog", "person"]
+
+# Archivo persistente para la Fase 9
+RUTA_PENDIENTES = "Proyecto4/dispositivo/capturas/pendientes.json"
 
 def verificar_hash(ruta_modelo):
     """Verifica que el modelo cargado sea exactamente el autorizado (Seguridad)"""
@@ -31,19 +33,27 @@ def verificar_hash(ruta_modelo):
         sys.exit(1)
     return hash_calculado
 
+def cargar_pendientes():
+    """Carga las capturas pendientes que no se pudieron enviar por falta de red."""
+    if os.path.exists(RUTA_PENDIENTES):
+        try:
+            with open(RUTA_PENDIENTES, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return []
+    return []
+
+def guardar_pendientes(cola):
+    """Guarda físicamente en disco la cola de pendientes (sobrevive a reinicios)."""
+    with open(RUTA_PENDIENTES, "w") as f:
+        json.dump(cola, f)
+
 def enviar_aws(url, token, evento, ruta_imagen):
-    """
-    Intenta enviar a AWS una sola vez. 
-    Devuelve True si tuvo éxito o fue rechazado permanentemente (400s).
-    Devuelve False si es un error de red o de servidor (500s) para reintentarlo luego.
-    """
     if not token:
         print("Advertencia: No hay TOKEN configurado, se omite el envío a AWS.")
-        return True # Se asume manejado para no encolar infinitamente
+        return True
 
-    headers = {
-        "Authorization": f"Bearer {token}"
-    }
+    headers = {"Authorization": f"Bearer {token}"}
     
     try:
         with open(ruta_imagen, 'rb') as img_file:
@@ -58,29 +68,34 @@ def enviar_aws(url, token, evento, ruta_imagen):
         if response.status_code == 201:
             print("¡Envío exitoso (201) a AWS!")
             return True
+        elif response.status_code == 200:
+            print("Envío exitoso (200): El evento ya estaba guardado en el servidor.")
+            return True
         elif response.status_code in [500, 502, 503, 504]:
             print(f"Error {response.status_code} en servidor. Se guardará para reintento.")
             return False
         else:
             print(f"Rechazado por el servidor {response.status_code}: {response.text}")
-            return True # Rechazo firme, no se reintenta
+            return True
             
     except requests.exceptions.RequestException as e:
-        print(f"Fallo de conexión ({e}). Se guardará para reintento offline.")
+        print(f"Fallo de conexión ({e}). Se guardará en disco para reintento offline.")
         return False
 
 def reintentar_pendientes(cola_pendientes, url):
-    """Intenta enviar los eventos que se quedaron encolados por falta de red."""
     if not cola_pendientes:
         return []
     
     pendientes_restantes = []
     print(f"\n--- Intentando reenviar {len(cola_pendientes)} capturas pendientes ---")
-    for evento, ruta_img in cola_pendientes:
+    for item in cola_pendientes:
+        evento = item["evento"]
+        ruta_img = item["ruta_img"]
         exito = enviar_aws(url, TOKEN, evento, ruta_img)
         if not exito:
-            pendientes_restantes.append((evento, ruta_img))
+            pendientes_restantes.append(item)
             print(f"Fallo el reintento de {evento['capture_id']}, sigue en cola.")
+        time.sleep(1) # Pausa amigable para no saturar la red al volver
     
     return pendientes_restantes
 
@@ -88,33 +103,29 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, help="Ruta al modelo .onnx")
     parser.add_argument("--version", required=True, help="Versión del modelo")
-    parser.add_argument("--url", default=API_URL, help="URL del servidor (sobreescribe P4_API_URL)")
+    parser.add_argument("--url", default=API_URL, help="URL del servidor")
     args = parser.parse_args()
 
-    # 1. Validación de seguridad
     print("Verificando integridad del modelo...")
     hash_modelo = verificar_hash(args.model)
     print(f"modelo={args.version} sha256={hash_modelo} runtime=onnxruntime-{ort.__version__}")
     print(f"clases={','.join(CLASES)} cámara=/dev/video0; Ctrl+C para salir")
     
-    # 2. Cargar módulo de preprocesamiento EXACTO (Eliminando fallback)
-    # Agrega Proyecto4/modelo a la ruta del sistema
+    # Preprocesamiento estricto
     sys.path.append(os.path.abspath("Proyecto4/modelo"))
     try:
         from preprocess import preprocess
     except ImportError as e:
         print(f"ERROR FATAL: {e}. No se encontró 'preprocess.py' en Proyecto4/modelo/")
-        print("El preprocesamiento original de ImageNet es obligatorio.")
+        print("Asegúrate de ejecutar el script desde la RAÍZ del repositorio (python Proyecto4/dispositivo/...).")
         sys.exit(1)
 
-    # 3. Configurar sesión de ONNX a 1 solo hilo
     session_options = ort.SessionOptions()
     session_options.intra_op_num_threads = 1
     session_options.inter_op_num_threads = 1
     session = ort.InferenceSession(args.model, sess_options=session_options)
     input_name = session.get_inputs()[0].name
 
-    # 4. Inicializar cámara y directorios
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         print("Error: No se pudo abrir la cámara web USB.")
@@ -123,7 +134,7 @@ def main():
     os.makedirs("Proyecto4/dispositivo/capturas", exist_ok=True)
     ruta_jsonl = "Proyecto4/dispositivo/capturas/events.jsonl"
     
-    cola_pendientes = [] # Lista para almacenar eventos que no se pudieron enviar
+    cola_pendientes = cargar_pendientes()
 
     try:
         while True:
@@ -132,35 +143,29 @@ def main():
                 time.sleep(1)
                 continue
             
-            # Preprocesar usando el módulo original: (Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
             t0 = time.time()
             input_tensor = preprocess(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
             
-            # Inferencia
             outputs = session.run(None, {input_name: input_tensor})
             t_inferencia_ms = (time.time() - t0) * 1000
             
-            # Interpretar resultados con Softmax
             predicciones = outputs[0][0]
             exp_preds = np.exp(predicciones - np.max(predicciones))
             probabilidades = exp_preds / exp_preds.sum()
             clase_idx = int(np.argmax(probabilidades))
             
-            # Sin redondear la confianza (Regla 9)
             confianza = float(probabilidades[clase_idx]) 
             clase_predicha = CLASES[clase_idx]
             
-            # Generar metadatos y hashes
             capture_id = str(uuid.uuid4())
             timestamp_ahora = datetime.datetime.now(datetime.timezone.utc).isoformat()
-            nombre_img = f"{capture_id}.jpg" # Mismo nombre que capture_id
+            nombre_img = f"{capture_id}.jpg"
             ruta_img = os.path.join("Proyecto4/dispositivo/capturas", nombre_img)
             
             cv2.imwrite(ruta_img, frame)
             with open(ruta_img, "rb") as f:
                 image_sha256 = hashlib.sha256(f.read()).hexdigest()
             
-            # Estructurar evento (Contrato AWS)
             evento = {
                 "schema_version": 1,
                 "capture_id": capture_id,
@@ -174,21 +179,24 @@ def main():
                 "confidence": confianza 
             }
             
-            # Persistir localmente en JSONL
             with open(ruta_jsonl, "a") as f:
                 f.write(json.dumps(evento) + "\n")
             
             print(f"{nombre_img} {clase_predicha} confianza={confianza} tiempo={t_inferencia_ms:.1f}ms")
             
-            # Intentar reintentar los viejos primero
-            cola_pendientes = reintentar_pendientes(cola_pendientes, args.url)
+            # Reintentar pendientes guardados en archivo
+            if cola_pendientes:
+                restantes = reintentar_pendientes(cola_pendientes, args.url)
+                if len(restantes) != len(cola_pendientes):
+                    cola_pendientes = restantes
+                    guardar_pendientes(cola_pendientes)
             
-            # Enviar el nuevo
+            # Envío nuevo
             exito_envio = enviar_aws(args.url, TOKEN, evento, ruta_img)
             if not exito_envio:
-                cola_pendientes.append((evento, ruta_img))
+                cola_pendientes.append({"evento": evento, "ruta_img": ruta_img})
+                guardar_pendientes(cola_pendientes)
             
-            # Pausa entre fotos
             time.sleep(5)
             
     except KeyboardInterrupt:

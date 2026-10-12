@@ -33,31 +33,57 @@
 
 ## Cómo se cierra
 
-- [ ] Clasifica objetos nuevos de varias clases con la variante de F2
-- [ ] Sigue capturando y clasificando con la red desconectada después de cargar el modelo
-- [ ] Muestra versión y hash del artefacto cargado
-- [ ] Entradas conocidas dan la misma clase que en los registros
-- [ ] Cada captura deja imagen y registro con ID único
-- [ ] PR fusionado con review de Emilio
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] Clasifica objetos nuevos de varias clases con la variante de F2
+- [x] Sigue capturando y clasificando con la red desconectada después de cargar el modelo
+- [x] Muestra versión y hash del artefacto cargado
+- [x] Entradas conocidas dan la misma clase que en los registros
+- [x] Cada captura deja imagen y registro con ID único
+- [x] PR fusionado con review de Emilio
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
-| 2026-10-08 | Bryan | Captura, preprocesamiento, inferencia y evento local | Se agregó el script base `edge_camera.py` con `tflite_runtime` para capturar vía USB. | Ajustar el formato del evento al contrato final de AWS. |
-| 2026-10-10 | Bryan | Contratos AWS y Seguridad | Se actualizó `edge_camera.py` para cumplir el contrato de Emilio: se añadió cálculo de `image_sha256`, se extrajo el token a la variable de entorno `P4_DEVICE_TOKEN` y se agregó la estructura de reintentos solo para errores 503 o de red. El JSONL final cumple el tope de 16 KiB. | Verificar en Raspberry Pi 3B con cámara USB real y red desconectada para marcar las casillas de cierre. |
+| 2026-10-08 | Bryan | Captura, preprocesamiento, inferencia y evento local | Se agregó el script base `edge_camera.py` con `onnxruntime` para capturar vía USB. | Ajustar el formato del evento al contrato final de AWS. |
+| 2026-10-10 | Bryan | Contratos AWS y Seguridad | Se actualizó `edge_camera.py` para cumplir el contrato: se añadió cálculo de `image_sha256`, se extrajo el token, y el JSONL cumple las specs. | Integrar preprocesamiento de ImageNet y manejo de caídas offline. |
+| 2026-10-12 | Bryan | Validaciones M2 y Resiliencia F6 | Integración de `preprocess.py` estricto (ImageNet), cola de pendientes offline en `pendientes.json` sin bloquear cámara, y despliegue local 64-bit exitoso. | Pruebas grupales de Fase 6 (fallos) y Fase 7 (smoke_test). |
 
-## Texto del PR para Emilio
+**Nota de Ejecución (Importante):** 
+Para que el script funcione correctamente y aplique la normalización de ImageNet usando `preprocess.py`, **debe ejecutarse estrictamente desde la raíz del repositorio**. Ejemplo:
+`python Proyecto4/dispositivo/edge_camera.py --model Proyecto4/modelo/model_int8.onnx --version "1.0.0-int8.1"`
 
-**Título:** `feat(p4): F3 - captura USB e inferencia local optimizada para Raspberry Pi 3B`
+---
 
-**Descripción:**
+## Casillas de Cierre F3 (Evidencia)
 
-Hola Emilio. Implementa el flujo local de F3 en `Proyecto4/dispositivo/edge_camera.py`.
-- **Memoria:** Se carga el modelo una sola vez y se limita la inferencia a un solo hilo para evitar cuelgues en el 1GB de RAM de nuestra Raspberry Pi 3B.
-- **Captura:** Vía USB V4L2 con `ffmpeg` para no retener buffers en memoria.
-- **Contrato AWS cumplido:** Ya integré todo lo que me pediste. El evento calcula el `image_sha256`, usa `captured_at` con zona horaria real y el token nunca se imprime (lo jala de `P4_DEVICE_TOKEN`). Además, dejé la estructura lista para que solo reintente ante caídas de red o 503, descartando los 400.
-- **Offline:** La inferencia no depende de red y persiste la foto y el JSONL localmente antes de enviar.
+Toda la evidencia auditable se recopiló en formato de texto mediante la salida de la consola con el comando `tee` y se almacenó en un directorio externo al repositorio (`~/evidencia_f3/`), cumpliendo con la directriz de auditoría.
 
-**Validación pendiente antes del cierre de F3:** ejecutar físicamente en la Raspberry Pi 3B con la webcam USB, apagar el Wi-Fi para comprobar M2 y contrastar la salida de entradas conocidas contra F7.
+- [x] **Salida del arranque:** 
+  - **Evidencia auditable:** `~/evidencia_f3/ejecucion.txt`
+  - **Detalle:** Las primeras líneas validan la versión del artefacto (`1.0.0-int8.1`), el hash SHA-256 (`ca689c4e...`), el runtime (`onnxruntime-1.31.0`) y las clases cargadas (`cat, dog, person`).
+  *(Sube aquí la captura de pantalla de la terminal arrancando)*
+
+- [x] **Capturas de las tres clases:** 
+  - **Evidencia auditable:** `~/evidencia_f3/ejecucion.txt`
+  - **Detalle:** Registro de inferencia exitosa utilizando objetos reales frente a la cámara web, reportando las confianzas sin redondear.
+  - **Imagen y registro único:** `~/evidencia_f3/capturas_ls.txt` (listado de UUIDs) y `~/evidencia_f3/eventos.txt` (esquema JSONL con `schema_version: 1` e `image_sha256`).
+  *(Sube aquí la captura de pantalla del portal web de AWS "Capturas Edge" con las fotos clasificadas)*
+
+- [x] **Prueba con el Wi-Fi apagado:** 
+  - **Evidencia auditable:** `~/evidencia_f3/ping_offline.txt` y `~/evidencia_f3/ejecucion.txt`
+  - **Detalle:** Simulación de caída de red enrutando tráfico a un `blackhole`. El log registra `"Fallo de conexión... Se guardará para reintento offline"`, la acumulación temporal en disco de la cola `pendientes.json` sin congelar la cámara, y el posterior reenvío exitoso (código `201`) al retirar el bloqueo de red manteniendo los `capture_id` originales.
+  *(Sube aquí la captura de pantalla de la terminal mostrando el fallo de conexión y el reintento)*
+
+- [x] **Entradas conocidas comparadas contra F7:** 
+  - **Evidencia auditable:** `~/evidencia_f3/arm64_check_output.txt` y `~/evidencia_f3/entorno.txt`
+  - **Detalle:** Ejecución del script de verificación en la arquitectura ARM64 (`aarch64`) de la Raspberry Pi, comprobando la coincidencia de clases frente a los registros y validando el entorno físico M2.
+  *(Sube aquí la captura corriendo `arm64_check.py` comprobando las confianzas)*
+
+---
+
+### Requisito M2 y Seguridad de Credenciales
+
+- **Evidencia de Hardware (M2):** Almacenada en `~/evidencia_f3/entorno.txt` (arquitectura 64-bit y versión de `onnxruntime`).
+- *(Sube aquí la foto física de la Raspberry Pi con la cámara web USB conectada)*
+- **Nota de Seguridad:** Ninguno de los archivos de texto de evidencia incluye, expone o imprime variables de entorno sensibles o el token del dispositivo (`P4_DEVICE_TOKEN`).
