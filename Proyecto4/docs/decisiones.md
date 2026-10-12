@@ -17,9 +17,9 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 ## 1. Formato y runtime
 
-- Formato del artefacto optimizado (por ejemplo ONNX, TFLite, TorchScript u otro):
-- Runtime en el dispositivo y versión:
-- Por qué es compatible con el hardware de la decisión 7:
+- Formato del artefacto optimizado (por ejemplo ONNX, TFLite, TorchScript u otro): ONNX (.onnx), específicamente cuantizado a INT8 (por eso el sufijo _int8.onnx).
+- Runtime en el dispositivo y versión: onnxruntime versión 1.31.0 ejecutándose dentro de un entorno virtual (env) en Python.
+- Por qué es compatible con el hardware de la decisión 7: El formato ONNX con cuantización a INT8 y ejecutado a través de onnxruntime reduce significativamente el consumo de RAM. Esto es vital para la Raspberry Pi 3B, que cuenta con solo 1GB de RAM. Además, el modelo procesa la inferencia en un solo hilo para evitar cuelgues o picos de procesamiento en la CPU ARM.
 
 ## 2. Técnica y objetivo de optimización
 
@@ -36,9 +36,9 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 ## 4. Modo de captura
 
-- Por botón o por intervalo:
-- Un objeto por captura; ¿recorte fijo? (sí/no, y cuál):
-- Resolución de captura:
+- Por botón o por intervalo: Por intervalo. El script captura y procesa en ciclo continuo (con bloqueos de espera tras fallos de red) hasta que se detiene manualmente (vía Ctrl+C).
+- Un objeto por captura; ¿recorte fijo? (sí/no, y cuál): Sí, un objeto principal por captura para la clasificación (persona, gato, perro). No se aplica un recorte (crop) geométrico fijo durante la captura inicial; se pasa el fotograma completo a la función de preprocesamiento, la cual redimensiona y normaliza la imagen al tamaño esperado por el modelo.
+- Resolución de captura: Resolución estándar de la cámara web (USB V4L2) manejada por el sistema operativo.
 
 ## 5. Servicios de AWS
 
@@ -73,10 +73,10 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 ## 7. Hardware y entorno del dispositivo
 
-- Dispositivo y cámara (modelo):
-- Sistema operativo y versión:
-- Runtime y versiones:
-- Prueba realizada el 7 de oct (cámara captura, el runtime carga el modelo original o una entrada conocida):
+- Dispositivo y cámara (modelo): Raspberry Pi 3B conectada a una cámara web estándar vía USB.
+- Sistema operativo y versión: Raspberry Pi OS (basado en Debian, versión de 64-bit o 32-bit según la imagen base).
+- Runtime y versiones: Python 3 (entorno virtual venv) utilizando onnxruntime==1.31.0 y Pillow para el procesamiento de la imagen.
+- Prueba realizada el 7 de oct (cámara captura, el runtime carga el modelo original o una entrada conocida): Sí. La cámara capturó las imágenes, calculó el hash SHA-256 (ca689c4e...) que validó la identidad del modelo cuantizado, y las inferencias mostraron la clase correcta (cat, dog, person) y la confianza sin depender de conexión a red (validado apagando el Wi-Fi).
 
 ## 8. Qué cabe en Git
 
