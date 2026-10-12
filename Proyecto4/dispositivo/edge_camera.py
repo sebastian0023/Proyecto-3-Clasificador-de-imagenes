@@ -76,7 +76,6 @@ def enviar_aws_con_reintentos(url, token, evento, ruta_imagen):
                 break
                 
         except requests.exceptions.RequestException as e:
-            # Imprime el error exacto de conexión (Timeout, SSL, Connection Refused, etc.)
             print(f"Fallo de conexión ({e}). Reintentando en 5 segundos...")
             time.sleep(5)
 
@@ -152,17 +151,18 @@ def main():
             with open(ruta_img, "rb") as f:
                 image_sha256 = hashlib.sha256(f.read()).hexdigest()
             
-            # Estructurar evento (Contrato AWS)
+            # Estructurar evento EXACTO como lo pide el servidor (FastAPI)
             evento = {
                 "schema_version": 1,
                 "capture_id": capture_id,
                 "captured_at": timestamp_ahora,
                 "device_id": "edge01",
                 "model_version": args.version,
+                "model_sha256": hash_modelo,
                 "image_sha256": image_sha256,
+                "image_ref": nombre_img,
                 "predicted_class": clase_predicha,
-                "confidence": round(confianza, 4),
-                "inference_time_ms": round(t_inferencia_ms, 2)
+                "confidence": round(confianza, 4)
             }
             
             # Persistir localmente en JSONL
