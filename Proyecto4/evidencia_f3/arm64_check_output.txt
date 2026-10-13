@@ -1,0 +1,3 @@
+machine=aarch64 python=3.13.5 onnxruntime=1.31.0 numpy=2.5.4
+model=model_int8.onnx bytes=11349151 sha256=ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0
+runtime_ops=DequantizeLinear:2, NhwcMaxPool:1, QGemm:1, QLinearAdd:8, QLinearConv:20, QuantizeLinear:2, ReduceMean:1, Reshape:1, Transpose:2

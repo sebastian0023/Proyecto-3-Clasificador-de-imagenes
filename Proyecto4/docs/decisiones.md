@@ -18,7 +18,7 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 ## 1. Formato y runtime
 
 - **Formato del artefacto optimizado:** ONNX (`.onnx`), específicamente cuantizado a INT8.
-- **Runtime en el dispositivo y versión:** `onnxruntime` versión 1.30.0 ejecutándose dentro de un entorno virtual (`env`) en Python. Dependencias adicionales: `opencv-python-headless`, `requests` y `Pillow`.
+- **Runtime en el dispositivo y versión:** `onnxruntime` versión 1.31.0 ejecutándose dentro de un entorno virtual (`env`) en Python (Nota: Edith probó previamente con la versión 1.30.0). Dependencias adicionales: `opencv-python-headless`, `requests` y `Pillow`.
 - **Por qué es compatible con el hardware de la decisión 7:** El formato ONNX con cuantización a INT8 y ejecutado a través de `onnxruntime` reduce significativamente el consumo de RAM. Esto es vital para la Raspberry Pi 3B. Se ejecuta en un solo hilo para evitar picos en la CPU ARM.
 
 ## 2. Técnica y objetivo de optimización
@@ -75,7 +75,7 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 - **Dispositivo y cámara (modelo):** Raspberry Pi 3B (arquitectura de 64 bits requerida por ONNX) conectada a una cámara web estándar vía USB.
 - **Sistema operativo y versión:** Raspberry Pi OS (versión de 64-bit).
-- **Runtime y versiones:** Python 3 (entorno virtual `venv`) utilizando `onnxruntime==1.30.0`.
+- **Runtime y versiones:** Python 3 (entorno virtual `venv`) utilizando `onnxruntime==1.31.0`.
 - **Prueba realizada el 8 de oct (cámara captura, el runtime carga el modelo original o una entrada conocida):** Sí. La cámara capturó las imágenes, calculó el hash SHA-256 que validó la identidad del modelo cuantizado, importando correctamente el preprocesamiento base. Las inferencias mostraron la clase y la confianza sin redondeo. La prueba de resiliencia (Wi-Fi apagado) demostró la captura y guardado offline sin interrupciones, con éxito en reintentos posteriores.
 
 ## 8. Qué cabe en Git
