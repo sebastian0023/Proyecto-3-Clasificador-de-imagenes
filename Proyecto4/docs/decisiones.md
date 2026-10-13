@@ -8,7 +8,7 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 |---|---|---|---|---|---|
 | 1 | Formato y runtime del modelo en el dispositivo | Edith y Bryan | | pendiente | F2, F3 |
 | 2 | Técnica y objetivo de optimización | Edith | | pendiente | F2, F7, F8 |
-| 3 | Datos de comparación de calidad | Edith | | pendiente | F7 |
+| 3 | Datos de comparación de calidad | Edith | 13 oct | cerrada | F7 |
 | 4 | Modo de captura | Bryan | | pendiente | F3, F9 |
 | 5 | Servicios de AWS | Emilio | 8 oct | cerrada | F4, F5 |
 | 6 | Ubicación de Capturas Edge en el portal | Emilio | 8 oct (URL y acceso: 9 oct) | cerrada | F5 |
@@ -30,9 +30,10 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 ## 3. Datos de comparación de calidad
 
-- Conjunto (validación del Proyecto 3, con el manifiesto y las etiquetas del P3):
-- Manifiesto y hash de origen:
-- Confirmación de que el test no se usa para calibrar ni ajustar:
+- **Conjunto:** la partición `val` del manifiesto del P3 con el que se seleccionó el modelo 1.0.0: 292 recortes (cat 67, dog 78, person 147), con las etiquetas del manifiesto. Ambos modelos se evalúan sobre esas mismas 292 muestras ([`calidad.md`](calidad.md)).
+- **Manifiesto y hash de origen:** `m-0.1.3-s42-1`, `Proyecto3/data/manifests/m-0.1.3-s42-1/manifest.jsonl`, SHA-256 `45600f297d13f51685e051e0cbc4962beb1f7c6a4e03247cbf61a345e6fa4305` (igual a `manifest_hash` de su `.meta.json` y de `Proyecto3/docs/selection.json`); recortes del release `0.1.3`, índice `crops.jsonl` con SHA-256 `d3d61f35…be1bed`.
+- **Dónde se evalúa cada modelo:** el original con PyTorch y su propio preprocesamiento; la variante INT8 en aarch64 con el entorno de la Pi (Debian 13, Python 3.13, onnxruntime 1.31.0, CPU Cortex-A53 emulada). El INT8 no se evalúa en x86: ahí da otras probabilidades ([`artefacto.md`](artefacto.md)).
+- **El test no se usa:** ni para calibrar (la calibración de F2 usa 200 recortes de `train`, [`calibracion_manifest.jsonl`](../modelo/registros/calibracion_manifest.jsonl)) ni para elegir la configuración ni para esta comparación. Los scripts de F7 solo leen filas con `split == "val"`.
 
 ## 4. Modo de captura
 

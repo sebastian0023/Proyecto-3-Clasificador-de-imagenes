@@ -35,10 +35,10 @@
 
 ## Cómo se cierra
 
-- [ ] Predicciones por muestra entregadas y recalculables
-- [ ] Reporte antes y después con métricas por clase y errores explicados
-- [ ] Caída de accuracy de hasta 2 puntos porcentuales, o decisión documentada si no se logra
-- [ ] Procedencia de calibración y exclusión del test anotadas
+- [x] Predicciones por muestra entregadas y recalculables: [`predicciones_validacion.csv`](../../calidad/registros/predicciones_validacion.csv), 292 filas (una por muestra de `val`), con las probabilidades completas de cada modelo en `pred_original.csv` y `pred_optimizado.csv`
+- [x] Reporte antes y después con métricas por clase y errores explicados: [`docs/calidad.md`](../calidad.md) y [`metricas.json`](../../calidad/registros/metricas.json). Solo `0.1.3:a554` cambia (dog → person; el original ya dudaba, con 0.55)
+- [x] Caída de accuracy de hasta 2 puntos porcentuales: 0.9965753424657534 → 0.9931506849315068, **0.3424657534246589 pp**, con el INT8 evaluado en aarch64 (entorno de la Pi)
+- [x] Procedencia de calibración y exclusión del test anotadas: [`calidad.md` § Separación de datos](../calidad.md#separación-de-datos) y decisión 3 en [`decisiones.md`](../decisiones.md)
 - [ ] PR fusionado con review de Bryan
 - [ ] Estado de la tarjeta en **Hecho**
 
@@ -46,3 +46,4 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 2026-10-13 | Edith | Evaluación común, predicciones, revisión del manifiesto, métricas, errores y separación | `calidad/predecir.py` (original en PyTorch; INT8 en aarch64 con CPU Cortex-A53 emulada, Debian 13 y onnxruntime 1.31.0, igual que la Pi) y `calidad/comparar.py`. Accuracy 0.99658 → 0.99315 (caída de 0.342 pp), F1 macro 0.99537 → 0.99209; 291/292 iguales. Decisión 3 cerrada. PR de F7 | Review de Bryan |
