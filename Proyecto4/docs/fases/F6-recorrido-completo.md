@@ -22,10 +22,10 @@
 
 ## Bloques de trabajo
 
-- **Conexión:** unir el envío del dispositivo con el servicio de recepción de F4.
-- **Fallo reversible:** definir cómo se provoca el fallo de envío en la demostración sin dañar el entorno, por ejemplo apuntando a un destino inválido o cortando la red.
-- **Reintento:** mostrar el error en el dispositivo y permitir reintento manual con el mismo ID. El registro local se conserva aunque el envío falle.
-- **Trazabilidad:** seguir una captura nueva por imagen, ID, fecha y clasificación en dispositivo, AWS y portal.
+- [ ] **Conexión:** unir el envío del dispositivo con el servicio de recepción de F4.
+- [ ] **Fallo reversible:** definir cómo se provoca el fallo de envío en la demostración sin dañar el entorno, por ejemplo apuntando a un destino inválido o cortando la red.
+- [ ] **Reintento:** mostrar el error en el dispositivo y permitir reintento manual con el mismo ID. El registro local se conserva aunque el envío falle.
+- [ ] **Trazabilidad:** seguir una captura nueva por imagen, ID, fecha y clasificación en dispositivo, AWS y portal. — Herramienta lista: [`scripts/trazar_captura.py`](../../scripts/trazar_captura.py) (solo lectura; pruebas en [`tests/test_traza.py`](../../tests/test_traza.py)). Falta la primera traza real con las tres fuentes.
 
 ## Cómo se cierra
 
@@ -39,3 +39,4 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 2026-10-12 | Emilio | Trazabilidad (herramienta) | `scripts/trazar_captura.py`: dado un `capture_id`, lee la línea del `events.jsonl` y la foto local del dispositivo, el registro y la imagen en S3 (`head-object`/`get-object`, sin escribir) y el registro y la imagen del portal con basic_auth (credenciales desde `P4_PORTAL_USUARIO`/`P4_PORTAL_PASSWORD`; si faltan, se omite y se avisa). Tabla por campo (capture_id, clase, confianza, versión y SHA-256 del modelo, captured_at, image_sha256) y SHA-256 de la imagen en dispositivo, S3 (metadatos y descarga) y portal; salida 1 si algo no coincide, 2 si falta en S3. 25 pruebas sin AWS (121 en P4). Prueba de humo de solo lectura contra S3 con `44e6a9b3-e5dc-4d92-a8e6-9c7e0a0c65b0`: registro y metadatos coinciden. | Traza real con dispositivo y portal (bloque 2). |
