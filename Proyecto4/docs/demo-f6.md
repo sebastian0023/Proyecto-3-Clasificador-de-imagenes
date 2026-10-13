@@ -36,10 +36,10 @@ Programa del dispositivo (ya en `main`, [`dispositivo/edge_camera.py`](../dispos
 | Paso | Quién | Comando / acción | Qué se ve |
 |---|---|---|---|
 | 1 | Bryan | `python Proyecto4/dispositivo/edge_camera.py --model Proyecto4/modelo/model_int8.onnx --version 1.0.0-int8.1` | Versión y SHA-256 del modelo; cada captura con `¡Envío exitoso (201) a AWS!` |
-| 2 | Bryan (otra terminal) | `sudo ip route add blackhole 174.129.84.80/32` ⚠️ *confirmar con Bryan que es el comando del ensayo* | `ping 174.129.84.80` → `connect: Invalid argument` |
+| 2 | Bryan (otra terminal) | `sudo ip route add blackhole 174.129.84.80` (el comando del ensayo, confirmado por Bryan) | `ping 174.129.84.80` → `connect: Invalid argument` |
 | 3 | Bryan | Mostrar 1 o 2 objetos a la cámara | La Pi **sigue clasificando**; `Fallo de conexión (… Invalid argument). Se guardará en disco…` |
 | 4 | Bryan | `cat Proyecto4/dispositivo/capturas/pendientes.json` | Los `capture_id` que fallaron. **Anotar uno** (el «ID de la demo») |
-| 5 | Bryan | `sudo ip route del blackhole 174.129.84.80/32` | — |
+| 5 | Bryan | `sudo ip route del blackhole 174.129.84.80` | — |
 | 6 | Bryan | Esperar el siguiente ciclo (~5 s) | `--- Intentando reenviar N capturas pendientes ---` y `¡Envío exitoso (201) a AWS!` para **el mismo ID**; `pendientes.json` vuelve a `[]` |
 | 7 | Emilio | Traza (abajo) y portal | Un solo registro, imagen recuperable, datos iguales |
 
@@ -92,11 +92,7 @@ El corte solo afecta a la ruta de la Pi hacia `174.129.84.80`: la sesión SSH co
 
 | Situación | Acción |
 |---|---|
-| Quedó la ruta *blackhole* | `sudo ip route del blackhole 174.129.84.80/32` (o reiniciar la Pi) |
+| Quedó la ruta *blackhole* | `sudo ip route del blackhole 174.129.84.80` (o reiniciar la Pi) |
 | Wi-Fi apagado | `sudo nmcli radio wifi on` |
 | El programa quedó con `--url` inválida | `Ctrl+C` y arrancar sin `--url`; la cola se reenvía sola |
 | `pendientes.json` no se vacía con red | Revisar `P4_DEVICE_TOKEN` (un `401` sale de la cola y no se reintenta) y que el portal responda (`curl.exe` del inicio) |
-
-## Pendiente de confirmar con Bryan
-
-- El comando exacto de la ruta *blackhole* del ensayo (no está en `F3-edge-camara.md`; el error `[Errno 22] Invalid argument` de `ping_offline.txt` corresponde a `ip route add blackhole`).

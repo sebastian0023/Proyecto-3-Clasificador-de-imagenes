@@ -31,7 +31,7 @@
 
 - [x] Una fotografía nueva de la cámara visible en Capturas Edge (`bf2e1822-61a7-4439-a1ba-5ee395e3c026` en la galería del portal desplegado: foto de la Pi, person 98.74 %, `edge01`, `1.0.0-int8.1`, fechas iguales a S3; `portal_bf2e1822.jpg`; el portal sirve registro e imagen de los 7 IDs, `GET` `200`/`200` en las trazas)
 - [x] Imagen, ID, clase y versión coinciden en dispositivo, AWS y portal (7 trazas: 8 de 8 filas iguales, imagen con el mismo SHA-256 en la foto de la Pi, el evento, S3 y el portal; `trazas/traza_<id>.txt`)
-- [x] Un envío fallido y reintentado deja un solo registro (los 7 IDs del ensayo: fallos de conexión y un solo `201` en `ejecucion_offline.txt`; 1 registro por ID en `edge-captures/events/` según las trazas)
+- [x] Un envío fallido y reintentado deja un solo registro (los 7 IDs del ensayo: fallos de conexión y un solo `201` en `ejecucion_offline.txt`; 1 registro por ID en `edge-captures/events/` según las trazas. Evidencia adicional: 5 envíos con fallo **real** de red el 13 oct, DNS y `Connection reset`, reintentados con el mismo ID y con 1 registro cada uno; `reenvio_68_verificacion.txt`)
 - [ ] PR fusionado con review de Edith
 - [ ] Estado de la tarjeta en **Hecho**
 
@@ -72,5 +72,10 @@ Fuera del repo, en `C:\MLOps_Project_Four\evidencia_f6\` (se copia a la carpeta 
 | `trazas/sin_portal/traza_<id>.txt` (7) | Traza dispositivo + S3 |
 | `trazas/traza_<id>.txt` (7), `resumen_trazas_7_ids.md` | Traza de las tres fuentes y tabla resumen |
 | `s3_registros_snapshot.json` | Lectura de los 136 registros de S3 del 13 oct (base del resumen para F9) |
-| `resumen_edge01_para_f9.txt`, `analisis_68_sin_s3.txt` | Capturas de `edge01` por código, clase y warnings; las 68 del dispositivo que no están en S3 y la hipótesis del token ausente |
+| `resumen_edge01_para_f9.txt`, `analisis_68_sin_s3.txt` | Capturas de `edge01` por código, clase y warnings (actualizado tras el reenvío); las 68 que faltaban en S3, causa confirmada (sin token) y resolución |
+| `ids_68.txt` | Los 68 `capture_id` reenviados (UTF-8 sin BOM, LF) |
+| `reenvio_68.txt` | Salida de la Pi durante el reenvío (Bryan): 91 IDs con un solo `201`, 5 con un fallo real de red antes |
+| `reenvio_68_verificacion.txt`, `s3_registros_reenvio_91.json` | Verificación en S3 de las 68 y las 23 nuevas: un registro por ID, imagen y datos iguales, total 227 |
 | `portal_bf2e1822.jpg` | La captura `bf2e1822` en Capturas Edge del portal desplegado, con los mismos datos que S3 |
+| 2026-10-13 | Emilio | Hallazgo resuelto: las 68 sin S3 | Causa confirmada por Bryan: ese tramo corrió sin `P4_DEVICE_TOKEN` y, sin token, `enviar_aws` devolvía `True` y no encolaba; corregido en su PR #42 (sin token la captura va a la cola). Las 68 se reenviaron el 13 oct con sus mismos `capture_id`. Verificación de solo lectura en S3: `edge-captures/events/` pasó de 136 a 227 (136 + 68 + 23 capturas nuevas tomadas durante el reenvío), sin IDs ajenos ni duplicados; 68/68 con un registro, imagen con el `sha256` del evento de la Pi y los mismos datos que el `events.jsonl`; 23/23 nuevas con un registro. **Evidencia extra para 4.3:** 5 envíos fallaron por red real (DNS y `Connection reset`: `4dadcbb8`, `9b50a6e0`, `047589a0`, `e730e7ed` de las 68 y `6a761f96` nueva), se reintentaron con el mismo ID y dejaron un solo registro cada uno. | — |
+| 2026-10-13 | Emilio | Resumen para F9 (actualizado) | `edge01` en S3: 224 capturas; 192 del código nuevo (cat 42, dog 16, person 134) y 32 del viejo (cat 7, dog 3, person 22); ninguna con warnings. | Para las 20 de F9, equilibrar clases: hay pocas `dog`. |
