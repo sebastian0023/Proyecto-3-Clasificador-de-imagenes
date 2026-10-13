@@ -23,7 +23,7 @@ Variante **`1.0.0-int8.1`**: el modelo publicado 1.0.0 del Proyecto 3, exportado
 |---|---|
 | Versión | `1.0.0-int8.1` |
 | Formato | ONNX, opset 18 |
-| Runtime | onnxruntime 1.30.0, `CPUExecutionProvider` (aarch64 en la Pi) |
+| Runtime | onnxruntime, `CPUExecutionProvider`: 1.31.0 en la Raspberry Pi (Debian 13, Python 3.13.5, [`entorno.txt`](../evidencia_f3/entorno.txt)); la conversión y la prueba emulada usaron 1.30.0 y dan las mismas salidas |
 | Técnica | Cuantización estática post-entrenamiento: formato QDQ, pesos INT8 **por canal**, activaciones INT8, calibración MinMax |
 | Calibración | 200 recortes **solo de train** del manifiesto `m-0.1.3-s42-1` (semilla 42: 48 cat, 54 dog, 98 person); IDs en [`calibracion_manifest.jsonl`](../modelo/registros/calibracion_manifest.jsonl). Validación y test no intervienen |
 | Entrada | `input`, float32, NCHW `[1, 3, 224, 224]`, RGB normalizado; la cuantización de la entrada ocurre dentro del grafo (`QuantizeLinear`), el dispositivo no cuantiza a mano |
@@ -58,7 +58,7 @@ Descarga: `s3://dataset-quality-releases-750702272375/models/clasificador-edge/1
 | Conversión reproducible | dos corridas dan los mismos SHA-256 de FP32 e INT8 | mismo comando, mismo resultado |
 | Entradas conocidas (x86) | original, FP32 e INT8 dan la clase esperada en 3/3 | [`smoke_test.json`](../modelo/registros/smoke_test.json) |
 | Carga en aarch64 (Docker con QEMU, Python 3.11, onnxruntime 1.30.0) | carga; SHA-256 coincide; 3/3 entradas conocidas con la clase esperada (`a1330` dog 0.930898); el runtime ejecuta 20 `QLinearConv`, 1 `QGemm` y 8 `QLinearAdd` | [`arm64_check.txt`](../modelo/registros/arm64_check.txt) |
-| Carga en la Raspberry Pi física | **pendiente de Bryan (F3)** | — |
+| Carga en la Raspberry Pi física (Debian 13, Python 3.13.5, onnxruntime 1.31.0) | carga; SHA-256 coincide; 3/3 entradas conocidas con **las mismas probabilidades** que aarch64 emulado (`a1330` dog 0.930898); mismos operadores en el runtime | [`evidencia_f3/arm64_check_output.txt`](../evidencia_f3/arm64_check_output.txt) |
 
 ### Aviso para F7 y F8: medir INT8 en ARM, no en la laptop
 
