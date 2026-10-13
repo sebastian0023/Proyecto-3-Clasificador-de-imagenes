@@ -51,7 +51,7 @@ def guardar_pendientes(cola):
 def enviar_aws(url, token, evento, ruta_imagen):
     if not token:
         print("Advertencia: No hay TOKEN configurado, se omite el envío a AWS.")
-        return True
+        return False
 
     headers = {"Authorization": f"Bearer {token}"}
     
