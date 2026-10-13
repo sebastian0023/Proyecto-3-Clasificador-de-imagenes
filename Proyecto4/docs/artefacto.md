@@ -62,7 +62,7 @@ Descarga: `s3://dataset-quality-releases-750702272375/models/clasificador-edge/1
 
 ### Aviso para F7 y F8: medir INT8 en ARM, no en la laptop
 
-El mismo `model_int8.onnx` da probabilidades distintas en x86 y en aarch64 (por ejemplo, `a1330`: dog 0.562 en la laptop, 0.931 en aarch64). La causa probable es la saturación conocida de onnxruntime al ejecutar INT8×INT8 con AVX2 en x86 (sin VNNI); en ARM las instrucciones enteras no saturan. En una revisión interna en aarch64 sobre las 292 muestras de validación, FP32 dio 0.9966 e INT8 0.9932 (caída de 0.34 pp; en x86 la caída aparente era de 1.37 pp). Es una cifra preliminar: no se guardaron las predicciones por muestra, y el registro recalculable lo produce F7. La comparación de calidad formal (F7) y las mediciones (F8) se hacen con el runtime de aarch64.
+El mismo `model_int8.onnx` da probabilidades distintas en x86 y en aarch64 (por ejemplo, `a1330`: dog 0.562 en la laptop, 0.931 en aarch64). La causa probable es la saturación conocida de onnxruntime al ejecutar INT8×INT8 con AVX2 en x86 (sin VNNI); en ARM las instrucciones enteras no saturan. La comparación formal de F7, con predicciones por muestra y el INT8 evaluado en aarch64, da una caída de 0.342 pp (0.99658 → 0.99315); en x86 la caída aparente sería de 1.37 pp ([`calidad.md`](calidad.md)). La comparación de calidad formal (F7) y las mediciones (F8) se hacen con el runtime de aarch64.
 
 ## Reproducir
 
