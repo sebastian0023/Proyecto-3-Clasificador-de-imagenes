@@ -50,7 +50,7 @@ Solo hay dos muestras con error en alguno de los modelos:
 | Runtime | PyTorch 2.14.0 (CPU), Python 3.12.10, x86-64 | onnxruntime **1.31.0**, Python 3.13, aarch64 |
 | Plataforma | laptop | contenedor `linux/arm64` (Debian 13) con CPU **Cortex-A53** emulada por QEMU (`QEMU_CPU=cortex-a53`, sin `dotprod`): el procesador, SO y runtime de la Raspberry Pi 3 |
 
-**Por qué el INT8 se evalúa en aarch64 y no en la laptop:** en x86 el mismo archivo da otras probabilidades (saturación de INT8 con AVX2; [`artefacto.md`](artefacto.md)). En la laptop el INT8 daría 0.9828767123287672, una caída aparente de 1.37 pp que **no es la del dispositivo**. Se guarda como referencia en [`registros/referencias/pred_int8_x86.csv`](../calidad/registros/aux/pred_int8_x86.csv).
+**Por qué el INT8 se evalúa en aarch64 y no en la laptop:** en x86 el mismo archivo da otras probabilidades (saturación de INT8 con AVX2; [`artefacto.md`](artefacto.md)). En la laptop el INT8 daría 0.9828767123287672, una caída aparente de 1.37 pp que **no es la del dispositivo**. Se guarda como referencia en [`registros/referencias/pred_int8_x86.csv`](../calidad/registros/referencias/pred_int8_x86.csv).
 
 **La emulación reproduce la Pi:** en las 3 entradas conocidas, el contenedor da exactamente las mismas probabilidades que la Raspberry Pi física ([`evidencia_f3/arm64_check_output.txt`](../evidencia_f3/arm64_check_output.txt)): `a1330` dog 0.930898, `a1528` cat 0.999977, `a1022` person 0.992791. Las filas de esas muestras en [`pred_optimizado.csv`](../calidad/registros/pred_optimizado.csv) tienen los mismos valores.
 
