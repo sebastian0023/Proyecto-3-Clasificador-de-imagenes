@@ -1,0 +1,216 @@
+{
+  "manifest_id": "m-0.1.3-s42-1",
+  "manifest_sha256": "45600f297d13f51685e051e0cbc4962beb1f7c6a4e03247cbf61a345e6fa4305",
+  "split": "val",
+  "classes": [
+    "cat",
+    "dog",
+    "person"
+  ],
+  "checks": {
+    "missing": 0,
+    "extra": 0,
+    "duplicates": 0,
+    "label_mismatches": 0,
+    "classes_with_support": [
+      "cat",
+      "dog",
+      "person"
+    ]
+  },
+  "original": {
+    "model_sha256": "e4acca429ebf73d0e5a60fb0dda383a6a5322dccb1decf04b4e40ab9db989172",
+    "run": {
+      "label": "original P3 1.0.0 (PyTorch, x86)",
+      "created_at": "2026-10-13T21:34:39+00:00",
+      "backend": "torch",
+      "model": "model.pt",
+      "model_sha256": "e4acca429ebf73d0e5a60fb0dda383a6a5322dccb1decf04b4e40ab9db989172",
+      "manifest_id": "m-0.1.3-s42-1",
+      "manifest_sha256": "45600f297d13f51685e051e0cbc4962beb1f7c6a4e03247cbf61a345e6fa4305",
+      "split": "val",
+      "samples": 292,
+      "classes": [
+        "cat",
+        "dog",
+        "person"
+      ],
+      "machine": "AMD64",
+      "python": "3.12.10",
+      "qemu_cpu": null,
+      "numpy": "2.5.3",
+      "torch": "2.14.0+cpu",
+      "preprocessing": "p3.data.transforms.build_eval_transform",
+      "csv_sha256": "908b9dafb638d5ea9a646da0373dd8e36efc2dc5c97570cc323202d2ccd04e99"
+    },
+    "samples": 292,
+    "correct": 291,
+    "accuracy": 0.9965753424657534,
+    "f1_macro": 0.9953705920853088,
+    "per_class": {
+      "cat": {
+        "support": 67,
+        "tp": 66,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.9850746268656716,
+        "f1": 0.9924812030075187
+      },
+      "dog": {
+        "support": 78,
+        "tp": 78,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.9873417721518988,
+        "recall": 1.0,
+        "f1": 0.9936305732484078
+      },
+      "person": {
+        "support": 147,
+        "tp": 147,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    "confusion_matrix": {
+      "rows_true_cols_pred": [
+        "cat",
+        "dog",
+        "person"
+      ],
+      "matrix": [
+        [
+          66,
+          1,
+          0
+        ],
+        [
+          0,
+          78,
+          0
+        ],
+        [
+          0,
+          0,
+          147
+        ]
+      ]
+    }
+  },
+  "optimizado": {
+    "model_sha256": "ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0",
+    "run": {
+      "label": "variante 1.0.0-int8.1 en aarch64 (QEMU cortex-a53, Debian 13, Python 3.13, onnxruntime 1.31.0: el entorno de la Pi)",
+      "created_at": "2026-10-13T21:41:07+00:00",
+      "backend": "onnx",
+      "model": "model_int8.onnx",
+      "model_sha256": "ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0",
+      "manifest_id": "m-0.1.3-s42-1",
+      "manifest_sha256": "45600f297d13f51685e051e0cbc4962beb1f7c6a4e03247cbf61a345e6fa4305",
+      "split": "val",
+      "samples": 292,
+      "classes": [
+        "cat",
+        "dog",
+        "person"
+      ],
+      "machine": "aarch64",
+      "python": "3.13.16",
+      "qemu_cpu": "cortex-a53",
+      "numpy": "2.5.4",
+      "onnxruntime": "1.31.0",
+      "preprocessing": "modelo/preprocess.py",
+      "csv_sha256": "8c8795352a8f30ee8f0ac17065b94e6020fe246ac902676bd5dc08a5db46cfaf"
+    },
+    "samples": 292,
+    "correct": 290,
+    "accuracy": 0.9931506849315068,
+    "f1_macro": 0.9920902865595105,
+    "per_class": {
+      "cat": {
+        "support": 67,
+        "tp": 66,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.9850746268656716,
+        "f1": 0.9924812030075187
+      },
+      "dog": {
+        "support": 78,
+        "tp": 77,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.9871794871794872,
+        "recall": 0.9871794871794872,
+        "f1": 0.9871794871794872
+      },
+      "person": {
+        "support": 147,
+        "tp": 147,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.9932432432432432,
+        "recall": 1.0,
+        "f1": 0.9966101694915254
+      }
+    },
+    "confusion_matrix": {
+      "rows_true_cols_pred": [
+        "cat",
+        "dog",
+        "person"
+      ],
+      "matrix": [
+        [
+          66,
+          1,
+          0
+        ],
+        [
+          0,
+          77,
+          1
+        ],
+        [
+          0,
+          0,
+          147
+        ]
+      ]
+    }
+  },
+  "accuracy_drop_pp": 0.3424657534246589,
+  "accuracy_drop_within_2pp": true,
+  "f1_macro_drop": 0.003280305525798277,
+  "agreement": 291,
+  "errores_y_cambios": [
+    {
+      "crop_id": "0.1.3:a322",
+      "true_class": "cat",
+      "pred_original": "dog",
+      "pred_optimizado": "dog",
+      "conf_original": 0.8912931680679321,
+      "conf_optimizado": 0.8690587878227234,
+      "optimizado_p_cat": 0.12442309409379959,
+      "optimizado_p_dog": 0.8690587878227234,
+      "optimizado_p_person": 0.006518152076750994
+    },
+    {
+      "crop_id": "0.1.3:a554",
+      "true_class": "dog",
+      "pred_original": "dog",
+      "pred_optimizado": "person",
+      "conf_original": 0.5534741878509521,
+      "conf_optimizado": 0.5761209726333618,
+      "optimizado_p_cat": 0.011809115298092365,
+      "optimizado_p_dog": 0.4120698869228363,
+      "optimizado_p_person": 0.5761209726333618
+    }
+  ],
+  "predicciones_csv_sha256": "d5a08f1bc33b32b64eb08b27bbb4cca54ca1e1a2fdf3c45c60ea55dcd87cc754"
+}

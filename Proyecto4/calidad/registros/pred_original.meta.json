@@ -1,0 +1,23 @@
+{
+  "label": "original P3 1.0.0 (PyTorch, x86)",
+  "created_at": "2026-10-13T21:34:39+00:00",
+  "backend": "torch",
+  "model": "model.pt",
+  "model_sha256": "e4acca429ebf73d0e5a60fb0dda383a6a5322dccb1decf04b4e40ab9db989172",
+  "manifest_id": "m-0.1.3-s42-1",
+  "manifest_sha256": "45600f297d13f51685e051e0cbc4962beb1f7c6a4e03247cbf61a345e6fa4305",
+  "split": "val",
+  "samples": 292,
+  "classes": [
+    "cat",
+    "dog",
+    "person"
+  ],
+  "machine": "AMD64",
+  "python": "3.12.10",
+  "qemu_cpu": null,
+  "numpy": "2.5.3",
+  "torch": "2.14.0+cpu",
+  "preprocessing": "p3.data.transforms.build_eval_transform",
+  "csv_sha256": "908b9dafb638d5ea9a646da0373dd8e36efc2dc5c97570cc323202d2ccd04e99"
+}
