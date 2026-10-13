@@ -32,17 +32,18 @@
 
 ## Cómo se cierra
 
-- [ ] Variante cargable en el runtime del dispositivo — carga en aarch64 emulado con onnxruntime 1.30.0 ([`arm64_check.txt`](../../modelo/registros/arm64_check.txt)); **falta confirmarlo en la Raspberry Pi física (Bryan, F3)**
+- [x] Variante cargable en el runtime del dispositivo: en la Raspberry Pi física (Debian 13, Python 3.13.5, onnxruntime 1.31.0) carga `model_int8.onnx` con SHA-256 `ca689c4e…` y da en las 3 entradas conocidas las mismas probabilidades que aarch64 emulado ([`evidencia_f3/arm64_check_output.txt`](../../evidencia_f3/arm64_check_output.txt), [`arm64_check.txt`](../../modelo/registros/arm64_check.txt)); el programa de la cámara la carga al arrancar ([`evidencia_f3/ejecucion_offline.txt`](../../evidencia_f3/ejecucion_offline.txt))
 - [x] Registro de conversión que une el original del Proyecto 3 con la variante: [`conversion_log.json`](../../modelo/registros/conversion_log.json) (entrada `e4acca42…` run `9f9b62c2…` → salida `ca689c4e…`)
 - [x] Técnica explicada con evidencia de su efecto: INT8 estática QDQ por canal, 74.66 % menos bytes, 20 `QLinearConv` en el runtime ([`artefacto.md`](../artefacto.md#efecto-de-la-técnica))
 - [x] Orden de clases y preprocesamiento idénticos al original: salen del checkpoint (`model_package.json`); 3/3 entradas conocidas iguales ([`smoke_test.json`](../../modelo/registros/smoke_test.json))
 - [x] Conversión reproducible desde el repositorio: [`modelo/convert.py`](../../modelo/convert.py) + [`conversion.yaml`](../../modelo/conversion.yaml) + lockfile; dos corridas dan los mismos SHA-256
 - [x] Ficha del artefacto con enlaces de descarga y hashes: [`docs/artefacto.md`](../artefacto.md), objetos en S3 en [`publicacion.json`](../../modelo/registros/publicacion.json)
-- [ ] PR fusionado con review de Bryan
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] PR fusionado: sebastian0023/Proyecto-3-Clasificador-de-imagenes#37, fusionado por Emilio el 9 oct (revisado por Emilio, sin review registrada en GitHub; el revisor asignado era Bryan)
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
 | 2026-10-08 | Edith | Conversión, registro, técnica, reproducibilidad, calibración, prueba de humo y ficha | Variante `1.0.0-int8.1` publicada en `s3://…/models/clasificador-edge/1.0.0-int8.1/`; PR de F2 | Carga en la Pi física (Bryan, F3). La calidad INT8 se mide en aarch64, no en x86 (ver aviso en `artefacto.md`) |
+| 2026-10-13 | Edith | Cierre | Carga en la Pi física confirmada con la salida de Bryan (`evidencia_f3/arm64_check_output.txt`): mismas clases y probabilidades que aarch64 emulado. La Pi usa onnxruntime 1.31.0; `modelo/requirements-edge.txt` pasa de 1.30.0 a 1.31.0 | — |
