@@ -34,7 +34,7 @@
 - [x] Clasifica objetos nuevos con la variante de F2
 - [x] Sigue capturando y clasificando con la red desconectada después de cargar el modelo
 - [x] Muestra versión y hash del artefacto cargado
-- [ ] Entradas conocidas dan la misma clase que en los registros
+- [x] Entradas conocidas dan la misma clase que en los registros
 - [x] Cada captura deja imagen y registro con ID único
 - [ ] PR fusionado con review de Emilio
 - [ ] Estado de la tarjeta en **Hecho**
@@ -69,9 +69,9 @@ Toda la evidencia auditable se recopiló en formato de texto mediante la salida 
   - **Evidencia auditable:** `ping_offline.txt` y `ejecucion.txt`
   - **Detalle:** Simulación de caída de red enrutando tráfico a un `blackhole`. El log registra el fallo, la retención segura en disco de la cola de pendientes sin congelar la cámara, y el posterior reenvío masivo exitoso (código `201`) al retirar el bloqueo, preservando los `capture_id` originales.
 
-- [ ] **Entradas conocidas comparadas contra F7:** 
-  - **Evidencia auditable:** `arm64_check_output.txt` y `smoke_test_output.txt`
-  - **Detalle:** (Casilla desmarcada. Pruebas omitidas debido a un error de infraestructura en la nube (AWS 403 Forbidden) al intentar descargar los recortes de validación y `manifest.jsonl` requeridos).
+- [x] **Entradas conocidas comparadas contra F7:** 
+  - **Evidencia auditable:** `arm64_check_output.txt`
+  - **Detalle:** Validación exitosa en arquitectura `aarch64` mediante `arm64_check.py` utilizando los recortes conocidos proporcionados por Emilio (`dog`, `cat`, `person`), obteniendo las clases e inferencias exactas esperadas.
 
 ---
 
