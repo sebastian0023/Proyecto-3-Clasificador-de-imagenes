@@ -66,7 +66,7 @@ Toda la evidencia auditable se recopiló en formato de texto mediante la salida 
   - **Detalle:** Registro de inferencia exitosa utilizando objetos reales frente a la cámara web (`dog`, `cat`, `person`), reportando las confianzas sin redondear. Se respalda con `capturas_ls.txt` (UUIDs) y `eventos.txt` (JSONL con `schema_version: 1`).
 
 - [x] **Prueba con el Wi-Fi apagado:** 
-  - **Evidencia auditable:** `ping_offline.txt` y `ejecucion.txt`
+  - **Evidencia auditable:** `ping_offline.txt` y `ejecucion_offline.txt`
   - **Detalle:** Simulación de caída de red enrutando tráfico a un `blackhole`. El log registra el fallo, la retención segura en disco de la cola de pendientes sin congelar la cámara, y el posterior reenvío masivo exitoso (código `201`) al retirar el bloqueo, preservando los `capture_id` originales.
 
 - [x] **Entradas conocidas comparadas contra F7:** 
