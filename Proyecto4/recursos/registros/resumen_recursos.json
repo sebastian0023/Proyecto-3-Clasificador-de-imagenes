@@ -1,0 +1,164 @@
+{
+  "created_at": "2026-10-14T01:34:38+00:00",
+  "conditions": {
+    "device_model": "Raspberry Pi 3 Model B Rev 1.2",
+    "cpu_model": "ARM Cortex-A53",
+    "architecture": "aarch64",
+    "os_pretty_name": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "ram_total_mb": 905.0,
+    "python_version": "3.13.5",
+    "onnxruntime_version": "1.31.0",
+    "numpy_version": "2.5.4",
+    "execution_provider": "CPUExecutionProvider",
+    "intra_op_num_threads": 1,
+    "inter_op_num_threads": 1,
+    "input_shape": [
+      1,
+      3,
+      224,
+      224
+    ],
+    "input_dtype": "float32 (RGB normalizado ImageNet)",
+    "image_source": "dispositivo/capturas/004325d5-236a-418c-9949-21d21ead4573.jpg",
+    "network_aws_during_benchmark": "excluido (inferencia 100% local sin envío de red)",
+    "warmup_iterations": 10,
+    "measured_iterations": 100,
+    "percentile_method": "interpolación lineal (numpy.percentile, method='linear')"
+  },
+  "artifacts_reference": {
+    "original_pt": {
+      "filename": "model.pt",
+      "bytes": 44783563,
+      "sha256": "e4acca429ebf73d0e5a60fb0dda383a6a5322dccb1decf04b4e40ab9db989172",
+      "precision": "FP32 (PyTorch checkpoint)"
+    },
+    "onnx_fp32": {
+      "filename": "model_fp32.onnx",
+      "bytes": 44791921,
+      "sha256": "e4dc89bbb652f6de9bea2fffa94ff59abb0e6cb679d8a4d95aeadc9e0be65328",
+      "precision": "FP32 (ONNX opset 18)"
+    },
+    "onnx_int8": {
+      "filename": "model_int8.onnx",
+      "bytes": 11349151,
+      "sha256": "ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0",
+      "precision": "INT8 estático QDQ por canal (ONNX opset 18)"
+    }
+  },
+  "size_comparison": {
+    "original_pt_bytes": 44783563,
+    "onnx_fp32_bytes": 44791921,
+    "onnx_int8_bytes": 11349151,
+    "reduction_vs_pt_bytes": 33434412,
+    "reduction_vs_pt_pct": 74.66,
+    "reduction_vs_fp32_bytes": 33442770,
+    "reduction_vs_fp32_pct": 74.66
+  },
+  "pytorch_original_on_device": {
+    "ejecutable_en_entorno_edge": false,
+    "error_tipo": "ModuleNotFoundError",
+    "error_mensaje": "No module named 'torch'",
+    "explicacion": "El entorno virtual de producción del dispositivo (requirements-edge.txt) prescinde de PyTorch (paquete de ~250+ MB en disco y alta huella de RAM en Raspberry Pi 3B de 1 GB) y estandariza onnxruntime==1.31.0. Para comparar bajo condiciones equivalentes (mismo hardware, mismo runtime y 1 hilo de CPU), se mide el modelo original exportado a ONNX FP32 (model_fp32.onnx, que mantiene una diferencia máxima de logits de 1.2e-7 frente a PyTorch) contra la variante cuantizada INT8 (model_int8.onnx)."
+  },
+  "benchmarks": {
+    "onnx_fp32": {
+      "variante": "onnx_fp32",
+      "archivo": "model_fp32.onnx",
+      "bytes": 44791921,
+      "mib": 42.7169,
+      "sha256": "e4dc89bbb652f6de9bea2fffa94ff59abb0e6cb679d8a4d95aeadc9e0be65328",
+      "load_time_ms": 1185.84,
+      "rss_before_mb": 56.33,
+      "rss_after_load_mb": 111.47,
+      "rss_after_run_mb": 123.18,
+      "warmup_excluded": 10,
+      "measured_iterations": 100,
+      "preprocess": {
+        "count": 100,
+        "p50_ms": 19.9558,
+        "p95_ms": 36.9998,
+        "mean_ms": 21.0717,
+        "std_ms": 4.3588,
+        "min_ms": 19.7596,
+        "max_ms": 41.6179,
+        "percentile_method": "linear_interpolation (numpy method='linear')"
+      },
+      "inferencia": {
+        "count": 100,
+        "p50_ms": 1048.836,
+        "p95_ms": 1596.0173,
+        "mean_ms": 1113.858,
+        "std_ms": 223.6772,
+        "min_ms": 1046.8506,
+        "max_ms": 2169.3274,
+        "percentile_method": "linear_interpolation (numpy method='linear')"
+      },
+      "total_local": {
+        "count": 100,
+        "p50_ms": 1068.8104,
+        "p95_ms": 1616.785,
+        "mean_ms": 1134.9297,
+        "std_ms": 227.0825,
+        "min_ms": 1066.7661,
+        "max_ms": 2206.3782,
+        "percentile_method": "linear_interpolation (numpy method='linear')"
+      }
+    },
+    "onnx_int8": {
+      "variante": "onnx_int8",
+      "archivo": "model_int8.onnx",
+      "bytes": 11349151,
+      "mib": 10.8234,
+      "sha256": "ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0",
+      "load_time_ms": 1195.49,
+      "rss_before_mb": 83.48,
+      "rss_after_load_mb": 98.37,
+      "rss_after_run_mb": 104.52,
+      "warmup_excluded": 10,
+      "measured_iterations": 100,
+      "preprocess": {
+        "count": 100,
+        "p50_ms": 20.1416,
+        "p95_ms": 39.7731,
+        "mean_ms": 27.0785,
+        "std_ms": 8.9383,
+        "min_ms": 19.7872,
+        "max_ms": 42.6925,
+        "percentile_method": "linear_interpolation (numpy method='linear')"
+      },
+      "inferencia": {
+        "count": 100,
+        "p50_ms": 634.6998,
+        "p95_ms": 1193.8069,
+        "mean_ms": 831.9827,
+        "std_ms": 266.7117,
+        "min_ms": 588.9221,
+        "max_ms": 1227.7412,
+        "percentile_method": "linear_interpolation (numpy method='linear')"
+      },
+      "total_local": {
+        "count": 100,
+        "p50_ms": 654.6808,
+        "p95_ms": 1231.1522,
+        "mean_ms": 859.0612,
+        "std_ms": 273.4263,
+        "min_ms": 608.933,
+        "max_ms": 1270.35,
+        "percentile_method": "linear_interpolation (numpy method='linear')"
+      }
+    }
+  },
+  "latency_comparison_fp32_vs_int8": {
+    "total_p50_diff_ms": 414.1296,
+    "total_p50_reduction_pct": 38.75,
+    "total_p95_diff_ms": 385.6328,
+    "total_p95_reduction_pct": 23.85,
+    "inferencia_p50_diff_ms": 414.1362,
+    "inferencia_p50_reduction_pct": 39.49,
+    "speedup_factor_p50_inferencia": 1.65,
+    "speedup_factor_p50_total": 1.63
+  },
+  "csv_file": "recursos/registros/tiempos_inferencia.csv",
+  "csv_sha256": "3edb675844ce0ce4f1d5c07d6a5e91b4430c7fce329d95ddae229d63f29f867d"
+}
