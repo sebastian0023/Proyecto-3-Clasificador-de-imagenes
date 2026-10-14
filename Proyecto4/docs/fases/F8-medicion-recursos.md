@@ -33,10 +33,10 @@
 
 ## Cómo se cierra
 
-- [ ] Archivo de tiempos por repetición con p50 y p95 recalculables
-- [ ] Tamaños de ambos artefactos y reducción calculada
-- [ ] Mejora medible documentada, con el intercambio recursos y calidad explicado
-- [ ] Ficha de hardware, runtime, precisión y condiciones
+- [x] Archivo de tiempos por repetición con p50 y p95 recalculables
+- [x] Tamaños de ambos artefactos y reducción calculada
+- [x] Mejora medible documentada, con el intercambio recursos y calidad explicado
+- [x] Ficha de hardware, runtime, precisión y condiciones
 - [ ] PR fusionado con review de Emilio
 - [ ] Estado de la tarjeta en **Hecho**
 
@@ -44,3 +44,4 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 2026-10-13 | Bryan | Tamaños, tiempos auditables (10 calentamiento + 100 mediciones), percentiles lineal, justificación de original PyTorch en edge, mejora y decisión | Script `recursos/medir_recursos.py`, reporte en `docs/recursos.md`, registros en `recursos/registros/` | Review de Emilio y merge |
