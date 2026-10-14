@@ -36,8 +36,8 @@
 - [x] Muestra versión y hash del artefacto cargado
 - [x] Entradas conocidas dan la misma clase que en los registros
 - [x] Cada captura deja imagen y registro con ID único
-- [ ] PR fusionado con review de Emilio
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] PR fusionado con review de Emilio
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 
