@@ -18,7 +18,7 @@ Criterios 3.1, 3.2 y 3.3. Comparación auditada entre el modelo original del Pro
 
 ## 2. Justificación de la exclusión del original en PyTorch en el edge
 
-Se intentó evaluar el modelo original en PyTorch (`model.pt`) en el dispositivo. Sin embargo, no se instaló en el entorno de producción por ser inviable en la arquitectura de 1 GB de RAM. Al intentar su importación, el script registra el error exacto: `ModuleNotFoundError: No module named 'torch'`. No se afirma un OOM ya que no se llegó a instanciar en ejecución.
+No se evaluó el original en PyTorch porque no se instaló en el entorno de producción por ser inviable en la arquitectura de 1 GB de RAM. Al intentar su importación, el script registra el error exacto: `ModuleNotFoundError: No module named 'torch'`. No se afirma un OOM ya que no se llegó a instanciar en ejecución.
 
 Para cumplir con la comparación bajo condiciones equivalentes (mismo hardware, mismo runtime y 1 hilo de CPU), se comparó el ONNX en precisión completa (`model_fp32.onnx`) frente a la variante cuantizada (`model_int8.onnx`). El archivo `model_fp32.onnx` proviene directamente del checkpoint oficial del Proyecto 3 y mantiene una diferencia máxima de logits de apenas $1.2 \times 10^{-7}$ respecto a PyTorch.
 
@@ -39,25 +39,23 @@ Las mediciones se realizaron excluyendo 10 iteraciones de calentamiento (`warmup
 
 | Métrica / Percentil | ONNX FP32 (`model_fp32.onnx`) | ONNX INT8 (`model_int8.onnx`) | Mejora / Reducción |
 |---|---:|---:|---:|
-| **Inferencia pura p50** | Valores en JSON | Valores en JSON | **Speedup 1.65x** |
-| **Inferencia pura p95** | Valores en JSON | Valores en JSON | — |
-| **Tiempo total (prep + inf) p50** | Valores en JSON | Valores en JSON | **Speedup 1.63x** |
-| **Tiempo total (prep + inf) p95** | Valores en JSON | Valores en JSON | — |
+| **Inferencia pura p50** | 1048.84 ms | 634.70 ms | **1.65× más rápido** |
+| **Inferencia pura p95** | 1596.02 ms | 1193.81 ms | **25.20 % menos** |
+| **Tiempo total (prep + inf) p50** | 1068.81 ms | 654.68 ms | **1.63× más rápido** |
+| **Tiempo total (prep + inf) p95** | 1616.79 ms | 1231.15 ms | **23.85 % menos** |
 
 ### Análisis de memoria (según registros JSON)
 - **Carga de modelo:** La sobrecarga al cargar el modelo en memoria muestra una diferencia notable: FP32 incrementa el consumo en **+55 MB**, mientras que INT8 solo requiere **+15 MB** adicionales.
-- **Consumo final:** Al concluir las corridas, el proceso con FP32 alcanza **123.18 MB** de RSS, frente a los **104.52 MB** de la variante INT8. Representa una optimización de memoria muy superior.
+- **Consumo final:** Al concluir las corridas, el proceso con FP32 alcanza **123.18 MB** de RSS, frente alos **104.52 MB** de la variante INT8. Representa una optimización de memoria muy superior.
 
 ### Variabilidad y comportamiento térmico
-Se observa que la variante INT8 alterna de forma determinista en rachas de latencia (por ejemplo, 57 ejecuciones rápidas a ~630 ms frente a 43 corridas a ~1160 ms). Esto se atribuye a la modulación de frecuencia y reducción de velocidad de reloj (*thermal throttling* o gestión de governor de energía) de la Raspberry Pi 3B bajo carga sostenida. 
-* Estado de throttling y temperatura verificados en el entorno:
-  - `vcgencmd get_throttled`
-  - `vcgencmd measure_temp`
-A pesar de esta alternancia, la mediana (`p50`) mejora 1.63 veces, el promedio global baja de 1,135 ms a 859 ms, y la reducción de tamaño se consolida en el 74.66 %.
+Se observa que la variante INT8 alterna en rachas de latencia (57 corridas rápidas a ~630 ms frente a 43 corridas a ~1160 ms). Esto se atribuye probablemente a la modulación de frecuencia de la Pi bajo carga sostenida. El estado térmico y de throttling fue verificado y registrado mediante `vcgencmd` (véase `recursos/registros/throttling.txt`, con temperatura registrada en 39.2 °C).
+A pesar de esta alternancia, la mediana (`p50`) mejora 1.63 veces, el promedio global baja de 1135 a 859 ms, y la reducción de tamaño se consolida en el 74.66 %.
 
 *Archivos de respaldo y registros detallados:*
 - CSV por repetición: [`recursos/registros/tiempos_inferencia.csv`](../recursos/registros/tiempos_inferencia.csv)
 - Resumen JSON: [`recursos/registros/resumen_recursos.json`](../recursos/registros/resumen_recursos.json)
+- Registro térmico: [`recursos/registros/throttling.txt`](../recursos/registros/throttling.txt)
 
 ## 5. Análisis de mejora y justificación de la decisión (con Edith)
 
