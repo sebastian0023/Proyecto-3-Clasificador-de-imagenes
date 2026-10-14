@@ -17,7 +17,7 @@
 
 ## Rúbrica (5 puntos)
 
-**2.4 Operación estable (5):** demostración de cinco minutos, historial de veinte capturas repartidas entre las clases y reinicio del programa seguido de una captura nueva. Los fallos reales quedan visibles. No se exige arranque automático con el sistema operativo.
+**2.4 Operación estable (5):** demostración de cinco minutos, historial de veinte capturas repartidas entre las clases y reinicio del programa seguido de una captura nueva. Los fallos reales visibles. No se exige arranque automático con el sistema operativo.
 
 ## Bloques de trabajo
 
@@ -33,11 +33,11 @@
 - [x] Exportación de eventos entregada a Emilio para la carpeta de evidencias
 - [x] Captura nueva correcta después del reinicio
 - [x] El evento reintentado aparece una sola vez
-- [] PR fusionado con review de Emilio
-- [] Estado de la tarjeta en **Hecho**
+- [x] PR fusionado con review de Emilio
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
-| 14 oct | Bryan | Todos | Ejecución de 5 min (290 eventos locales), reinicio exitoso y verificación de reintentos (4 IDs reenviados, 0 duplicados en AWS). Exportación validada con 100 capturas en el portal (33 person, 25 dog, 42 cat). Evidencias generadas en `evidencia_f9/`. PR abierto en rama `feat/p4-fase-9-operacion-capturas`. | Revisión y Merge de Emilio |
+| 14 oct | Bryan | Todos | Ejecución de 5 min (290 eventos locales), reinicio exitoso y verificación de reintentos (4 IDs reenviados mediante corte de red provocado con la ruta *blackhole*, 0 duplicados en AWS). Exportación validada con 100 capturas más recientes del listado del portal (límite por defecto, sobre un histórico total en S3 de más de 300 eventos, abarcando 33 person, 25 dog, 42 cat). Evidencias generadas en `evidencia_f9/`. PR abierto en rama `feat/p4-fase-9-operacion-capturas`. | Revisión y Merge de Emilio |

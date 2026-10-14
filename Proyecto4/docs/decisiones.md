@@ -79,7 +79,7 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 - **Dispositivo y cámara (modelo):** Raspberry Pi 3 Model B Rev 1.2 (ARM Cortex-A53 de 4 núcleos a 1.2 GHz, ~905 MB de RAM útil / 1 GB físico, arquitectura `aarch64`) conectada a una cámara web estándar vía USB V4L2.
 - **Sistema operativo y versión:** Debian GNU/Linux 13 (trixie) de 64 bits (`aarch64`), kernel `Linux 6.18.50+rpt-rpi-v8` (registrado en [`evidencia_f3/entorno.txt`](../evidencia_f3/entorno.txt)).
-- **Runtime y versiones:** Python 3.13.5 (entorno virtual `env`) utilizando `onnxruntime==1.31.0`, `opencv-python-headless==4.13.0.92`, `pillow==12.2.0`, `numpy==2.4.4` y `requests==2.33.1`.
+- **Runtime y versiones:** Python 3.13.5 (entorno virtual `env`) utilizando `onnxruntime==1.31.0`, `opencv-python-headless==4.13.0.92`, `pillow==12.2.0`, `numpy==2.2.4` y `requests==2.33.1`.
 - **Prueba realizada el 8 de oct (cámara captura, el runtime carga el modelo original o una entrada conocida):** Sí. La cámara capturó las imágenes, calculó el hash SHA-256 que validó la identidad del modelo cuantizado (`ca689c4e…fbd69c0`), importando correctamente el preprocesamiento base (`modelo/preprocess.py`). Las inferencias mostraron la clase y la confianza sin redondeo ([`evidencia_f3/arm64_check_output.txt`](../evidencia_f3/arm64_check_output.txt)). La prueba de resiliencia (Wi-Fi apagado) demostró la captura y guardado offline sin interrupciones, con éxito en reintentos posteriores ([`evidencia_f3/ejecucion_offline.txt`](../evidencia_f3/ejecucion_offline.txt)).
 
 ## 8. Qué cabe en Git

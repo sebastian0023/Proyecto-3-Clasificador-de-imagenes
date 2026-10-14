@@ -1,8 +1,9 @@
 {
   "total_eventos_local_pi": 290,
   "total_eventos_portal_aws": 100,
+  "nota_portal_aws": "100 capturas correspondientes a las más recientes del listado del portal (límite por paginación/defecto), dentro de un histórico total en AWS de más de 300 eventos.",
   "capturas_validas_uuid_preprocess": 100,
-  "capturas_excluidas_antiguas_o_prueba": 0,
+  "capturas_excluidas_antiguas_o_prueba": "Omitidas en el subconjunto de análisis actual (incluye registros históricos edge01-* y pruebas x86 previos a preprocess estricto).",
   "conteo_por_clase_validas_portal": {
     "person": 33,
     "dog": 25,
