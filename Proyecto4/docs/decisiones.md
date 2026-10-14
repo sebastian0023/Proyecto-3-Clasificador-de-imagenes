@@ -6,14 +6,14 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 | # | Decisión | Responsable | Fecha | Estado | Desbloquea |
 |---|---|---|---|---|---|
-| 1 | Formato y runtime del modelo en el dispositivo | Edith y Bryan | | pendiente | F2, F3 |
-| 2 | Técnica y objetivo de optimización | Edith | | pendiente | F2, F7, F8 |
+| 1 | Formato y runtime del modelo en el dispositivo | Edith y Bryan | 8 oct | cerrada | F2, F3 |
+| 2 | Técnica y objetivo de optimización | Edith | 8 oct | cerrada | F2, F7, F8 |
 | 3 | Datos de comparación de calidad | Edith | 13 oct | cerrada | F7 |
 | 4 | Modo de captura | Bryan | | pendiente | F3, F9 |
 | 5 | Servicios de AWS | Emilio | 8 oct | cerrada | F4, F5 |
 | 6 | Ubicación de Capturas Edge en el portal | Emilio | 8 oct (URL y acceso: 9 oct) | cerrada | F5 |
 | 7 | Hardware y entorno del dispositivo | Bryan | | pendiente | F3, F8 |
-| 8 | Qué cabe en Git y qué se distribuye por enlace | Edith y Emilio | | pendiente | F2, F10 |
+| 8 | Qué cabe en Git y qué se distribuye por enlace | Edith y Emilio | 8 oct (pesos) | cerrada para pesos y registros; carpeta de evidencias: pendiente de dato (Emilio, F10) | F2, F10 |
 
 ## 1. Formato y runtime
 
@@ -23,10 +23,13 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 ## 2. Técnica y objetivo de optimización
 
-- Técnica (cuantización, poda, destilación u otra):
-- Precisión resultante:
-- Objetivo medible (tamaño, latencia o memoria) y por qué importa en este hardware:
-- ¿Requiere calibración? Si sí, solo con muestras de entrenamiento del P3; el manifiesto de IDs se guarda en F2.
+- **Técnica:** cuantización estática post-entrenamiento con onnxruntime: formato QDQ, pesos INT8 **por canal**, activaciones INT8, calibración MinMax. Se aplica a los pesos del modelo 1.0.0 del P3, sin reentrenar ni cambiar la arquitectura. Configuración en [`modelo/conversion.yaml`](../modelo/conversion.yaml); ficha en [`artefacto.md`](artefacto.md).
+- **Precisión resultante:** INT8 en pesos y activaciones de las 20 convoluciones, la capa lineal y las sumas residuales; entrada y salida del grafo en float32. En aarch64, onnxruntime ejecuta 20 `QLinearConv`, 1 `QGemm` y 8 `QLinearAdd` (misma salida en la Pi y en la emulación).
+- **Objetivo medible y por qué importa en este hardware:**
+  - **Tamaño:** reducir unas 4 veces el artefacto. Resultado: 44 783 563 → 11 349 151 bytes, **74.66 % menos**. Importa porque la Raspberry Pi 3B tiene 1 GB de RAM compartida con el SO y el programa de la cámara.
+  - **Latencia y memoria en la Pi:** que el INT8 sea más rápido que el ONNX FP32 con el mismo runtime y en el mismo dispositivo. Con INT8 la Cortex-A53 procesa más valores por instrucción NEON y mueve 4 veces menos datos de pesos que en FP32. Lo mide Bryan en F8 (al menos 100 tiempos tras 10 de calentamiento); aquí no se fija un porcentaje.
+  - **Calidad:** perder como máximo 2 pp de accuracy en la validación del P3. Resultado de F7: **0.342 pp** ([`calidad.md`](calidad.md)).
+- **¿Requiere calibración?** Sí: 200 recortes **solo de `train`** del manifiesto `m-0.1.3-s42-1` (semilla 42), con sus IDs en [`calibracion_manifest.jsonl`](../modelo/registros/calibracion_manifest.jsonl). Validación y test no intervienen.
 
 ## 3. Datos de comparación de calidad
 
@@ -81,9 +84,12 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 
 ## 8. Qué cabe en Git
 
-- Pesos del original del P3 y de la variante: enlace de descarga y SHA-256, o en el repositorio:
-- Dónde se alojan los artefactos grandes:
-- Dónde queda la carpeta de evidencias (F10):
+- **Pesos del original y de la variante: por enlace con SHA-256, no en Git.** `Proyecto4/.gitignore` excluye `*.pt`, `*.onnx` y `artifacts/`. Cada archivo se identifica por su SHA-256 en [`artefacto.md`](artefacto.md) y [`publicacion.json`](../modelo/registros/publicacion.json):
+  - Original: `s3://dataset-quality-releases-750702272375/models/clasificador/1.0.0/model.pt` (VersionId `VtRww5se97lomVTcKJUv6d9mYSL7TXOf`), SHA-256 `e4acca42…9172`; copia en MLflow del P3 (`dvc pull mlflow_snapshot.dvc`).
+  - Variante y FP32 de referencia: `s3://dataset-quality-releases-750702272375/models/clasificador-edge/1.0.0-int8.1/`, versiones inmutables (`modelo/publish.py` no sobrescribe).
+- **Dónde se alojan los artefactos grandes:** en el mismo bucket S3 del P2/P3 (versionado, sin acceso público). El evaluador los descarga con su usuario de solo lectura o los recibe por un enlace temporal; nunca con llaves del equipo.
+- **Qué sí va en Git:** código de conversión y de evaluación, configuración, lockfiles y los registros pequeños que respaldan las cifras: registro de conversión, manifiesto de calibración, prueba de humo, predicciones por muestra y métricas (`modelo/registros/`, `calidad/registros/`, guardados byte por byte para que su SHA-256 no cambie).
+- **Dónde queda la carpeta de evidencias (F10):** **pendiente de dato (Emilio, F10).** Hoy la evidencia de F3 está en `Proyecto4/evidencia_f3/`, y la de F4–F6 está fuera del repo, en la laptop de Emilio, a la espera de copiarse en F10 sin secretos.
 
 ## Referencia del modelo del Proyecto 3
 
@@ -91,9 +97,10 @@ Se llena en F1 (Edith). Sin esto no hay continuidad demostrable (M1, 1.1).
 
 | Dato | Valor |
 |---|---|
-| Versión del modelo publicada | |
-| Run ID de MLflow | |
-| Ubicación de los pesos y SHA-256 | |
-| Clases y orden | |
-| Preprocesamiento (tamaño, normalización, orden de canales) | |
-| Entrada conocida con clase esperada | |
+| Versión del modelo publicada | `1.0.0`, la versión activa en `registry.json` del P3 ([`Proyecto3/docs/publicacion_s3.md`](../../Proyecto3/docs/publicacion_s3.md)) |
+| Run ID de MLflow | `9f9b62c202f0446a8a4b411a10321eff` (corrida r10, mejor época 6, `val_accuracy` 0.9965753424657534; [`Proyecto3/docs/selection.json`](../../Proyecto3/docs/selection.json)) |
+| Ubicación de los pesos y SHA-256 | `s3://dataset-quality-releases-750702272375/models/clasificador/1.0.0/model.pt`, VersionId `VtRww5se97lomVTcKJUv6d9mYSL7TXOf`, 44 783 563 bytes, SHA-256 `e4acca429ebf73d0e5a60fb0dda383a6a5322dccb1decf04b4e40ab9db989172`. El mismo hash en la copia de MLflow y en `selection.json` (verificado el 8 oct) |
+| Arquitectura | ResNet-18 con cabeza `Dropout(0.5) → Linear(512, 3)` (`hidden_layers: []`, leído del checkpoint) |
+| Clases y orden | 0 `cat`, 1 `dog`, 2 `person` |
+| Preprocesamiento (tamaño, normalización, orden de canales) | RGB; se estira a 224×224 sin recortar bordes (bilineal con antialias); escala a [0, 1]; media `[0.485, 0.456, 0.406]` y desviación `[0.229, 0.224, 0.225]` de ImageNet; tensor NCHW |
+| Entrada conocida con clase esperada | `0.1.3:a1330` (validación, `dog`): cat 0.051366, **dog 0.943828**, person 0.004807 con el original, igual que en `Proyecto3/docs/publicacion_s3.md`. Con la variante INT8 en la Pi: dog 0.930898 ([`evidencia_f3/arm64_check_output.txt`](../evidencia_f3/arm64_check_output.txt)) |
