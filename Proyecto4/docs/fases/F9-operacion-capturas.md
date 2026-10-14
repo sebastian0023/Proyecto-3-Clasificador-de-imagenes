@@ -29,14 +29,15 @@
 
 ## Cómo se cierra
 
-- [ ] Las 20 capturas visibles en el portal con sus metadatos
-- [ ] Exportación de eventos entregada a Emilio para la carpeta de evidencias
-- [ ] Captura nueva correcta después del reinicio
-- [ ] El evento reintentado aparece una sola vez
-- [ ] PR fusionado con review de Emilio
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] Las 20 capturas visibles en el portal con sus metadatos
+- [x] Exportación de eventos entregada a Emilio para la carpeta de evidencias
+- [x] Captura nueva correcta después del reinicio
+- [x] El evento reintentado aparece una sola vez
+- [] PR fusionado con review de Emilio
+- [] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 14 oct | Bryan | Todos | Ejecución de 5 min (290 eventos locales), reinicio exitoso y verificación de reintentos (4 IDs reenviados, 0 duplicados en AWS). Exportación validada con 100 capturas en el portal (33 person, 25 dog, 42 cat). Evidencias generadas en `evidencia_f9/`. PR abierto en rama `feat/p4-fase-9-operacion-capturas`. | Revisión y Merge de Emilio |

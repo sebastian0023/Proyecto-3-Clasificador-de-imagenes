@@ -1,0 +1,31 @@
+{
+  "total_eventos_local_pi": 290,
+  "total_eventos_portal_aws": 100,
+  "capturas_validas_uuid_preprocess": 100,
+  "capturas_excluidas_antiguas_o_prueba": 0,
+  "conteo_por_clase_validas_portal": {
+    "person": 33,
+    "dog": 25,
+    "cat": 42
+  },
+  "conteo_por_clase_validas_pi": {
+    "person": 178,
+    "cat": 72,
+    "dog": 40
+  },
+  "duplicados_en_portal": [],
+  "ids_reintentados_en_f9": [
+    "dfd57461-579e-4f35-9f88-8665a647532a",
+    "2f934fd5-285c-4d62-ae7a-c8a5c350b6a0",
+    "aa9d876a-a308-4b6b-90fe-7d3b3937a414",
+    "fbf85a5e-9be6-4e8b-a716-38f4ee8873e8"
+  ],
+  "apariciones_en_portal_de_reintentados": {
+    "dfd57461-579e-4f35-9f88-8665a647532a": 1,
+    "2f934fd5-285c-4d62-ae7a-c8a5c350b6a0": 1,
+    "aa9d876a-a308-4b6b-90fe-7d3b3937a414": 1,
+    "fbf85a5e-9be6-4e8b-a716-38f4ee8873e8": 1
+  },
+  "cumple_minimo_20_capturas": true,
+  "cumple_cero_duplicados": true
+}
