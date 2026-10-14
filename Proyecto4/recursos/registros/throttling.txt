@@ -1,0 +1,4 @@
+=== vcgencmd get_throttled ===
+throttled=0x50000
+=== vcgencmd measure_temp ===
+temp=39.2'C

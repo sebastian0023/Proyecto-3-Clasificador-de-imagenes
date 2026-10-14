@@ -46,10 +46,10 @@ Las mediciones se realizaron excluyendo 10 iteraciones de calentamiento (`warmup
 
 ### Análisis de memoria (según registros JSON)
 - **Carga de modelo:** La sobrecarga al cargar el modelo en memoria muestra una diferencia notable: FP32 incrementa el consumo en **+55 MB**, mientras que INT8 solo requiere **+15 MB** adicionales.
-- **Consumo final:** Al concluir las corridas, el proceso con FP32 alcanza **123.18 MB** de RSS, frente alos **104.52 MB** de la variante INT8. Representa una optimización de memoria muy superior.
+- **Consumo final:** Al concluir las corridas, el proceso con FP32 alcanza **123.18 MB** de RSS, frente a los **104.52 MB** de la variante INT8. Representa una optimización de memoria muy superior.
 
 ### Variabilidad y comportamiento térmico
-Se observa que la variante INT8 alterna en rachas de latencia (57 corridas rápidas a ~630 ms frente a 43 corridas a ~1160 ms). Esto se atribuye probablemente a la modulación de frecuencia de la Pi bajo carga sostenida. El estado térmico y de throttling fue verificado y registrado mediante `vcgencmd` (véase `recursos/registros/throttling.txt`, con temperatura registrada en 39.2 °C).
+Se observa que la variante INT8 alterna en rachas de latencia (57 corridas rápidas a ~630 ms frente a 43 corridas a ~1160 ms). Esto se atribuye probablemente a la modulación de frecuencia de la Pi bajo carga sostenida. El estado térmico y de throttling fue verificado y registrado mediante `vcgencmd` (véase `recursos/registros/throttling.txt`, con temperatura registrada en 39.2 °C, medido después de la prueba, en reposo).
 A pesar de esta alternancia, la mediana (`p50`) mejora 1.63 veces, el promedio global baja de 1135 a 859 ms, y la reducción de tamaño se consolida en el 74.66 %.
 
 *Archivos de respaldo y registros detallados:*
