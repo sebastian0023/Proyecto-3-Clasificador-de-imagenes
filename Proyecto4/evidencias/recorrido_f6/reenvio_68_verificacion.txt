@@ -1,0 +1,115 @@
+Verificacion del reenvio de las 68 (solo lecturas, perfil p4-emilio) - 2026-10-13T17:06:23+00:00
+Fuentes: ids_68.txt (sha256 293111cda906d9e2...), events.jsonl de la Pi, reenvio_68.txt de Bryan, s3_registros_snapshot.json (136, del 13 oct)
+
+1) Totales en edge-captures/events/: antes 136 | ahora 227 | esperado 136 + 91 = 227 -> OK
+   IDs nuevos desde la lectura del 13 oct: 91 = 68 reenviadas (68) + capturas nuevas del log (23); otros: ninguno
+   Llaves de registro duplicadas (S3 no permite dos con la misma llave; con If-None-Match no hay sobrescritura): ninguna
+   De los 136 anteriores, faltan hoy: ninguno
+
+2) Las 68 reenviadas: un registro por ID, imagen con el sha256 del evento de la Pi y mismos datos que el events.jsonl
+   capture_id                             reg clase   img=evento datos=Pi  received_at                     VersionId del registro
+   54f92f33-0109-4870-9cc7-48ff35ad0f3e     1 dog             si       si  2026-10-13T16:40:27.934+00:00   yH3MqMONH_Z1i8MZUSYDQTVUdQvG4ro7
+   2eea2aa3-29c1-4a37-8d08-e8fe3fe2d803     1 dog             si       si  2026-10-13T16:40:35.068+00:00   NiNofKZBgRX5LFlyFan0f7TZvBQIAeHu
+   1db574c4-fb48-4719-aaed-4d34d61ef242     1 person          si       si  2026-10-13T16:40:36.902+00:00   VFW5qxTHtDMvrNdlgG4kIc94shYKbNIC
+   e81a7435-badf-40e3-a035-362f38092a87     1 cat             si       si  2026-10-13T16:40:38.727+00:00   qXLi3ZALR4X_ZK8haZ0SFMJ3HDSywuly
+   aed1b5fe-29f6-401c-875a-2ecb757eecb0     1 cat             si       si  2026-10-13T16:40:50.607+00:00   XqYnyUJMgtMkkg9IF.PeuVZl1zlJgTCy
+   2f3b7c82-d2f9-40cb-9a5b-382361cf1a06     1 person          si       si  2026-10-13T16:41:02.380+00:00   qxt7cMZ3aPmTL5D9TrvvQgIrKn6e5rhr
+   ac25c85c-08e3-4d4a-a0bf-c95624010feb     1 person          si       si  2026-10-13T16:41:09.621+00:00   _3CVuISO6ePvsoXdEOBF_rTJ6521LQHB
+   f9062769-e139-4749-8055-4b83c47dd57f     1 person          si       si  2026-10-13T16:41:11.570+00:00   YtbH2hxf5FPeuracDOHzrqalFLQAFKpE
+   2bb5ba5a-9a66-4e5f-8bdb-98afff15bf2e     1 person          si       si  2026-10-13T16:41:13.410+00:00   ag3j0CMaUjDK6heyYbV40gLcf9Tm0ciD
+   42da5516-6665-4445-bbe1-6b5e3dfcfdf6     1 person          si       si  2026-10-13T16:41:15.155+00:00   sHMAsmOPwZt5_yGShaorupqV_mvbyGvE
+   eba7068a-47d5-4f47-ad49-8cbd1a22ca0a     1 person          si       si  2026-10-13T16:41:17.072+00:00   J4dJqXwZ2adudcAcJJEEKGI0MQE_p326
+   9a9ba7a2-03ca-4411-a824-2ea81e7affe3     1 person          si       si  2026-10-13T16:41:23.869+00:00   tkuO06AtPLeD9.5hMv2.N7.ilBjA5jCT
+   533b095f-7b7a-4913-a496-26895514c2b9     1 person          si       si  2026-10-13T16:41:25.708+00:00   iRk42ASUt5VX9IOujoSldopKXooLgJYb
+   449008bb-621b-4021-b8de-c16543e44f26     1 person          si       si  2026-10-13T16:41:27.642+00:00   Biw.WWDt7.v6zw7O74w_iFla1XFXeAxN
+   3da2e915-d8dd-4dd5-8a24-a455b539dcf3     1 person          si       si  2026-10-13T16:41:29.470+00:00   5s9S8KaLrPtSuzD2EViggvF1FXmrZIhv
+   bb8790c1-e684-49f2-b465-833ffce539b2     1 person          si       si  2026-10-13T16:41:33.842+00:00   rLSS9JbaQ84ySSBGmFiQE1tLn982CJKU
+   9616289f-aaa5-49b0-ae60-85cce460ccfb     1 person          si       si  2026-10-13T16:41:35.674+00:00   toFj2zt4bmYoGf_6z2SYyPKKmW2gHnij
+   4f7a7c9d-6c5f-422e-9305-d86e8c909215     1 person          si       si  2026-10-13T16:41:37.836+00:00   _uUo.qn2jqPg_t36JPKcDkJTZamT_lJZ
+   b95b26b8-6ee8-42fa-993c-1351d8244536     1 person          si       si  2026-10-13T16:41:39.753+00:00   ivF5E5JovHExo2_uu7GfWjZh8mnyMZxt
+   4dadcbb8-2580-4079-864a-070c86fa23e7     1 person          si       si  2026-10-13T16:45:29.770+00:00   3CRTDnsRSa9iwrReFnHvd_lIEjZ8GGz4
+   47845cb3-c6ef-4e42-9b26-4724f9da4483     1 person          si       si  2026-10-13T16:41:52.721+00:00   QJqxC_8LyppGTgCVZGBs6AdvbuYOVdFe
+   7da11438-9362-4eaa-94d5-24140bb17383     1 person          si       si  2026-10-13T16:41:54.756+00:00   RuJ8LvXaf4ILNg6KHOudP8Gp1_nEbuek
+   9b50a6e0-21ef-485d-bc56-ed669d9e52e4     1 person          si       si  2026-10-13T16:45:36.767+00:00   h6LFewhpSjIry3aOk8y5ZJODAo0Y4xsQ
+   85717c12-1bca-43fb-b9c0-76dabc8db122     1 person          si       si  2026-10-13T16:42:12.635+00:00   nfy9UhXGLtCqUAbD7d.yyGNDWx3aAZNA
+   a675f569-7f05-4627-93ee-17ab6142c2b7     1 person          si       si  2026-10-13T16:42:14.714+00:00   6P3.ovVNMH9Yn_9ANvnxShYtA6VWICRE
+   2401078e-dbcf-481a-bfb9-f6cb2dedae6e     1 person          si       si  2026-10-13T16:42:17.493+00:00   2YU12biJBUIKEwCrbOKQu2IWdRmWRqSM
+   90210919-4a66-4739-9e6d-638d22563bba     1 person          si       si  2026-10-13T16:42:19.899+00:00   0Gsgd6u09woaDLhDsPT2pZsNLTpxIhvX
+   54abf2d4-bb9e-4c43-8673-53476fb557e0     1 person          si       si  2026-10-13T16:42:22.180+00:00   brmWtg2nSXNsgOZT2NkztsUzBtMp0vMl
+   e8a462d3-cf8e-460b-9dcb-b238c2c815fc     1 person          si       si  2026-10-13T16:42:23.927+00:00   FibxKhByhrIxo.0iBhkHmZ.4P3TpeNgq
+   c717baf6-9eff-4aac-879d-34dcd8bc16f3     1 person          si       si  2026-10-13T16:42:25.684+00:00   dWAqC51cI5zsRwN_SnX9mu.ls_2nXvO_
+   4a5c9d71-614e-467d-a05c-5ad4859946ee     1 person          si       si  2026-10-13T16:42:27.459+00:00   ONsmhwZ.CaSChtsFq7XZWCgpRVHpBtBs
+   7b178985-b844-45c7-b496-9756571c2dc6     1 person          si       si  2026-10-13T16:42:29.271+00:00   UceijU30UGEA38r5ikY3cIS9NQ7IgxAf
+   047589a0-39e7-42db-9a1d-47f063babfa7     1 person          si       si  2026-10-13T16:45:38.618+00:00   z.AzNTbmGTUntAEvRoUDEL8QTxSg.Cm2
+   606bca66-0f85-47d1-9d42-7c5839ec673c     1 person          si       si  2026-10-13T16:42:40.524+00:00   jXbas.8Vkx9.E6urs3Zw2epGfYMX0Bnw
+   c79646d9-eff5-4a36-ba37-193d484b9e77     1 person          si       si  2026-10-13T16:42:47.443+00:00   .McQouhPi30EjGtb5FmURw1RWSFrl2ME
+   41a5f5aa-1b17-4a7b-b953-59b87242e14b     1 person          si       si  2026-10-13T16:42:54.456+00:00   q76.Q.huNeBvGwYae.bu7UrJgmc8yH3W
+   c96c582f-6891-4964-9f86-48d36c2529a3     1 person          si       si  2026-10-13T16:42:56.259+00:00   zJbZbENC3GbkToUYdea7mcBzoTxorhM2
+   2a4f3178-2b32-4e30-8d3f-6b5c0c181e4f     1 person          si       si  2026-10-13T16:43:03.277+00:00   Zq2Q24feCDevPfM6eQhmjsKtECrjjF.O
+   5c66ff49-395b-4823-bd63-6a31453ff033     1 person          si       si  2026-10-13T16:43:10.215+00:00   GDQSBy7Xm3wXEtdn3shqBqcoIOC72QIU
+   4d21ad8f-944f-4432-a59b-de96e18cfb48     1 person          si       si  2026-10-13T16:43:12.661+00:00   aDzOd2Tj.UKlgsnMSo3EFh0b3EgU.aWC
+   764e37a7-b193-4fff-a099-4b93793463ce     1 person          si       si  2026-10-13T16:43:17.366+00:00   ThSU_vDjy66TNksWZBPZSLzUPV5tUnXa
+   e0ddb9e8-6c4c-45f9-bd43-ce5cf21770ad     1 person          si       si  2026-10-13T16:43:19.112+00:00   eK0kyxea1NC8J_xok7gY55dyZh0gKn9E
+   af6f4b12-048a-4057-9bd1-304c5210aaf6     1 person          si       si  2026-10-13T16:43:26.401+00:00   ZCS5ObAufcNjPRLFU5.Q5gSiJGLRVoXM
+   e200c16b-d895-4d06-be7b-c26809de33f8     1 person          si       si  2026-10-13T16:43:28.294+00:00   DLtJY4xL2fK3Prr1IogKz0UlVNMmhruB
+   4403b8b5-9fd6-4645-8d1d-1e817ad67b33     1 person          si       si  2026-10-13T16:43:35.490+00:00   xgg73V9z9XRdLXKOMNHIlAqSDtFrl_wY
+   848dd39e-4e34-427e-90e4-bdda21e9825d     1 person          si       si  2026-10-13T16:43:42.237+00:00   2jsfqTgcOkOKgjsFmoCnT_JF_0frwvQb
+   c6b75467-b9e9-4ded-8587-1e6836193497     1 person          si       si  2026-10-13T16:43:44.082+00:00   5vVWjmGjYvFA.zbV0I_dc8ELprWJjYtA
+   3be965de-8bd0-4ec6-a5f0-c2a994e46d08     1 person          si       si  2026-10-13T16:43:45.859+00:00   ma2hsjdcZTdSYMUTm7oo1sb3DKVcBzcF
+   37164dbf-245e-46d3-80e3-479c88b99462     1 person          si       si  2026-10-13T16:43:53.011+00:00   Axn9OZWdQhc7chgVea.Zj_x3pg7oxAiE
+   874d4f2a-cfb8-4698-ba17-a2139ab47ba5     1 person          si       si  2026-10-13T16:43:54.908+00:00   FQaxdli4dmFzmY6O2wuf54NDBH0Y3rKB
+   cd0f9791-1273-464c-8e80-efde5e00fc0c     1 person          si       si  2026-10-13T16:44:02.131+00:00   HeHt29FGHgVuWlNOWSZWLbbbz4fnbu2E
+   5afd3267-97f2-4b70-87da-555a1f6696d8     1 person          si       si  2026-10-13T16:44:04.010+00:00   tJNEsc31kj_0o2JeNxQxjzR2.GcBtGZt
+   294fa382-847b-4fb3-bb6a-4f7a84c65635     1 person          si       si  2026-10-13T16:44:05.717+00:00   ERH4Sy6p7opbTbBh_yD47ttTOlLL_Oac
+   898af2b9-1821-42cc-a139-543f03d44aa2     1 person          si       si  2026-10-13T16:44:07.519+00:00   lye9yz.tZMxgJDmTrd3HG33969BV5Ppo
+   4d617341-7837-4dcc-9e48-3aa2b817265b     1 person          si       si  2026-10-13T16:44:09.459+00:00   JVodoP5ByZjKQEcDvgsqNUHnEpXB04J8
+   4a26cc9c-1aea-4f57-a179-989ffdea714d     1 person          si       si  2026-10-13T16:44:11.285+00:00   6WvqJo7.4hKWB77VoM1_ahxwADrpLa.w
+   2eaac7d1-893c-4a80-9335-0cc17d939cd2     1 person          si       si  2026-10-13T16:44:13.071+00:00   IUDSMoe4nk3TR2HaepnJ_ZFtH.LwmIbb
+   96ab93a8-4a9d-4c75-9f00-039e5ad27a87     1 person          si       si  2026-10-13T16:44:16.468+00:00   ibahaXO8uRmfRjMuimNpza2F9XG3eNO4
+   ccfd4d62-a090-4dfb-9cc1-1dc028085f20     1 person          si       si  2026-10-13T16:44:24.007+00:00   MXLRlVnaH1Qc3CJf3r6Q8dYeWvbD3yzE
+   86bb4f1f-323f-4f4e-9b55-552b327505ae     1 person          si       si  2026-10-13T16:44:25.895+00:00   H_xjhgqda0amFLRadt8YeV3o0Qo8qwYp
+   fd80dda1-f6af-4796-9fe5-dddfafecb025     1 person          si       si  2026-10-13T16:44:27.693+00:00   AJUkmFUNavstsIApRGfP4VwTdN.vPtOy
+   c31919ea-f6e1-4973-8671-df5dd1e4d9ef     1 person          si       si  2026-10-13T16:44:39.588+00:00   qw5f9D1ThTbMNUkTZXJBWyT6pGIinLhP
+   dfacebd1-5dd4-4f75-aae8-711ff6a24ba5     1 person          si       si  2026-10-13T16:44:51.812+00:00   Bt.OD0VW90MKjbM_1dlytQ2AlteE7gMU
+   8063a471-5666-4f3b-8398-d84fb8cbee9a     1 person          si       si  2026-10-13T16:44:58.660+00:00   u9N82vbt.ceIqiuuIVBRTrhcT_GfOmK.
+   e730e7ed-2ece-4bfb-937d-12d5b72fa060     1 person          si       si  2026-10-13T16:45:40.535+00:00   bdvfJT21pokPzRtdl0.KTMxzoHp41Nni
+   a1926e72-c3aa-4947-a0d7-85e8a6c274eb     1 person          si       si  2026-10-13T16:45:11.657+00:00   3Ccnv6n1ZrgbI6hE7pdcD7qqhpkQIf5p
+   d4f06096-21fd-414e-83db-4230b89f888e     1 person          si       si  2026-10-13T16:45:13.529+00:00   24jKNvISqY14rkPoR4LMfydj0YAIsnyf
+   3cc207a0-87b6-4b08-b470-5ee90acb7af0     1 person          si       si  2026-10-13T16:45:15.344+00:00   956j3sfKoIaRCzd.cyiytFTNRr07bG9I
+   RESULTADO 68: 68 de 68 correctas
+   clases de las 68: {'dog': 2, 'person': 64, 'cat': 2}
+
+3) Las 23 capturas nuevas tomadas durante el reenvio: un registro por ID (y clase igual al log)
+   00f5f5b1-7617-4527-898c-9edc560d2829     1 cat     log=cat     OK  2026-10-13T16:48:55.771+00:00
+   16e8803e-6873-479d-86a7-0f46aa00edc1     1 person  log=person  OK  2026-10-13T16:45:22.540+00:00
+   1c68919c-d5aa-45d5-b9ed-6d58658ebfeb     1 cat     log=cat     OK  2026-10-13T16:47:39.528+00:00
+   2e337490-da66-4e51-9e68-c969672b07e3     1 cat     log=cat     OK  2026-10-13T16:47:24.910+00:00
+   4eb0a853-7b9e-4cc6-b51a-8d4b9c2436c9     1 cat     log=cat     OK  2026-10-13T16:48:17.009+00:00
+   5295065f-7f49-4df5-b509-eca1b2b4dc7f     1 cat     log=cat     OK  2026-10-13T16:47:53.192+00:00
+   685b5f92-42df-4b7e-b783-9b410a9af1aa     1 cat     log=cat     OK  2026-10-13T16:47:46.059+00:00
+   6a761f96-563d-48b7-ad6d-ae52c20b55f7     1 cat     log=cat     OK  2026-10-13T16:46:44.259+00:00
+   8364fed3-9e19-455e-9173-d84f82ce3e7c     1 cat     log=cat     OK  2026-10-13T16:48:24.280+00:00
+   89539fa0-65da-4635-aac3-2b4ebda5d4ce     1 person  log=person  OK  2026-10-13T16:46:13.657+00:00
+   8be9c342-0592-4e43-b5c8-4fce6edfd367     1 cat     log=cat     OK  2026-10-13T16:48:04.996+00:00
+   8d0774c8-2682-4fd1-94a1-085637400457     1 cat     log=cat     OK  2026-10-13T16:46:53.450+00:00
+   99a61c7d-e3d0-44a9-ad2d-f0b0b0a09e56     1 cat     log=cat     OK  2026-10-13T16:48:36.452+00:00
+   a01f8e1d-4eb0-434d-84e0-b0f88371c454     1 person  log=person  OK  2026-10-13T16:45:49.392+00:00
+   a7a8791e-bc6b-48e4-a6a9-5898c229b7d8     1 cat     log=cat     OK  2026-10-13T16:47:32.118+00:00
+   aacb3cae-6b64-445c-8dd9-50e1d9765898     1 cat     log=cat     OK  2026-10-13T16:46:46.300+00:00
+   ad57621e-64d7-4759-83ff-ae55aaf7dd03     1 person  log=person  OK  2026-10-13T16:46:01.557+00:00
+   b18d39dd-5b48-4e82-8d88-95125bf90cee     1 cat     log=cat     OK  2026-10-13T16:48:48.648+00:00
+   be188ec4-d0e0-4771-b68e-faad4a0987e3     1 person  log=person  OK  2026-10-13T16:45:42.280+00:00
+   c8f18c79-43b1-4446-91af-46a3d4a3ab92     1 cat     log=cat     OK  2026-10-13T16:47:12.740+00:00
+   d61ec8ef-16b2-4045-884e-bf86ddaf9bec     1 cat     log=cat     OK  2026-10-13T16:49:02.875+00:00
+   e3ff5595-1882-4aa9-a51f-7cbeae1fc752     1 cat     log=cat     OK  2026-10-13T16:47:00.634+00:00
+   ff2b7f12-2918-4da3-8b7c-da168039bf98     1 person  log=person  OK  2026-10-13T16:46:20.620+00:00
+   RESULTADO 23: 23 de 23 correctas | clases: {'person': 6, 'cat': 17}
+
+4) Fallo de red real y reintento con el mismo ID (evidencia extra para 4.3)
+   4dadcbb8-2580-4079-864a-070c86fa23e7 (de las 68): log = 2 envios (1 fallo de red, luego 201); S3 = 1 registro, VersionId 3CRTDnsRSa9iwrReFnHvd_lIEjZ8GGz4, imagen igual
+   9b50a6e0-21ef-485d-bc56-ed669d9e52e4 (de las 68): log = 2 envios (1 fallo de red, luego 201); S3 = 1 registro, VersionId h6LFewhpSjIry3aOk8y5ZJODAo0Y4xsQ, imagen igual
+   047589a0-39e7-42db-9a1d-47f063babfa7 (de las 68): log = 2 envios (1 fallo de red, luego 201); S3 = 1 registro, VersionId z.AzNTbmGTUntAEvRoUDEL8QTxSg.Cm2, imagen igual
+   e730e7ed-2ece-4bfb-937d-12d5b72fa060 (de las 68): log = 2 envios (1 fallo de red, luego 201); S3 = 1 registro, VersionId bdvfJT21pokPzRtdl0.KTMxzoHp41Nni, imagen igual
+   6a761f96-563d-48b7-ad6d-ae52c20b55f7 (nueva): log = 2 envios (1 fallo de red, luego 201); S3 = 1 registro, VersionId rjJcD79vSCVq32WdVxWPhJqgu6r.7rSZ, imagen igual
+
+RESULTADO GENERAL: TODO CORRECTO

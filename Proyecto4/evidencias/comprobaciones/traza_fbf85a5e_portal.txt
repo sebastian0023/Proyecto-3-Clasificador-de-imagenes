@@ -1,0 +1,40 @@
+Traza de la captura fbf85a5e-9be6-4e8b-a716-38f4ee8873e8
+Generada: 2026-10-15T05:09:15+00:00
+
+campo                | fuente            | valor                                                            | resultado
+---------------------+-------------------+------------------------------------------------------------------+----------
+capture_id           | S3                | fbf85a5e-9be6-4e8b-a716-38f4ee8873e8                             | coincide
+                     | portal            | fbf85a5e-9be6-4e8b-a716-38f4ee8873e8                             |
+---------------------+-------------------+------------------------------------------------------------------+----------
+predicted_class      | S3                | dog                                                              | coincide
+                     | portal            | dog                                                              |
+---------------------+-------------------+------------------------------------------------------------------+----------
+confidence           | S3                | 0.9948710203170776                                               | coincide
+                     | portal            | 0.9948710203170776                                               |
+---------------------+-------------------+------------------------------------------------------------------+----------
+model_version        | S3                | 1.0.0-int8.1                                                     | coincide
+                     | portal            | 1.0.0-int8.1                                                     |
+---------------------+-------------------+------------------------------------------------------------------+----------
+model_sha256         | S3                | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 | coincide
+                     | portal            | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 |
+---------------------+-------------------+------------------------------------------------------------------+----------
+captured_at          | S3                | 2026-10-14T20:44:01.933747+00:00                                 | coincide
+                     | portal            | 2026-10-14T20:44:01.933747+00:00                                 |
+---------------------+-------------------+------------------------------------------------------------------+----------
+image_sha256         | S3                | 5631eccc5aca392756c66e76f3021397a4a1dc9e207c9f0ee1ba891fcf8da575 | coincide
+                     | portal            | 5631eccc5aca392756c66e76f3021397a4a1dc9e207c9f0ee1ba891fcf8da575 |
+---------------------+-------------------+------------------------------------------------------------------+----------
+SHA-256 de la imagen | S3 (metadatos)    | 5631eccc5aca392756c66e76f3021397a4a1dc9e207c9f0ee1ba891fcf8da575 | coincide
+                     | S3 (descarga)     | 5631eccc5aca392756c66e76f3021397a4a1dc9e207c9f0ee1ba891fcf8da575 |
+                     | portal (descarga) | 5631eccc5aca392756c66e76f3021397a4a1dc9e207c9f0ee1ba891fcf8da575 |
+
+Detalles:
+  - S3 s3://dataset-quality-releases-750702272375/edge-captures/events/fbf85a5e-9be6-4e8b-a716-38f4ee8873e8.json: 1 registro(s) con este ID
+  - registro: VersionId a4Pw2pfZPtGzBh8ljyKWXZ1NbkidZKcz, LastModified 2026-10-14T20:44:37+00:00, received_at 2026-10-14T20:44:36.575+00:00
+  - imagen s3://dataset-quality-releases-750702272375/edge-captures/images/fbf85a5e-9be6-4e8b-a716-38f4ee8873e8.jpg: VersionId nrfbfSXCiEEYFHbOZN8By1eWhtfiqdId, 86676 bytes
+  - portal https://174-129-84-80.sslip.io/api/p4/captures/fbf85a5e-9be6-4e8b-a716-38f4ee8873e8: HTTP 200; /image: HTTP 200
+
+Avisos:
+  - Sin --events: se omite el lado del dispositivo.
+
+Resultado: TODO COINCIDE (codigo de salida 0); 8 de 8 filas comparadas entre dos o mas fuentes

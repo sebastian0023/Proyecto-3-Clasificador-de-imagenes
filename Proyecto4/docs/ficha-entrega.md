@@ -85,7 +85,7 @@ La galería muestra las **100 capturas más recientes** («Mostrando 100 de 285�
 Observaciones honestas sobre las capturas recientes (no cambian la calidad medida, que sale de la validación etiquetada de F7; la rúbrica aclara que las 20 capturas verifican operación y no tienen un umbral de accuracy):
 
 - La mayoría de las capturas del 12 al 14 oct son fotos de un **monitor** que muestra imágenes; es la cámara de la Pi, pero en la demostración se usarán objetos físicos.
-- Errores del modelo visibles en esas capturas: un golden retriever en pantalla clasificado como `cat` (`5fbc3570…`, 0.885; `50930285…`, 0.914) y perros en pantalla clasificados como `person` (4 capturas, confianza 0.59–0.72). Quedan fuera de las 20 y se listan en [`evidencias/INDICE.md`](../evidencias/INDICE.md).
+- Errores del modelo visibles en esas capturas: un golden retriever en pantalla clasificado como `cat` (`5fbc3570…`, 0.885; `50930285…`, 0.914) y perros clasificados como `person` (4 capturas: `84b67e89…`, 0.7051; `7fca5e39…`, 0.7225; `471606a3…`, 0.5950, en pantalla, y `bfcb6daa…`, 0.9941, un perro borroso). Quedan fuera de las 20 y se listan en [`evidencias/INDICE.md`](../evidencias/INDICE.md).
 
 Operación estable, reinicio y reintentos: [`fases/F9-operacion-capturas.md`](fases/F9-operacion-capturas.md) y [`evidencia_f9/`](../evidencia_f9/). Fallo y reintento con el mismo ID: [`demo-f6.md`](demo-f6.md) y [`fases/F6-recorrido-completo.md`](fases/F6-recorrido-completo.md).
 
@@ -98,6 +98,6 @@ Tabla de dónde se cambian el destino de AWS, la identidad del dispositivo y el 
 - 6 capturas `person` de las 20 (fotos nuevas sin cara).
 - Video: lo agrega F11.
 - En [`decisiones.md`](decisiones.md), la tabla resumen marca las decisiones 4 (modo de captura) y 7 (hardware) como «pendiente» aunque sus secciones ya están llenas; las cierra Bryan en un PR aparte.
-- El `device_id` del dispositivo (`edge01`) está fijo en `dispositivo/edge_camera.py` (código congelado); hay una solicitud al PM para hacerlo configurable (`P4_DEVICE_ID`, con `edge01` por defecto).
+- El `device_id` del dispositivo (`edge01`) está fijo en `dispositivo/edge_camera.py`. **Pendiente aprobado:** el PM aprobó la excepción al congelamiento para hacerlo configurable (`P4_DEVICE_ID` o `--device-id`, con `edge01` por defecto y formato validado al arrancar); Bryan prepara el PR. Al fusionarse se actualizan esta ficha y la tabla de configuración del README.
 - El SHA-256 del modelo esperado también está fijo en el programa: es una **decisión de seguridad** (se detiene si el archivo no es `1.0.0-int8.1`, para no cargar otro modelo por error). El artefacto se elige con `--model`/`--version` y el destino con `--url`/`P4_API_URL`.
 - El modelo comercial de la cámara web no está registrado.

@@ -141,7 +141,7 @@ Dónde se cambia cada cosa (rúbrica 6.3). No hay archivos con valores reales en
 | Credenciales de AWS del portal | `P4_AWS_PROFILE` (solo desarrollo); en producción, vacío = rol de instancia | [`docs/decisiones.md`](docs/decisiones.md) §5, [`docs/despliegue.md`](docs/despliegue.md) |
 | Artefacto que carga el dispositivo | `--model` y `--version` de `edge_camera.py` | `Proyecto4/modelo/model_int8.onnx`, `1.0.0-int8.1` |
 | Versiones aceptadas por el receptor | `P4_ACCEPTED_MODELS` (`version=sha256`) en `Proyecto2/.env` | `1.0.0-int8.1=ca689c4e…69c0` |
-| Identidad del dispositivo | Fija en el código: `device_id: "edge01"` en [`dispositivo/edge_camera.py`](dispositivo/edge_camera.py) | `edge01` (no configurable por entorno; código congelado) |
+| Identidad del dispositivo | Fija en el código: `device_id: "edge01"` en [`dispositivo/edge_camera.py`](dispositivo/edge_camera.py) | `edge01`. **Pendiente aprobado:** el PM aprobó hacerlo configurable (`P4_DEVICE_ID` o `--device-id`, `edge01` por defecto, formato validado al arrancar); Bryan prepara el PR. Esta fila se actualiza cuando se fusione |
 | Acceso de evaluación al portal | `basic_auth` de Caddy: usuario y hash en `/opt/p4/secretos/caddy.env` de la EC2 | usuario `evaluador`; plantilla y proceso en [`deploy/preparar_secretos.sh`](deploy/preparar_secretos.sh) |
 
 **Decisión de seguridad:** el programa del dispositivo exige al arrancar el SHA-256 de `1.0.0-int8.1` (fijo en el código) y se detiene si el archivo no coincide, para que no se cargue otro modelo por error. El artefacto se elige con `--model` y `--version`; publicar otra variante implica actualizar ese SHA-256 junto con `P4_ACCEPTED_MODELS` del receptor.

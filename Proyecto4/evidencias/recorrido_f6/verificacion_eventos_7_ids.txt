@@ -1,0 +1,10 @@
+events.jsonl de la Pi: 207 lineas | eventos.txt de main: 20 lineas
+capture_id                             en Pi en main misma linea fallos  201  clase/confianza
+bf2e1822-61a7-4439-a1ba-5ee395e3c026       1       1          si      7    1  person 0.9874191880226135
+ffff74f0-ebc0-4c20-84c0-181ae078a298       1       1          si      6    1  person 0.9856405258178711
+ff24163f-fc90-4279-b224-6a98b5b406ae       1       1          si      5    1  person 0.9876047372817993
+8a474355-4297-4f70-b93e-83ed83ff7534       1       1          si      4    1  person 0.9870089888572693
+2d2fb732-b74d-45fa-a66c-e7c36dfd3e36       1       1          si      3    1  person 0.983082115650177
+b7faabf1-343a-4fba-a34b-f01d112326c6       1       1          si      2    1  person 0.9915691018104553
+004325d5-236a-418c-9949-21d21ead4573       1       1          si      1    1  person 0.9593096971511841
+RESULTADO: todo correcto

@@ -1,0 +1,20 @@
+=== imagen
+{
+    "VersionId": "jRqvSKq453iCpkuthCrKniLnHT4AelYa",
+    "LastModified": "2026-10-09T17:23:28+00:00",
+    "Bytes": 146963,
+    "Tipo": "image/jpeg",
+    "sha256": "aaba8be7882299d3701925d9cd91ff7a10cace5de50f9c1e65bd63385673c73c"
+}
+=== registro
+{
+    "VersionId": "S7SF8y3MabIzCI8ZTOz4BZbDvgZbKS8g",
+    "LastModified": "2026-10-09T17:23:29+00:00",
+    "Bytes": 726,
+    "Tipo": "application/json"
+}
+=== s3 ls edge-captures/
+2026-10-08 23:53:23        727 edge-captures/events/f4-prueba-20261008-0001.json
+2026-10-09 11:23:29        726 edge-captures/events/f5-prueba-20261009-0001.json
+2026-10-08 23:53:22     238034 edge-captures/images/f4-prueba-20261008-0001.jpg
+2026-10-09 11:23:28     146963 edge-captures/images/f5-prueba-20261009-0001.jpg

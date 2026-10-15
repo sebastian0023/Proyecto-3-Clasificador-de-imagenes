@@ -1,0 +1,42 @@
+Traza de la captura ffff74f0-ebc0-4c20-84c0-181ae078a298
+Generada: 2026-10-13T13:47:42+00:00
+
+campo                | fuente                   | valor                                                            | resultado
+---------------------+--------------------------+------------------------------------------------------------------+----------
+capture_id           | dispositivo              | ffff74f0-ebc0-4c20-84c0-181ae078a298                             | coincide
+                     | S3                       | ffff74f0-ebc0-4c20-84c0-181ae078a298                             |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+predicted_class      | dispositivo              | person                                                           | coincide
+                     | S3                       | person                                                           |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+confidence           | dispositivo              | 0.9856405258178711                                               | coincide
+                     | S3                       | 0.9856405258178711                                               |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+model_version        | dispositivo              | 1.0.0-int8.1                                                     | coincide
+                     | S3                       | 1.0.0-int8.1                                                     |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+model_sha256         | dispositivo              | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 | coincide
+                     | S3                       | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+captured_at          | dispositivo              | 2026-10-12T22:16:02.492260+00:00                                 | coincide
+                     | S3                       | 2026-10-12T22:16:02.492260+00:00                                 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+image_sha256         | dispositivo              | ee9f3f723df4a70cbb20c968cdac89aa82042e675987f4ea3a56d9c5c5d297ea | coincide
+                     | S3                       | ee9f3f723df4a70cbb20c968cdac89aa82042e675987f4ea3a56d9c5c5d297ea |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+SHA-256 de la imagen | dispositivo (foto local) | ee9f3f723df4a70cbb20c968cdac89aa82042e675987f4ea3a56d9c5c5d297ea | coincide
+                     | dispositivo (evento)     | ee9f3f723df4a70cbb20c968cdac89aa82042e675987f4ea3a56d9c5c5d297ea |
+                     | S3 (metadatos)           | ee9f3f723df4a70cbb20c968cdac89aa82042e675987f4ea3a56d9c5c5d297ea |
+                     | S3 (descarga)            | ee9f3f723df4a70cbb20c968cdac89aa82042e675987f4ea3a56d9c5c5d297ea |
+
+Detalles:
+  - dispositivo: C:\MLOps_Project_Four\evidencia_f6\events.jsonl (1 linea(s) con este ID)
+  - foto local: C:\MLOps_Project_Four\evidencia_f6\ffff74f0-ebc0-4c20-84c0-181ae078a298.jpg (59996 bytes)
+  - S3 s3://dataset-quality-releases-750702272375/edge-captures/events/ffff74f0-ebc0-4c20-84c0-181ae078a298.json: 1 registro(s) con este ID
+  - registro: VersionId Fb32dY3l3PsCT2RurFvN1FVV6WSWIiLZ, LastModified 2026-10-12T22:16:48+00:00, received_at 2026-10-12T22:16:47.274+00:00
+  - imagen s3://dataset-quality-releases-750702272375/edge-captures/images/ffff74f0-ebc0-4c20-84c0-181ae078a298.jpg: VersionId Ocg0DKVG7n_3KK4riI1LlcUOrt2pjzCR, 59996 bytes
+
+Avisos:
+  - Se omite el portal: --sin-portal.
+
+Resultado: TODO COINCIDE (codigo de salida 0); 8 de 8 filas comparadas entre dos o mas fuentes
