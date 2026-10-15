@@ -1,0 +1,24 @@
+Hashes de los artefactos en S3 (solo lectura, perfil del equipo) - 2026-10-15T04:51:56+00:00
+
+s3://dataset-quality-releases-750702272375/models/clasificador/1.0.0/model.pt
+  bytes 44783563 (esperado 44783563)
+  sha256 e4acca429ebf73d0e5a60fb0dda383a6a5322dccb1decf04b4e40ab9db989172
+  esperado e4acca429ebf73d0e5a60fb0dda383a6a5322dccb1decf04b4e40ab9db989172 (conversion_log.json input)
+  VersionId actual VtRww5se97lomVTcKJUv6d9mYSL7TXOf (registrado VtRww5se97lomVTcKJUv6d9mYSL7TXOf)
+  -> COINCIDE
+
+s3://dataset-quality-releases-750702272375/models/clasificador-edge/1.0.0-int8.1/model_fp32.onnx
+  bytes 44791921 (esperado 44791921)
+  sha256 e4dc89bbb652f6de9bea2fffa94ff59abb0e6cb679d8a4d95aeadc9e0be65328
+  esperado e4dc89bbb652f6de9bea2fffa94ff59abb0e6cb679d8a4d95aeadc9e0be65328 (conversion_log.json outputs.fp32 / publicacion.json)
+  VersionId actual qt0K5n9G3Ksq9jdrtd2OIgiukvzJGior (registrado qt0K5n9G3Ksq9jdrtd2OIgiukvzJGior)
+  -> COINCIDE
+
+s3://dataset-quality-releases-750702272375/models/clasificador-edge/1.0.0-int8.1/model_int8.onnx
+  bytes 11349151 (esperado 11349151)
+  sha256 ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0
+  esperado ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 (conversion_log.json outputs.int8 / publicacion.json)
+  VersionId actual zZUwIi72HXSCv1KEuw2hHmunc1.xdwjt (registrado zZUwIi72HXSCv1KEuw2hHmunc1.xdwjt)
+  -> COINCIDE
+
+RESULTADO: los 3 artefactos coinciden con los registros

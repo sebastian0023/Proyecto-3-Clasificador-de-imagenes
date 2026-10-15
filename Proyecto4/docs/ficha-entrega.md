@@ -98,5 +98,6 @@ Tabla de dónde se cambian el destino de AWS, la identidad del dispositivo y el 
 - 6 capturas `person` de las 20 (fotos nuevas sin cara).
 - Video: lo agrega F11.
 - En [`decisiones.md`](decisiones.md), la tabla resumen marca las decisiones 4 (modo de captura) y 7 (hardware) como «pendiente» aunque sus secciones ya están llenas; las cierra Bryan en un PR aparte.
-- El `device_id` del dispositivo (`edge01`) y el SHA-256 del modelo esperado están fijos en `dispositivo/edge_camera.py` (código congelado); el artefacto se elige con `--model`/`--version` y el destino con `--url`/`P4_API_URL`.
+- El `device_id` del dispositivo (`edge01`) está fijo en `dispositivo/edge_camera.py` (código congelado); hay una solicitud al PM para hacerlo configurable (`P4_DEVICE_ID`, con `edge01` por defecto).
+- El SHA-256 del modelo esperado también está fijo en el programa: es una **decisión de seguridad** (se detiene si el archivo no es `1.0.0-int8.1`, para no cargar otro modelo por error). El artefacto se elige con `--model`/`--version` y el destino con `--url`/`P4_API_URL`.
 - El modelo comercial de la cámara web no está registrado.

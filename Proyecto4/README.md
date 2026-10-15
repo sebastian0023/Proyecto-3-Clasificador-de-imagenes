@@ -144,7 +144,7 @@ Dónde se cambia cada cosa (rúbrica 6.3). No hay archivos con valores reales en
 | Identidad del dispositivo | Fija en el código: `device_id: "edge01"` en [`dispositivo/edge_camera.py`](dispositivo/edge_camera.py) | `edge01` (no configurable por entorno; código congelado) |
 | Acceso de evaluación al portal | `basic_auth` de Caddy: usuario y hash en `/opt/p4/secretos/caddy.env` de la EC2 | usuario `evaluador`; plantilla y proceso en [`deploy/preparar_secretos.sh`](deploy/preparar_secretos.sh) |
 
-El programa del dispositivo además exige el SHA-256 de `1.0.0-int8.1` al arrancar (fijo en el código): otro artefacto requiere cambiar ese valor.
+**Decisión de seguridad:** el programa del dispositivo exige al arrancar el SHA-256 de `1.0.0-int8.1` (fijo en el código) y se detiene si el archivo no coincide, para que no se cargue otro modelo por error. El artefacto se elige con `--model` y `--version`; publicar otra variante implica actualizar ese SHA-256 junto con `P4_ACCEPTED_MODELS` del receptor.
 
 ## 5. Verificar
 

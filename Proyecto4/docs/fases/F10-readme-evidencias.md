@@ -52,3 +52,4 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 2026-10-15 | Emilio | Comprobaciones repetibles | [`docs/comprobaciones.md`](../comprobaciones.md): hashes, tamaño y VersionId de los 3 artefactos en S3 (coinciden con `conversion_log.json` y `publicacion.json`); entradas conocidas de la Pi iguales a F7 (diferencia < 5e-7); traza de `fbf85a5e` en S3; 14/14 fotos de las 20 con su `image_sha256`; pytest Proyecto4 121 y Proyecto2 278 en el contenedor; recálculo de accuracy, F1 y p50/p95 con [`evidencias/comprobaciones/recalcular.py`](../../evidencias/comprobaciones/recalcular.py): todo coincide. Lo de la Pi se cita como ejecutado por Bryan. | Traza de `fbf85a5e` con el portal (credenciales de Emilio). |
