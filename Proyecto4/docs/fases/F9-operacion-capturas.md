@@ -17,7 +17,7 @@
 
 ## Rúbrica (5 puntos)
 
-**2.4 Operación estable (5):** demostración de cinco minutos, historial de veinte capturas repartidas entre las clases y reinicio del programa seguido de una captura nueva. Los fallos reales visibles. No se exige arranque automático con el sistema operativo.
+**2.4 Operación estable (5):** demostración de cinco minutos, historial de veinte capturas repartidas entre las clases y reinicio del programa seguido de una captura nueva. Los fallos reales quedan visibles. No se exige arranque automático con el sistema operativo.
 
 ## Bloques de trabajo
 

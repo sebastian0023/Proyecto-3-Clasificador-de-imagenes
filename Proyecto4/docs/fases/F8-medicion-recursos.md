@@ -37,8 +37,8 @@
 - [x] Tamaños de ambos artefactos y reducción calculada
 - [x] Mejora medible documentada, con el intercambio recursos y calidad explicado
 - [x] Ficha de hardware, runtime, precisión y condiciones
-- [ ] PR fusionado con review de Emilio
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] PR fusionado con review de Emilio
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 
