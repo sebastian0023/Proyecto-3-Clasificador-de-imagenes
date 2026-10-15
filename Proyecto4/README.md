@@ -92,7 +92,7 @@ python Proyecto4/dispositivo/edge_camera.py --model Proyecto4/modelo/model_int8.
 ```
 
 - El token lo entrega Emilio por canal privado; se escribe sin eco y vive solo en esa sesión.
-- Al arrancar imprime `modelo=1.0.0-int8.1 sha256=ca689c4e… runtime=onnxruntime-1.31.0`.
+- Al arrancar imprime `modelo=1.0.0-int8.1 sha256=ca689c4e… runtime=onnxruntime-1.31.0` y `dispositivo=<device_id>`. Para usar otra identidad: `export P4_DEVICE_ID=<id>` o `--device-id <id>` (por defecto `edge01`).
 - Toma una foto cada ~5 s; por cada una imprime `<capture_id>.jpg <clase> confianza=<valor> tiempo=<ms>` y, si el envío funciona, `¡Envío exitoso (201) a AWS!`.
 - Guarda la foto y el evento **antes** de enviar: `Proyecto4/dispositivo/capturas/<capture_id>.jpg` y `capturas/events.jsonl`. Si el envío falla (sin red, error 5xx o sin token), la captura queda en `capturas/pendientes.json` y se reenvía con el **mismo `capture_id`** en los ciclos siguientes, también después de reiniciar.
 - Sin red sigue capturando y clasificando. `Ctrl+C` lo detiene.
@@ -141,7 +141,7 @@ Dónde se cambia cada cosa (rúbrica 6.3). No hay archivos con valores reales en
 | Credenciales de AWS del portal | `P4_AWS_PROFILE` (solo desarrollo); en producción, vacío = rol de instancia | [`docs/decisiones.md`](docs/decisiones.md) §5, [`docs/despliegue.md`](docs/despliegue.md) |
 | Artefacto que carga el dispositivo | `--model` y `--version` de `edge_camera.py` | `Proyecto4/modelo/model_int8.onnx`, `1.0.0-int8.1` |
 | Versiones aceptadas por el receptor | `P4_ACCEPTED_MODELS` (`version=sha256`) en `Proyecto2/.env` | `1.0.0-int8.1=ca689c4e…69c0` |
-| Identidad del dispositivo | Fija en el código: `device_id: "edge01"` en [`dispositivo/edge_camera.py`](dispositivo/edge_camera.py) | `edge01`. **Pendiente aprobado:** el PM aprobó hacerlo configurable (`P4_DEVICE_ID` o `--device-id`, `edge01` por defecto, formato validado al arrancar); Bryan prepara el PR. Esta fila se actualiza cuando se fusione |
+| Identidad del dispositivo | `P4_DEVICE_ID` o `--device-id` de [`edge_camera.py`](dispositivo/edge_camera.py) (`--device-id` tiene prioridad) | `edge01` por defecto. Se valida al arrancar: 1 a 64 caracteres, solo letras, números, `.`, `_` y `-`; si no cumple, el programa se detiene con `ERROR FATAL: device_id inválido`. Probado en la Pi con `edge01-demo` (captura `2fc25b54…`, `device_id` `edge01-demo` en S3) y con `'mi pi'` rechazado: [`evidencia_f3/device_id_configurable.txt`](evidencia_f3/device_id_configurable.txt) |
 | Acceso de evaluación al portal | `basic_auth` de Caddy: usuario y hash en `/opt/p4/secretos/caddy.env` de la EC2 | usuario `evaluador`; plantilla y proceso en [`deploy/preparar_secretos.sh`](deploy/preparar_secretos.sh) |
 
 **Decisión de seguridad:** el programa del dispositivo exige al arrancar el SHA-256 de `1.0.0-int8.1` (fijo en el código) y se detiene si el archivo no coincide, para que no se cargue otro modelo por error. El artefacto se elige con `--model` y `--version`; publicar otra variante implica actualizar ese SHA-256 junto con `P4_ACCEPTED_MODELS` del receptor.

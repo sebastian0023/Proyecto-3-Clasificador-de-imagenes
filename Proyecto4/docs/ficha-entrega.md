@@ -20,7 +20,8 @@ Detalle en [`PLAN.md`](PLAN.md).
 | Dato | Valor | Fuente |
 |---|---|---|
 | Dispositivo | Raspberry Pi 3 Model B Rev 1.2, ARM Cortex-A53 (4 núcleos), 905 MB de RAM útil, `aarch64` | [`recursos/registros/resumen_recursos.json`](../recursos/registros/resumen_recursos.json) |
-| Cámara | Cámara web USB (V4L2, `/dev/video0`), resolución estándar; capturas de 640×480. El modelo comercial de la cámara no está registrado | [`decisiones.md`](decisiones.md) §7, [`evidencias/capturas_20/`](../evidencias/capturas_20/) |
+| Cámara | Cámara web USB genérica, `lsusb`: `ID 32e6:9221 USB Camera` (V4L2, `/dev/video0`); capturas de 640×480 | [`evidencia_f3/lsusb_camera.txt`](../evidencia_f3/lsusb_camera.txt), [`decisiones.md`](decisiones.md) §7, [`evidencias/capturas_20/`](../evidencias/capturas_20/) |
+| Identidad del dispositivo | `edge01` por defecto; configurable con `P4_DEVICE_ID` o `--device-id`, validada al arrancar | [`README.md` → Configuración](../README.md#configuración), [`evidencia_f3/device_id_configurable.txt`](../evidencia_f3/device_id_configurable.txt) |
 | Sistema operativo | Debian GNU/Linux 13 (trixie) de 64 bits, kernel `6.18.50+rpt-rpi-v8` | [`evidencia_f3/entorno.txt`](../evidencia_f3/entorno.txt), `resumen_recursos.json` |
 | Runtime | Python 3.13.5; **onnxruntime 1.31.0** (`CPUExecutionProvider`, 1 hilo); **numpy 2.5.4**; opencv-python-headless 4.13.0.92; pillow 12.2.0; requests 2.33.1 | `resumen_recursos.json`, [`evidencia_f3/arm64_check_output.txt`](../evidencia_f3/arm64_check_output.txt), [`decisiones.md`](decisiones.md) §7 |
 | Programa | [`dispositivo/edge_camera.py`](../dispositivo/edge_camera.py): captura por intervalo (~5 s), clasifica, guarda foto y evento y envía; cola persistente de pendientes | [`fases/F3-edge-camara.md`](fases/F3-edge-camara.md), [`demo-f6.md`](demo-f6.md) |
@@ -98,6 +99,5 @@ Tabla de dónde se cambian el destino de AWS, la identidad del dispositivo y el 
 
 - Video: lo agrega F11.
 - En [`decisiones.md`](decisiones.md), la tabla resumen marca las decisiones 4 (modo de captura) y 7 (hardware) como «pendiente» aunque sus secciones ya están llenas; las cierra Bryan en un PR aparte.
-- El `device_id` del dispositivo (`edge01`) está fijo en `dispositivo/edge_camera.py`. **Pendiente aprobado:** el PM aprobó la excepción al congelamiento para hacerlo configurable (`P4_DEVICE_ID` o `--device-id`, con `edge01` por defecto y formato validado al arrancar); Bryan prepara el PR. Al fusionarse se actualizan esta ficha y la tabla de configuración del README.
-- El SHA-256 del modelo esperado también está fijo en el programa: es una **decisión de seguridad** (se detiene si el archivo no es `1.0.0-int8.1`, para no cargar otro modelo por error). El artefacto se elige con `--model`/`--version` y el destino con `--url`/`P4_API_URL`.
-- El modelo comercial de la cámara web no está registrado.
+- El `device_id` es configurable desde el PR #50 de Bryan (excepción al congelamiento aprobada por el PM): `P4_DEVICE_ID` o `--device-id`, `edge01` por defecto, y el formato se valida al arrancar. Evidencia en la Pi: una captura con `edge01-demo` (`2fc25b54…`, registrada en S3 con ese `device_id`) y el rechazo de `'mi pi'` ([`evidencia_f3/device_id_configurable.txt`](../evidencia_f3/device_id_configurable.txt)).
+- El SHA-256 del modelo esperado sí está fijo en el programa: es una **decisión de seguridad** (se detiene si el archivo no es `1.0.0-int8.1`, para no cargar otro modelo por error). El artefacto se elige con `--model`/`--version` y el destino con `--url`/`P4_API_URL`.

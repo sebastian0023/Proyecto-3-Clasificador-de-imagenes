@@ -13,6 +13,8 @@ Empieza por la [ficha de entrega](../docs/ficha-entrega.md) (resumen de una pág
 | Equipo, dispositivo y cámara, SO, runtime, técnica, URL del portal y referencias a cada evidencia | 6.1 | [`docs/ficha-entrega.md`](../docs/ficha-entrega.md) |
 | Instalación, recuperación del modelo desde S3 con SHA-256, arranque de la Pi y del portal, verificación | 6.1 | [`README.md`](../README.md) |
 | Dónde se cambian destino de AWS, identidad del dispositivo y artefacto; plantilla sin secretos | 6.3 | [`README.md` → Configuración](../README.md#configuración) |
+| La identidad del dispositivo es configurable: en la Pi, con `P4_DEVICE_ID`/`--device-id` = `edge01-demo`, la captura `2fc25b54-0f21-4399-ae28-a18280112b78` llegó a S3 con `device_id` `edge01-demo` (leído el 15 oct); un valor inválido (`'mi pi'`) detiene el programa al arrancar | 6.3 | [`evidencia_f3/device_id_configurable.txt`](../evidencia_f3/device_id_configurable.txt) |
+| Cámara del dispositivo: USB genérica, `ID 32e6:9221 USB Camera` | 2.1 | [`evidencia_f3/lsusb_camera.txt`](../evidencia_f3/lsusb_camera.txt) |
 | Decisiones técnicas (formato, runtime, técnica, hardware, AWS, acceso) | 1.2, 6.3 | [`docs/decisiones.md`](../docs/decisiones.md) |
 | Contrato del evento entre el dispositivo y AWS | 4.1 | [`docs/contratos.md`](../docs/contratos.md) |
 
@@ -61,6 +63,7 @@ Empieza por la [ficha de entrega](../docs/ficha-entrega.md) (resumen de una pág
 | Qué demuestra | Criterio | Ruta |
 |---|---|---|
 | Capturas de `edge01` con el programa final: registro, foto, SHA-256 verificado y VersionId | 2.4, 4.1, 5.2 | [`capturas_20/capturas_20.csv`](capturas_20/capturas_20.csv), [`capturas_20/capturas_20.json`](capturas_20/capturas_20.json), [`capturas_20/fotos/`](capturas_20/fotos/) |
+| Lado del dispositivo de las 6 `person` y de las 12 de la pared: log de la Pi de la sesión del 15 oct (32 capturas, 32 envíos `201`, sin fallos). Clase y confianza iguales a S3 en las 18 | 2.1, 2.3, 4.1 | [`evidencia_f3/capturas_person_15oct.txt`](../evidencia_f3/capturas_person_15oct.txt) |
 | Operación de cinco minutos, reinicio con captura nueva, corte de red y reintento | 2.4, 4.3 | [`evidencia_f9/`](../evidencia_f9/), [`docs/fases/F9-operacion-capturas.md`](../docs/fases/F9-operacion-capturas.md) |
 | Las 100 capturas más recientes del portal en el momento de F9 | 2.4, 5.2 | [`evidencia_f9/export.json`](../evidencia_f9/export.json) |
 
@@ -164,6 +167,4 @@ El video opcional (V1–V3) se graba en F11. Cuando exista, aquí va su enlace.
 
 ## Pendientes de este paquete
 
-- `device_id` configurable (`P4_DEVICE_ID` y `--device-id`, `edge01` por defecto): **aprobado por el PM**; Bryan prepara el PR. Al fusionarse se actualizan la tabla de configuración del README y la ficha.
-- Modelo comercial de la cámara web (salida de `lsusb`, Bryan).
 - Video (F11).
