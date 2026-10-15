@@ -101,7 +101,10 @@ La mayoría de las capturas del 12 al 14 oct son fotos de un **monitor** que mue
 
 La API del portal exporta todos los eventos: `GET https://174-129-84-80.sslip.io/api/p4/captures/export?format=csv` (o `format=json`), con el usuario de evaluación.
 
-*Pendiente: Emilio la descarga a `exportacion/` y aquí se anota la hora de la consulta y el número de registros.*
+| Qué demuestra | Criterio | Ruta |
+|---|---|---|
+| Exportación completa descargada el 2026-10-15T05:22:32Z: **285** registros en CSV y **285** en JSON (person 172, dog 41, cat 72; 282 de `edge01` y 3 de prueba de F4 y F5) | 4.1, 4.2, 5.2 | [`exportacion/export_completa.csv`](exportacion/export_completa.csv), [`exportacion/export_completa.json`](exportacion/export_completa.json) |
+| Contraste con S3 (consulta de solo lectura del 2026-10-15T05:23:54Z): 285 registros y 285 imágenes, mismos IDs y 0 diferencias en 9 campos por registro | 4.2 | [`exportacion/verificacion_export.txt`](exportacion/verificacion_export.txt) |
 
 ## 8. Acceso al portal
 
@@ -148,7 +151,6 @@ El video opcional (V1–V3) se graba en F11. Cuando exista, aquí va su enlace.
 ## Pendientes de este paquete
 
 - 6 capturas `person` de las 20 (fotos nuevas sin cara, Bryan).
-- Exportación completa en `exportacion/` (Emilio).
 - `device_id` configurable (`P4_DEVICE_ID` y `--device-id`, `edge01` por defecto): **aprobado por el PM**; Bryan prepara el PR. Al fusionarse se actualizan la tabla de configuración del README y la ficha.
 - Modelo comercial de la cámara web (salida de `lsusb`, Bryan).
 - Video (F11).
