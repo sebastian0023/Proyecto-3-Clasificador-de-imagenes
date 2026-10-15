@@ -64,9 +64,9 @@ Empieza por la [ficha de entrega](../docs/ficha-entrega.md) (resumen de una pág
 | Operación de cinco minutos, reinicio con captura nueva, corte de red y reintento | 2.4, 4.3 | [`evidencia_f9/`](../evidencia_f9/), [`docs/fases/F9-operacion-capturas.md`](../docs/fases/F9-operacion-capturas.md) |
 | Las 100 capturas más recientes del portal en el momento de F9 | 2.4, 5.2 | [`evidencia_f9/export.json`](../evidencia_f9/export.json) |
 
-Estado: **14 de 20** (7 `cat`, 7 `dog`). **Las 6 `person` están pendientes**: Bryan toma fotos nuevas de una persona sin cara, por privacidad. Al recibirlas se regeneran `capturas_20.csv` y `capturas_20.json` con las 20.
+Estado: **20 de 20** (7 `cat`, 7 `dog`, 6 `person`). Las 6 `person` (`2040a5e8…`, `40168924…`, `47422b09…`, `9f3df09b…` de espaldas, `bc600dad…` y `e877963d…`) son de una sesión de Bryan del 15 oct con una persona real **sin cara**, por privacidad. Cada una se revisó a la vista y se verificó en S3 (consulta del 2026-10-15T22:18:58Z): SHA-256 de la foto = `image_sha256` del registro = metadato `sha256` de S3 = foto entregada por Bryan, con los dos VersionId en el CSV.
 
-`evidencia_f9/resumen_f9.json` dice «más de 300» eventos en AWS. La consulta de solo lectura del 2026-10-15T04:36:12Z da **285** registros y 285 imágenes en `edge-captures/`; esa es la cifra que usa este paquete. El archivo de F9 se conserva tal cual.
+`evidencia_f9/resumen_f9.json` dice «más de 300» eventos en AWS. La consulta de solo lectura del 2026-10-15T04:36:12Z dio **285** registros y 285 imágenes en `edge-captures/`, la cifra de la exportación de la sección 7. El archivo de F9 se conserva tal cual. Tras la sesión del 15 oct hay **334** registros (consulta del 2026-10-15T22:22:19Z). Ordenadas por fecha de captura, como en la galería, 19 de las 20 siguen entre las 100 más recientes y `2692100d…` (`cat`) quedó en la posición 101. Se consulta con `GET /api/p4/captures/{id}` (sección 8).
 
 ### Hallazgos del modelo en las capturas recientes
 
@@ -80,6 +80,20 @@ Se documentan con honestidad y quedan **fuera de las 20**. No cambian la calidad
 | `7fca5e39-71d2-4df0-8915-836b31da8229` | perro en pantalla | `person` | 0.7225131988525391 | 2026-10-14T20:40:58 |
 | `471606a3-b0da-418f-ab59-3367145b8f6a` | perro en pantalla | `person` | 0.5949792861938477 | 2026-10-14T20:40:51 |
 | `bfcb6daa-199d-40b5-865c-71a59485ad14` | perro borroso | `person` | 0.994139552116394 | 2026-10-12T23:34:39 |
+| `68d8602a-674a-4a0f-903f-5221f1e9b276` | pared de ladrillo, sin nadie | `person` | 0.9677174091339111 | 2026-10-15T18:30:58 |
+| `a2267652-6b86-4968-9340-1f6b117aa1d4` | pared de ladrillo, sin nadie | `person` | 0.9697469472885132 | 2026-10-15T18:31:13 |
+| `bc8a6fe6-e5f5-4455-8a33-a038f021a2fd` | pared de ladrillo, sin nadie | `person` | 0.9587169289588928 | 2026-10-15T18:31:20 |
+| `b73a6cf1-1cc1-4077-aeff-8031ce64df81` | pared de ladrillo, sin nadie | `person` | 0.9637080430984497 | 2026-10-15T18:31:27 |
+| `178322fb-4821-4885-8296-167a8c5279fb` | pared de ladrillo, sin nadie | `person` | 0.9612895846366882 | 2026-10-15T18:31:40 |
+| `c200a629-7aa8-4099-ab27-a81cba861c64` | pared de ladrillo, sin nadie | `person` | 0.9466997385025024 | 2026-10-15T18:31:55 |
+| `1901a109-efc5-4df7-8bc7-84cd9d22d7a3` | pared de ladrillo, sin nadie | `person` | 0.9548580050468445 | 2026-10-15T18:32:08 |
+| `6a30438d-09e6-4185-968f-6b38b365c84b` | pared de ladrillo, sin nadie | `person` | 0.9632566571235657 | 2026-10-15T18:32:15 |
+| `af16c65b-cbd7-43e8-bcb8-a1bffd5e89cf` | pared de ladrillo, sin nadie | `person` | 0.9559810161590576 | 2026-10-15T18:32:23 |
+| `88be5ad9-ed17-4cd8-a7ca-f25017301712` | pared de ladrillo, sin nadie | `person` | 0.9505563974380493 | 2026-10-15T18:32:35 |
+| `a87b1da1-58cc-4098-a844-b813ec2138f0` | pared de ladrillo, sin nadie | `person` | 0.9612895846366882 | 2026-10-15T18:32:43 |
+| `24f309f1-43f0-4cfe-a5b0-455a6250344a` | pared de ladrillo, sin nadie | `person` | 0.9659807682037354 | 2026-10-15T18:32:55 |
+
+**Pared de ladrillo (15 oct):** las 12 fotos muestran solo la pared, con el extintor, un contacto y un dispensador, sin ninguna persona. El modelo dio `person` con confianza de **0.9467 a 0.9697**. Valores leídos de S3 el 2026-10-15T22:20:45Z, con la foto igual al `image_sha256` de cada registro. Es un falso positivo ligado a ese fondo. Las 6 `person` de las 20 se tomaron frente a la misma pared, así que su acierto **no separa a la persona del fondo**: verifican la operación, no la calidad del modelo. **Recomendación para la demo:** evitar ese fondo y presentar a la persona y los objetos frente a uno neutro.
 
 La mayoría de las capturas del 12 al 14 oct son fotos de un **monitor** que muestra imágenes (con la cámara de la Pi). En la demostración se usarán objetos físicos.
 
@@ -150,7 +164,6 @@ El video opcional (V1–V3) se graba en F11. Cuando exista, aquí va su enlace.
 
 ## Pendientes de este paquete
 
-- 6 capturas `person` de las 20 (fotos nuevas sin cara, Bryan).
 - `device_id` configurable (`P4_DEVICE_ID` y `--device-id`, `edge01` por defecto): **aprobado por el PM**; Bryan prepara el PR. Al fusionarse se actualizan la tabla de configuración del README y la ficha.
 - Modelo comercial de la cámara web (salida de `lsusb`, Bryan).
 - Video (F11).

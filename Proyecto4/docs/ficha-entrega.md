@@ -80,12 +80,13 @@ La galería muestra las **100 capturas más recientes** («Mostrando 100 de 285�
 
 ## Capturas de operación
 
-[`evidencias/capturas_20/`](../evidencias/capturas_20/): capturas de `edge01` hechas con el programa final, entre las 100 visibles en la galería, con foto, registro, SHA-256 verificado y VersionId. Reparto: 7 `cat`, 7 `dog` y 6 `person` (**las 6 `person` están pendientes**: Bryan toma fotos nuevas de una persona sin cara, por privacidad).
+[`evidencias/capturas_20/`](../evidencias/capturas_20/): capturas de `edge01` hechas con el programa final, con foto, registro, SHA-256 verificado y VersionId. Se eligieron entre las 100 visibles en la galería. Tras la sesión del 15 oct, S3 tiene **334** registros (consulta del 2026-10-15T22:22:19Z): 19 de las 20 siguen entre las 100 más recientes y `2692100d…` (`cat`) quedó en la posición 101, consultable con `GET /api/p4/captures/{id}`. Reparto: **7 `cat`, 7 `dog` y 6 `person`**. Las 6 `person` son de una sesión nueva del 15 oct con una persona real **sin cara** (torso, brazos, manos o de espaldas), por privacidad, revisadas foto por foto.
 
 Observaciones honestas sobre las capturas recientes (no cambian la calidad medida, que sale de la validación etiquetada de F7; la rúbrica aclara que las 20 capturas verifican operación y no tienen un umbral de accuracy):
 
 - La mayoría de las capturas del 12 al 14 oct son fotos de un **monitor** que muestra imágenes; es la cámara de la Pi, pero en la demostración se usarán objetos físicos.
 - Errores del modelo visibles en esas capturas: un golden retriever en pantalla clasificado como `cat` (`5fbc3570…`, 0.885; `50930285…`, 0.914) y perros clasificados como `person` (4 capturas: `84b67e89…`, 0.7051; `7fca5e39…`, 0.7225; `471606a3…`, 0.5950, en pantalla, y `bfcb6daa…`, 0.9941, un perro borroso). Quedan fuera de las 20 y se listan en [`evidencias/INDICE.md`](../evidencias/INDICE.md).
+- En la sesión del 15 oct, **12 fotos de la pared de ladrillo sin nadie** se clasificaron como `person` con confianza de 0.9467 a 0.9697. Es un falso positivo ligado a ese fondo. Las 6 `person` de las 20 tienen el mismo fondo, así que su acierto no separa a la persona de la pared. **Recomendación para la demo:** no usar ese fondo y presentar a la persona y los objetos frente a uno neutro. IDs y valores en [`evidencias/INDICE.md`](../evidencias/INDICE.md).
 
 Operación estable, reinicio y reintentos: [`fases/F9-operacion-capturas.md`](fases/F9-operacion-capturas.md) y [`evidencia_f9/`](../evidencia_f9/). Fallo y reintento con el mismo ID: [`demo-f6.md`](demo-f6.md) y [`fases/F6-recorrido-completo.md`](fases/F6-recorrido-completo.md).
 
@@ -95,7 +96,6 @@ Tabla de dónde se cambian el destino de AWS, la identidad del dispositivo y el 
 
 ## Pendientes y observaciones para la evaluación
 
-- 6 capturas `person` de las 20 (fotos nuevas sin cara).
 - Video: lo agrega F11.
 - En [`decisiones.md`](decisiones.md), la tabla resumen marca las decisiones 4 (modo de captura) y 7 (hardware) como «pendiente» aunque sus secciones ya están llenas; las cierra Bryan en un PR aparte.
 - El `device_id` del dispositivo (`edge01`) está fijo en `dispositivo/edge_camera.py`. **Pendiente aprobado:** el PM aprobó la excepción al congelamiento para hacerlo configurable (`P4_DEVICE_ID` o `--device-id`, con `edge01` por defecto y formato validado al arrancar); Bryan prepara el PR. Al fusionarse se actualizan esta ficha y la tabla de configuración del README.
