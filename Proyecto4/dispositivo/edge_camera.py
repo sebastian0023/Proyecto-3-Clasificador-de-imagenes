@@ -6,6 +6,7 @@ import hashlib
 import argparse
 import datetime
 import uuid
+import re
 import numpy as np
 import cv2
 import requests
@@ -17,6 +18,7 @@ from PIL import Image
 # ==========================================
 API_URL = os.environ.get("P4_API_URL", "https://174-129-84-80.sslip.io/api/p4/captures")
 TOKEN = os.environ.get("P4_DEVICE_TOKEN")
+DEVICE_ID = os.environ.get("P4_DEVICE_ID", "edge01")
 CLASES = ["cat", "dog", "person"]
 
 # Archivo persistente para la Fase 9
@@ -104,12 +106,18 @@ def main():
     parser.add_argument("--model", required=True, help="Ruta al modelo .onnx")
     parser.add_argument("--version", required=True, help="Versión del modelo")
     parser.add_argument("--url", default=API_URL, help="URL del servidor")
+    parser.add_argument("--device-id", default=DEVICE_ID, help="Identidad del dispositivo (sobreescribe P4_DEVICE_ID)")
     args = parser.parse_args()
+
+    # Validación estricta del contrato del device_id al arrancar
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", args.device_id):
+        print(f"ERROR FATAL: device_id inválido: {args.device_id!r} (solo letras, números, '.', '_' y '-', máximo 64)")
+        sys.exit(1)
 
     print("Verificando integridad del modelo...")
     hash_modelo = verificar_hash(args.model)
     print(f"modelo={args.version} sha256={hash_modelo} runtime=onnxruntime-{ort.__version__}")
-    print(f"clases={','.join(CLASES)} cámara=/dev/video0; Ctrl+C para salir")
+    print(f"clases={','.join(CLASES)} dispositivo={args.device_id} cámara=/dev/video0; Ctrl+C para salir")
     
     # Preprocesamiento estricto
     sys.path.append(os.path.abspath("Proyecto4/modelo"))
@@ -170,7 +178,7 @@ def main():
                 "schema_version": 1,
                 "capture_id": capture_id,
                 "captured_at": timestamp_ahora,
-                "device_id": "edge01",
+                "device_id": args.device_id,
                 "model_version": args.version,
                 "model_sha256": hash_modelo,
                 "image_sha256": image_sha256,
@@ -206,4 +214,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
