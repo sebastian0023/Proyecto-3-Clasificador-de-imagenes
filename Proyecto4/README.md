@@ -122,7 +122,7 @@ cd Proyecto2
 python scripts/up.py
 ```
 
-`up.py` crea `Proyecto2/.env` desde [`Proyecto2/.env.example`](../Proyecto2/.env.example) si no existe. Para que el receptor local guarde en S3, edita en `.env`: `P4_AWS_PROFILE=<perfil>` y un `P4_DEVICE_TOKEN` de desarrollo (por ejemplo `python -c "import secrets; print(secrets.token_urlsafe(32))"`). Para no mezclar pruebas con las capturas reales, usa otro prefijo: `P4_CAPTURES_PREFIX=edge-captures-dev/`. Portal local: `http://localhost:8000/#/edge-captures`. Apagar: `python scripts/down.py`.
+`up.py` crea `Proyecto2/.env` desde [`Proyecto2/.env.example`](../Proyecto2/.env.example) si no existe. Para que el receptor local guarde en S3, edita en `.env`: `P4_AWS_PROFILE=<perfil>` y un `P4_DEVICE_TOKEN` de desarrollo (por ejemplo `python -c "import secrets; print(secrets.token_urlsafe(32))"`). Para no mezclar pruebas con las capturas reales, usa otro prefijo: `P4_CAPTURES_PREFIX=edge-captures-dev/`. Después de editar `.env`, **vuelve a correr `python scripts/up.py`** para que el contenedor tome los cambios. Si no, sigue con el `.env` anterior y el portal responde `503` con `NoCredentialsError`. Portal local: `http://localhost:8000/#/edge-captures`. Apagar: `python scripts/down.py`.
 
 ### Consultar capturas anteriores
 
