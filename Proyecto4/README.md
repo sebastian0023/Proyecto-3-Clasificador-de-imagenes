@@ -30,6 +30,12 @@ Proyecto4/
 | Raspberry Pi | Raspberry Pi OS / Debian 13 de **64 bits** (`aarch64`; onnxruntime no tiene wheels para armv7), Python 3.13, cámara web USB en `/dev/video0`, red para enviar a AWS |
 | Laptop (portal y verificaciones) | Python 3.12, Docker Desktop (Compose v2), AWS CLI v2 con un perfil del equipo con lectura del bucket (para bajar el modelo y verificar). Las llaves nunca van al repositorio |
 
+En la laptop con Windows, antes de clonar, activa las rutas largas en Git para que el clon no falle con archivos cuya ruta completa supera el límite de 260 caracteres de Windows:
+
+```bash
+git config --global core.longpaths true
+```
+
 Clonar el repositorio en las dos máquinas:
 
 ```bash

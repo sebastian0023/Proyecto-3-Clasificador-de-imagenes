@@ -41,6 +41,8 @@ Variante **`1.0.0-int8.1`**: el modelo publicado 1.0.0 del Proyecto 3, exportado
 
 Descarga: `s3://dataset-quality-releases-750702272375/models/clasificador-edge/1.0.0-int8.1/`. Llaves, SHA-256 y VersionId de cada objeto en [`publicacion.json`](../modelo/registros/publicacion.json).
 
+El bloque `source_model` de `publicacion.json` (llave, bytes, SHA-256 y VersionId `VtRww5se97lomVTcKJUv6d9mYSL7TXOf` del `model.pt` del P3) se agregó a mano en F10, a pedido de la revisión de Edith. El VersionId se verificó con `aws s3api head-object` en S3 el 2026-10-16 (UTC; 15 oct en hora local −06:00). `publish.py` no genera ese bloque: si se vuelve a correr, hay que reponerlo.
+
 ## Efecto de la técnica
 
 - **Tamaño:** 44 783 563 → 11 349 151 bytes, **74.66 % menos** que el original (`size_reduction_pct` en el registro).

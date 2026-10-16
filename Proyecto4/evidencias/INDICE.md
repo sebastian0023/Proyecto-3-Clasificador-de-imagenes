@@ -123,6 +123,8 @@ La API del portal exporta todos los eventos: `GET https://174-129-84-80.sslip.io
 | Exportación completa descargada el 2026-10-15T05:22:32Z: **285** registros en CSV y **285** en JSON (person 172, dog 41, cat 72; 282 de `edge01` y 3 de prueba de F4 y F5) | 4.1, 4.2, 5.2 | [`exportacion/export_completa.csv`](exportacion/export_completa.csv), [`exportacion/export_completa.json`](exportacion/export_completa.json) |
 | Contraste con S3 (consulta de solo lectura del 2026-10-15T05:23:54Z): 285 registros y 285 imágenes, mismos IDs y 0 diferencias en 9 campos por registro | 4.2 | [`exportacion/verificacion_export.txt`](exportacion/verificacion_export.txt) |
 
+La exportación incluye **32 capturas de `edge01` con `image_ref` `edge01-*.jpg`** (por ejemplo `edge01-44e6a9b3.jpg`), tomadas el 2026-10-12 entre 21:06 y 21:10 UTC con la versión anterior del código del dispositivo, que nombraba así la foto. Su `capture_id` es un UUID y su modelo es `1.0.0-int8.1`. Las 250 capturas restantes de `edge01` usan el formato del código actual (`{capture_id}.jpg`) y las 3 restantes son de prueba de F4 y F5. Ninguna de esas 32 forma parte de las 20.
+
 ## 8. Acceso al portal
 
 | Dato | Valor |
