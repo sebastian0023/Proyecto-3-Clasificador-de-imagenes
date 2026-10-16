@@ -158,9 +158,12 @@ Lista con comandos, resultado esperado y resultado obtenido: [`docs/comprobacion
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python -m pip install fastapi==0.141.1 pydantic==2.13.5 pydantic-settings==2.15.0 boto3==1.43.75 pillow==12.3.0 python-multipart==0.0.32 httpx==0.28.1 pytest==9.1.1
-.\.venv\Scripts\python -m pytest -q
+.\.venv\Scripts\python -m pip install fastapi==0.141.1 pydantic==2.13.5 pydantic-settings==2.15.0 boto3==1.43.75 pillow==12.3.0 python-multipart==0.0.32 httpx==0.28.1 pytest==9.1.1 numpy==2.5.3
+.\.venv\Scripts\python -m pytest
 .\.venv\Scripts\python scripts\trazar_captura.py --capture-id fbf85a5e-9be6-4e8b-a716-38f4ee8873e8 --perfil <perfil>
+.\.venv\Scripts\python evidencias\comprobaciones\recalcular.py
 ```
+
+`numpy==2.5.3` lo necesita `recalcular.py` (recálculo de accuracy, F1 y p50/p95) y es la versión del entorno de la laptop ([`modelo/requirements-conversion.lock.txt`](modelo/requirements-conversion.lock.txt)). La Pi usa numpy 2.5.4 ([`docs/ficha-entrega.md`](docs/ficha-entrega.md)). `pyproject.toml` ya agrega `-q` a pytest.
 
 `trazar_captura.py` solo lee S3 y, si cargas `P4_PORTAL_USUARIO` y `P4_PORTAL_PASSWORD` (con `Read-Host -AsSecureString`), también el portal.
