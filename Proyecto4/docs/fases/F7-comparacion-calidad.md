@@ -47,3 +47,4 @@
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
 | 2026-10-13 | Edith | Evaluación común, predicciones, revisión del manifiesto, métricas, errores y separación | `calidad/predecir.py` (original en PyTorch; INT8 en aarch64 con CPU Cortex-A53 emulada, Debian 13 y onnxruntime 1.31.0, igual que la Pi) y `calidad/comparar.py`. Accuracy 0.99658 → 0.99315 (caída de 0.342 pp), F1 macro 0.99537 → 0.99209; 291/292 iguales. Decisión 3 cerrada. PR de F7 | Review de Bryan |
+| 2026-10-16 | Edith | Reproducción en clon limpio | Con los pasos de `calidad.md` § Reproducir: `pred_original.csv`, `pred_optimizado.csv` (aarch64) y `predicciones_validacion.csv` con el mismo SHA-256 que los versionados; caída 0.3424657534246589 pp. Se documentan los datos del P3, el entorno y el modelo publicado que hacen falta | — |

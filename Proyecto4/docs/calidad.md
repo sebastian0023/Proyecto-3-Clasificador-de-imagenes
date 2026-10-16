@@ -74,20 +74,33 @@ Solo hay dos muestras con error en alguno de los modelos:
 
 ## Reproducir
 
-Requiere los recortes y el manifiesto del P3 (`dvc pull` en `Proyecto3`) y la variante de F2 en `Proyecto4/artifacts/1.0.0-int8.1/` (descarga desde S3 en [`artefacto.md`](artefacto.md)). Desde `Proyecto4/`:
+Probado tal cual en un clon limpio, en Windows con PowerShell, el 16 oct de 2026. Antes hacen falta tres cosas:
 
-```bash
-.venv/Scripts/python calidad/predecir.py --backend torch --model ../Proyecto3/mlflow_snapshot/artifacts/3/9f9b62c202f0446a8a4b411a10321eff/artifacts/checkpoint/model.pt --manifest ../Proyecto3/data/manifests/m-0.1.3-s42-1/manifest.jsonl --crops ../Proyecto3/data/crops/0.1.3 --out calidad/registros/pred_original
+- **Datos del P3:** el checkpoint, el manifiesto y los recortes, obtenidos con el [paso 1 de `artefacto.md` § Reproducir](artefacto.md#1-datos-del-proyecto-3-que-no-están-en-git).
+- **Entorno con torch:** `Proyecto4/.venv` con `modelo/requirements-conversion.lock.txt`, del [paso 2](artefacto.md#2-conversión-y-prueba-de-humo).
+- **Modelo publicado:** el `model_int8.onnx` en `Proyecto4/modelo/`, descargado como indica el [paso 2 del README](../README.md#2-recuperar-el-modelo-desde-s3-y-verificar-su-sha-256). `comparar.py` exige su SHA-256 (`ca689c4e…`), así que una reconversión propia no sirve aquí ([`artefacto.md`](artefacto.md#reproducir)).
+
+Las salidas van a una carpeta temporal, para no pisar la evidencia versionada. Desde la raíz del repositorio:
+
+```powershell
+New-Item -ItemType Directory -Force "$env:TEMP\f7" | Out-Null
+cd Proyecto4
+.\.venv\Scripts\python calidad/predecir.py --backend torch --model ../Proyecto3/mlflow_snapshot/artifacts/3/9f9b62c202f0446a8a4b411a10321eff/artifacts/checkpoint/model.pt --manifest ../Proyecto3/data/manifests/m-0.1.3-s42-1/manifest.jsonl --crops ../Proyecto3/data/crops/0.1.3 --out "$env:TEMP\f7\pred_original"
+cd ..
 ```
 
-El optimizado, en aarch64. Desde la raíz del repositorio (en la Pi basta el `python …` de adentro, con rutas locales):
+El optimizado, en aarch64 (Docker con la CPU de la Pi emulada; tarda unos 10 minutos). En la Pi basta el `python …` de adentro, con rutas locales:
 
-```bash
-docker run --rm --platform linux/arm64 -e QEMU_CPU=cortex-a53 -v "$PWD/Proyecto4:/p4" -v "$PWD/Proyecto3/data:/p3data:ro" python:3.13-slim-trixie sh -c "pip install -q onnxruntime==1.31.0 'numpy>=2.2,<2.6' 'pillow>=11,<13' && python /p4/calidad/predecir.py --backend onnx --model /p4/artifacts/1.0.0-int8.1/model_int8.onnx --manifest /p3data/manifests/m-0.1.3-s42-1/manifest.jsonl --crops /p3data/crops/0.1.3 --out /p4/calidad/registros/pred_optimizado"
+```powershell
+docker run --rm --platform linux/arm64 -e QEMU_CPU=cortex-a53 -v "$PWD/Proyecto4:/p4:ro" -v "$PWD/Proyecto3/data:/p3data:ro" -v "$env:TEMP\f7:/out" python:3.13-slim-trixie sh -c "pip install -q onnxruntime==1.31.0 'numpy>=2.2,<2.6' 'pillow>=11,<13' && python /p4/calidad/predecir.py --backend onnx --model /p4/modelo/model_int8.onnx --manifest /p3data/manifests/m-0.1.3-s42-1/manifest.jsonl --crops /p3data/crops/0.1.3 --out /out/pred_optimizado"
 ```
 
-```bash
-.venv/Scripts/python calidad/comparar.py
+```powershell
+cd Proyecto4
+.\.venv\Scripts\python calidad/comparar.py --registros "$env:TEMP\f7"
+Get-FileHash "$env:TEMP\f7\pred_original.csv", calidad\registros\pred_original.csv, "$env:TEMP\f7\pred_optimizado.csv", calidad\registros\pred_optimizado.csv, "$env:TEMP\f7\predicciones_validacion.csv", calidad\registros\predicciones_validacion.csv
 ```
+
+**Qué comparar:** cada CSV reproducido debe tener el mismo SHA-256 que su par versionado, y `comparar.py` debe imprimir la misma caída (`caida_pp=0.3424657534246589`, 291/292 iguales). Los `.meta.json` sí cambian: guardan la fecha, la máquina y las versiones de cada corrida.
 
 Para recalcular sin los scripts: en `predicciones_validacion.csv`, el accuracy es la fracción de filas con `true_class == pred_original` (o `pred_optimizado`), y el F1 por clase sale de contar TP, FP y FN por columna.
