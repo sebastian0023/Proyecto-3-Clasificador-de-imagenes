@@ -38,8 +38,8 @@ En x86 el INT8 da otras probabilidades (no otra clase en estas 3 entradas); la c
 
 | # | Comprobación | Comando | Esperado | Obtenido | Quién / cuándo | Registro |
 |---|---|---|---|---|---|---|
-| 4.1 | Receptor, validación, persistencia, idempotencia, consulta y traza (Proyecto 4) | `.\.venv\Scripts\python -m pytest -q` | Todas pasan | **121 passed** | Emilio, 2026-10-15T04:52Z | [`evidencias/comprobaciones/pytest_proyecto4.txt`](../evidencias/comprobaciones/pytest_proyecto4.txt) |
-| 4.2 | Portal de P2 y P3 con el router de P4 montado | Desde `Proyecto2/` con el stack arriba: `docker compose exec -T app pytest` | Todas pasan | **278 passed** | Emilio, 2026-10-15T04:52Z | [`evidencias/comprobaciones/pytest_proyecto2_contenedor.txt`](../evidencias/comprobaciones/pytest_proyecto2_contenedor.txt) |
+| 4.1 | Receptor, validación, persistencia, idempotencia, consulta y traza (Proyecto 4) | `.\.venv\Scripts\python -m pytest` (`pyproject.toml` ya agrega `-q`) | Todas pasan | **121 passed** (2 advertencias de deprecación de `starlette`/`anyio`, no son fallos) | Emilio, 2026-10-15T04:52Z; repetido el 2026-10-16T04:09Z con `main` y el PR #50 en la rama | [`evidencias/comprobaciones/pytest_proyecto4.txt`](../evidencias/comprobaciones/pytest_proyecto4.txt) |
+| 4.2 | Portal de P2 y P3 con el router de P4 montado | Desde `Proyecto2/` con el stack arriba: `docker compose exec -T app pytest` | Todas pasan | **278 passed** (1 advertencia de deprecación de `starlette`/`anyio`) | Emilio, 2026-10-15T04:52Z; repetido el 2026-10-16T04:07Z con `main` y el PR #50 en la rama | [`evidencias/comprobaciones/pytest_proyecto2_contenedor.txt`](../evidencias/comprobaciones/pytest_proyecto2_contenedor.txt) |
 
 ## 5. Recálculo de las cifras declaradas
 

@@ -1,2 +1,14 @@
-pytest Proyecto2 en el contenedor app (docker compose exec) - 2026-10-15T04:52:46Z
-278 passed in 43.52s
+pytest Proyecto2 en el contenedor app (docker compose exec -T app pytest) - 2026-10-16T04:07:51Z
+Rama feat/p4-fase-10-readme-evidencias en c2c3714 (incluye main con el PR #50); stack levantado y sano antes de correr.
+
+........................................................................ [ 25%]
+........................................................................ [ 51%]
+........................................................................ [ 77%]
+..............................................................           [100%]
+=============================== warnings summary ===============================
+../usr/local/lib/python3.12/site-packages/starlette/testclient.py:53
+  /usr/local/lib/python3.12/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+278 passed, 1 warning in 35.00s
