@@ -165,7 +165,7 @@ La exportación incluye **32 capturas de `edge01` con `image_ref` `edge01-*.jpg`
 
 ## 11. Video (pendiente, lo agrega F11)
 
-El video opcional (V1–V3) se graba en F11. Cuando exista, aquí va su enlace.
+[El video opcional (V1–V3) se graba en F11. Cuando exista, aquí va su enlace.](https://iteso01-my.sharepoint.com/:v:/g/personal/edith_perez_iteso_mx/IQDenRwiFy1qQZ4MYBzjhwPVAa7KIOlz2fmEmwlBtJ8NWWM)
 
 ## Pendientes de este paquete
 
