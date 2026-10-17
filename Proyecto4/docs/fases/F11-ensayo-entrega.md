@@ -11,7 +11,7 @@
 | Bloquea a | — |
 | Control | Control 3 |
 
-**Nota de calendario:** simulacro y ensayo realizados entre el 14 y el 15 de octubre; resolución de pendientes (#49 y #51), grabación del video de demostración y entrega final completados el viernes 16 de octubre.
+**Nota de calendario:** el simulacro previsto para el 14 oct se corrió el viernes 16 por la noche, junto con el ensayo y la grabación del video; los pendientes de los PR #49 y #51 se resolvieron ese mismo día. La entrega se envía el viernes 16.
 
 > Fase de coordinación. Sebastián dirige el simulacro, repasa las evidencias y envía la entrega; no ejecuta trabajo técnico ni toca el código. La demostración y el video los opera el equipo.
 
@@ -42,16 +42,15 @@ Narración o diapositivas sin ejecución valen 0. Duración orientativa de 3 a 5
 
 ## Cómo se cierra
 
-- [x] Simulacro completo sin intervención sobre el código
-- [x] M1, M2 y M3 confirmados con evidencia observada (Sebastián)
+- [ ] Simulacro completo sin intervención sobre el código (lo marca Sebastián)
+- [ ] M1, M2 y M3 confirmados con evidencia observada (Sebastián)
 - [x] Video accesible desde un enlace en `evidencias/INDICE.md §11`, mostrando V1, V2 y V3 (Edith/Bryan)
-- [x] Pendientes del simulacro cerrados el viernes 16
-- [x] Entrega enviada el viernes 16 (Sebastián)
-- [x] Estado de la tarjeta en **Hecho** (Sebastián)
+- [ ] Pendientes del simulacro cerrados el viernes 16 (lo marca Sebastián)
+- [ ] Entrega enviada el viernes 16 (Sebastián)
+- [ ] Estado de la tarjeta en **Hecho** (Sebastián)
 
 ## Registro de avance
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
-| 2026-10-14 | Todos | Ensayo / Demo | Simulacro de evaluación, revisión de la rúbrica y definición de pruebas de captura. | Arreglos de los PRs #49 y #51. |
-| 2026-10-16 | Todos | Video / Entrega | Grabación del video demostrativo del Proyecto 4 (cobertura en vivo de V1, V2 y V3: captura, inferencia, caída de red y sincronización con AWS/Portal). Enlace publicado en `evidencias/INDICE.md §11`. Cierre formal para entrega. | Ninguno |
+| 2026-10-16 | Todos | Ensayo y video | Ensayo con Sebastián como evaluador y grabación del video de la demostración (V1, V2 y V3: captura y clasificación en la Pi, corte y regreso de la red con reintento, captura nueva en AWS y en Capturas Edge, misma captura en la Pi, S3 y el portal). Enlace en [`evidencias/INDICE.md`](../../evidencias/INDICE.md#11-video). | Confirmar M1–M3 y enviar la entrega (Sebastián). |
