@@ -45,3 +45,7 @@
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 07 oct 2026 | Edith | Referencia P3 y Traspaso | Recuperación de pesos originales, clases, hash SHA-256 del modelo y recorrido del repositorio base. | Ninguno |
+| 07 oct 2026 | Emilio | Accesos AWS | Validación de credenciales de AWS, bucket S3 y despliegue del portal con el equipo actual. | Ninguno |
+| 07 oct 2026 | Bryan | Hardware / Cámara | Pruebas de funcionamiento de la cámara y validación del runtime/sistema operativo en el dispositivo edge. | Ninguno |
+| 07 oct 2026 | Edith / Bryan / Emilio | Decisiones y Contrato | Creación y registro de decisiones técnicas en `docs/decisiones.md` y definición del contrato del evento en `docs/contratos.md`. PR inicial de andamiaje. | Ninguno |

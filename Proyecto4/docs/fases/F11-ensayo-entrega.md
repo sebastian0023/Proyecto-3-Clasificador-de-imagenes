@@ -53,4 +53,4 @@ Narración o diapositivas sin ejecución valen 0. Duración orientativa de 3 a 5
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
-| 2026-10-16 | Todos | Ensayo | Video demostrativo |
+| 2026-10-16 | Todos | Ensayo / Demo | Grabación del video demostrativo de la Fase 3 (captura, inferencia y simulación de caída de red) | Ninguno |
