@@ -28,7 +28,7 @@ Proyecto4/
 | Dónde | Qué |
 |---|---|
 | Raspberry Pi | Raspberry Pi OS / Debian 13 de **64 bits** (`aarch64`; onnxruntime no tiene wheels para armv7), Python 3.13, cámara web USB en `/dev/video0`, red para enviar a AWS |
-| Laptop (portal y verificaciones) | Python 3.12, Docker Desktop (Compose v2), AWS CLI v2 con un perfil del equipo con lectura del bucket (para bajar el modelo y verificar). Las llaves nunca van al repositorio |
+| Laptop (portal y verificaciones) | Python 3.12, Docker Desktop (Compose v2). Solo el equipo: AWS CLI v2 con un perfil del equipo con lectura del bucket (para bajar el modelo y las lecturas de S3). El evaluador no necesita AWS: usa el portal y un enlace temporal del modelo (pasos 2 y 5). Las llaves nunca van al repositorio |
 
 En la laptop con Windows, antes de clonar, activa las rutas largas en Git para que el clon no falle con archivos cuya ruta completa supera el límite de 260 caracteres de Windows:
 
@@ -45,7 +45,23 @@ cd Proyecto-3-Clasificador-de-imagenes
 
 ## 2. Recuperar el modelo desde S3 y verificar su SHA-256
 
-Los pesos no están en Git (decisión 8). Se bajan de S3 en la laptop, con un perfil del equipo, y se copian a la Pi: **la Pi no tiene credenciales de AWS**.
+Los pesos no están en Git (decisión 8). **La Pi no tiene credenciales de AWS** y el evaluador tampoco recibe llaves de AWS (decisión del equipo del 16 oct; decisiones 5 y 6).
+
+**Evaluador.** El equipo le entrega por canal privado, igual que la contraseña de `basic_auth`, un **enlace de descarga temporal** de `model_int8.onnx`. El enlace vence en 7 días como máximo; si venció, se pide otro. Después de descargarlo, el evaluador verifica el archivo con su SHA-256, que debe ser exactamente `ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0`:
+
+```powershell
+# Windows (PowerShell)
+(Get-FileHash .\model_int8.onnx -Algorithm SHA256).Hash.ToLower()
+```
+
+```bash
+# Linux
+echo "ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0  model_int8.onnx" | sha256sum -c
+```
+
+Tamaño, SHA-256 y VersionId de los 3 objetos, comprobados contra S3: [`evidencias/comprobaciones/hashes_modelos_s3.txt`](evidencias/comprobaciones/hashes_modelos_s3.txt).
+
+**Equipo** (opción con un perfil del equipo con lectura del bucket). Se baja de S3 en la laptop y se copia a la Pi:
 
 | Archivo | Llave en `s3://dataset-quality-releases-750702272375/` | Bytes | SHA-256 |
 |---|---|---:|---|
@@ -59,6 +75,7 @@ En la laptop (PowerShell, desde la raíz del repositorio):
 
 ```powershell
 aws s3 cp s3://dataset-quality-releases-750702272375/models/clasificador-edge/1.0.0-int8.1/model_int8.onnx Proyecto4/modelo/model_int8.onnx --profile <perfil>
+aws s3api head-object --bucket dataset-quality-releases-750702272375 --key models/clasificador-edge/1.0.0-int8.1/model_int8.onnx --profile <perfil> --query "{VersionId:VersionId,Bytes:ContentLength}"
 (Get-FileHash Proyecto4/modelo/model_int8.onnx -Algorithm SHA256).Hash.ToLower()
 scp Proyecto4/modelo/model_int8.onnx <usuario>@<ip-de-la-pi>:~/Proyecto-3-Clasificador-de-imagenes/Proyecto4/modelo/
 ```
@@ -160,10 +177,26 @@ Lista con comandos, resultado esperado y resultado obtenido: [`docs/comprobacion
 python -m venv .venv
 .\.venv\Scripts\python -m pip install fastapi==0.141.1 pydantic==2.13.5 pydantic-settings==2.15.0 boto3==1.43.75 pillow==12.3.0 python-multipart==0.0.32 httpx==0.28.1 pytest==9.1.1 numpy==2.5.3
 .\.venv\Scripts\python -m pytest
-.\.venv\Scripts\python scripts\trazar_captura.py --capture-id fbf85a5e-9be6-4e8b-a716-38f4ee8873e8 --perfil <perfil>
 .\.venv\Scripts\python evidencias\comprobaciones\recalcular.py
 ```
 
-`numpy==2.5.3` lo necesita `recalcular.py` (recálculo de accuracy, F1 y p50/p95) y es la versión del entorno de la laptop ([`modelo/requirements-conversion.lock.txt`](modelo/requirements-conversion.lock.txt)). La Pi usa numpy 2.5.4 ([`docs/ficha-entrega.md`](docs/ficha-entrega.md)). `pyproject.toml` ya agrega `-q` a pytest.
+`numpy==2.5.3` lo necesita `recalcular.py` (recálculo de accuracy, F1 y p50/p95) y es la versión del entorno de la laptop ([`modelo/requirements-conversion.lock.txt`](modelo/requirements-conversion.lock.txt)). La Pi usa numpy 2.5.4 ([`docs/ficha-entrega.md`](docs/ficha-entrega.md)). `pyproject.toml` ya agrega `-q` a pytest. Ninguno de estos dos comandos necesita AWS.
 
-`trazar_captura.py` solo lee S3 y, si cargas `P4_PORTAL_USUARIO` y `P4_PORTAL_PASSWORD` (con `Read-Host -AsSecureString`), también el portal.
+**Evaluador: una captura, por el portal desplegado** (usuario `evaluador`; `curl.exe` pide la contraseña, entregada por canal privado). Ejemplo con `fbf85a5e-9be6-4e8b-a716-38f4ee8873e8`, una de las 20:
+
+```powershell
+curl.exe -u evaluador https://174-129-84-80.sslip.io/api/p4/captures/fbf85a5e-9be6-4e8b-a716-38f4ee8873e8
+curl.exe -u evaluador -o fbf85a5e.jpg https://174-129-84-80.sslip.io/api/p4/captures/fbf85a5e-9be6-4e8b-a716-38f4ee8873e8/image
+(Get-FileHash .\fbf85a5e.jpg -Algorithm SHA256).Hash.ToLower()
+curl.exe -u evaluador -o export.csv "https://174-129-84-80.sslip.io/api/p4/captures/export?format=csv"
+```
+
+`GET /api/p4/captures/<id>` devuelve el registro guardado en S3 (JSON con clase, confianza, fechas, dispositivo, versión y `image_sha256`). `/image` devuelve la foto, y su SHA-256 debe ser igual al `image_sha256` del registro. `/export?format=csv` (o `json`) baja todos los eventos; también lo enlazan **CSV** y **JSON** en la galería. Se compara con la evidencia registrada: [`evidencias/capturas_20/capturas_20.csv`](evidencias/capturas_20/capturas_20.csv), [`evidencias/comprobaciones/traza_fbf85a5e_s3.txt`](evidencias/comprobaciones/traza_fbf85a5e_s3.txt) y la exportación del 15 oct en [`evidencias/exportacion/`](evidencias/exportacion/).
+
+**Equipo: la traza con S3** (necesita un perfil de AWS del equipo; `--perfil` vale `p4-emilio` por defecto). La corre el equipo, también en vivo durante la demostración ([`docs/consulta-aws.md`](docs/consulta-aws.md)):
+
+```powershell
+.\.venv\Scripts\python scripts\trazar_captura.py --capture-id fbf85a5e-9be6-4e8b-a716-38f4ee8873e8 --perfil <perfil>
+```
+
+Su salida registrada: [`evidencias/comprobaciones/traza_fbf85a5e_s3.txt`](evidencias/comprobaciones/traza_fbf85a5e_s3.txt) (solo S3) y [`traza_fbf85a5e_portal.txt`](evidencias/comprobaciones/traza_fbf85a5e_portal.txt) (S3 y portal). `trazar_captura.py` solo lee S3 y, si cargas `P4_PORTAL_USUARIO` y `P4_PORTAL_PASSWORD` (con `Read-Host -AsSecureString`), también el portal.
