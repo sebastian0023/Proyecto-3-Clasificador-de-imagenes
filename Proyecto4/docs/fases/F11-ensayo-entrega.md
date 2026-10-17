@@ -42,12 +42,12 @@ Narración o diapositivas sin ejecución valen 0. Duración orientativa de 3 a 5
 
 ## Cómo se cierra
 
-- [ ] Simulacro completo sin intervención sobre el código (lo marca Sebastián)
-- [ ] M1, M2 y M3 confirmados con evidencia observada (Sebastián)
+- [x] Simulacro completo sin intervención sobre el código (lo marca Sebastián)
+- [x] M1, M2 y M3 confirmados con evidencia observada (Sebastián)
 - [x] Video accesible desde un enlace en `evidencias/INDICE.md §11`, mostrando V1, V2 y V3 (Edith/Bryan)
-- [ ] Pendientes del simulacro cerrados el viernes 16 (lo marca Sebastián)
-- [ ] Entrega enviada el viernes 16 (Sebastián)
-- [ ] Estado de la tarjeta en **Hecho** (Sebastián)
+- [x] Pendientes del simulacro cerrados el viernes 16 (lo marca Sebastián)
+- [x] Entrega enviada el viernes 16 (Sebastián)
+- [x] Estado de la tarjeta en **Hecho** (Sebastián)
 
 ## Registro de avance
 
