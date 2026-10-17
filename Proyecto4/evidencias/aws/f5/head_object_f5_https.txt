@@ -1,0 +1,40 @@
+=== imagen
+{
+    "VersionId": "ERpIgwQdRzt1T6CNdnV_URwsWME.d4kN",
+    "LastModified": "2026-10-09T18:45:52+00:00",
+    "Bytes": 837884,
+    "Tipo": "image/jpeg",
+    "sha256": "157869ff15341a3847ab698e0f5f3f5dbbbb8e0d469346fb40e5cdd69a28eedd",
+    "captureId": "f5-https-20261009-0001"
+}
+=== registro
+{
+    "VersionId": "AIM1r9Ri1vM1RPS3NaGrTHslis4xAIia",
+    "LastModified": "2026-10-09T18:45:52+00:00",
+    "Bytes": 731,
+    "Tipo": "application/json"
+}
+=== registro (contenido)
+{
+  "schema_version": 1,
+  "capture_id": "f5-https-20261009-0001",
+  "captured_at": "2026-10-09T12:39:18-06:00",
+  "predicted_class": "person",
+  "confidence": 0.9993854761123657,
+  "device_id": "f5-prueba",
+  "model_version": "1.0.0-int8.1",
+  "model_sha256": "ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0",
+  "image_ref": "C:\\MLOps_Project_Four\\prueba_f5_https.jpeg",
+  "image_sha256": "157869ff15341a3847ab698e0f5f3f5dbbbb8e0d469346fb40e5cdd69a28eedd",
+  "region": null,
+  "received_at": "2026-10-09T18:45:51.300+00:00",
+  "image_key": "edge-captures/images/f5-https-20261009-0001.jpg",
+  "image_bytes": 837884,
+  "image_width": 2316,
+  "image_height": 3088,
+  "delivery_delay_s": 393.3,
+  "warnings": []
+}=== s3 ls edge-captures/events/
+2026-10-08 23:53:23        727 f4-prueba-20261008-0001.json
+2026-10-09 12:45:52        731 f5-https-20261009-0001.json
+2026-10-09 11:23:29        726 f5-prueba-20261009-0001.json

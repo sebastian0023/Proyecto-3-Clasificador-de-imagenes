@@ -1,0 +1,9 @@
+bf2e1822-61a7-4439-a1ba-5ee395e3c026.jpg: OK
+ffff74f0-ebc0-4c20-84c0-181ae078a298.jpg: OK
+ff24163f-fc90-4279-b224-6a98b5b406ae.jpg: OK
+8a474355-4297-4f70-b93e-83ed83ff7534.jpg: OK
+2d2fb732-b74d-45fa-a66c-e7c36dfd3e36.jpg: OK
+b7faabf1-343a-4fba-a34b-f01d112326c6.jpg: OK
+004325d5-236a-418c-9949-21d21ead4573.jpg: OK
+events.jsonl: OK
+pendientes.json: OK

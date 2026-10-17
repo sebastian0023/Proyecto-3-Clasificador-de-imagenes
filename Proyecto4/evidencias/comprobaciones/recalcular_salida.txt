@@ -1,0 +1,12 @@
+Calidad: 292 muestras, IDs unicos: True, clases reales: {'person': 147, 'dog': 78, 'cat': 67}
+  accuracy original                          calculado=0.9965753424657534       declarado=0.9965753424657534       OK
+  f1_macro original                          calculado=0.9953705920853088       declarado=0.9953705920853088       OK
+  accuracy optimizado                        calculado=0.9931506849315068       declarado=0.9931506849315068       OK
+  f1_macro optimizado                        calculado=0.9920902865595105       declarado=0.9920902865595105       OK
+  caida de accuracy (pp)                     calculado=0.3424657534246589       declarado=0.3424657534246589       OK
+Recursos: 220 filas; por variante y fase: {('onnx_fp32', 'True'): 10, ('onnx_fp32', 'False'): 100, ('onnx_int8', 'True'): 10, ('onnx_int8', 'False'): 100}
+  onnx_fp32 p50 total (ms)                   calculado=1068.8103500000002       declarado=1068.8104                OK
+  onnx_fp32 p95 total (ms)                   calculado=1616.7850099999991       declarado=1616.785                 OK
+  onnx_int8 p50 total (ms)                   calculado=654.6808000000001        declarado=654.6808                 OK
+  onnx_int8 p95 total (ms)                   calculado=1231.1521950000001       declarado=1231.1522                OK
+RESULTADO: todo coincide

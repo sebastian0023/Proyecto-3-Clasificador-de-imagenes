@@ -1,0 +1,48 @@
+Traza de la captura ff24163f-fc90-4279-b224-6a98b5b406ae
+Generada: 2026-10-13T13:53:45+00:00
+
+campo                | fuente                   | valor                                                            | resultado
+---------------------+--------------------------+------------------------------------------------------------------+----------
+capture_id           | dispositivo              | ff24163f-fc90-4279-b224-6a98b5b406ae                             | coincide
+                     | S3                       | ff24163f-fc90-4279-b224-6a98b5b406ae                             |
+                     | portal                   | ff24163f-fc90-4279-b224-6a98b5b406ae                             |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+predicted_class      | dispositivo              | person                                                           | coincide
+                     | S3                       | person                                                           |
+                     | portal                   | person                                                           |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+confidence           | dispositivo              | 0.9876047372817993                                               | coincide
+                     | S3                       | 0.9876047372817993                                               |
+                     | portal                   | 0.9876047372817993                                               |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+model_version        | dispositivo              | 1.0.0-int8.1                                                     | coincide
+                     | S3                       | 1.0.0-int8.1                                                     |
+                     | portal                   | 1.0.0-int8.1                                                     |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+model_sha256         | dispositivo              | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 | coincide
+                     | S3                       | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 |
+                     | portal                   | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+captured_at          | dispositivo              | 2026-10-12T22:16:08.868617+00:00                                 | coincide
+                     | S3                       | 2026-10-12T22:16:08.868617+00:00                                 |
+                     | portal                   | 2026-10-12T22:16:08.868617+00:00                                 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+image_sha256         | dispositivo              | 649ddff857b2746b918a25586ccfd8c89e8af5c837a52b75cfffeea493f522a0 | coincide
+                     | S3                       | 649ddff857b2746b918a25586ccfd8c89e8af5c837a52b75cfffeea493f522a0 |
+                     | portal                   | 649ddff857b2746b918a25586ccfd8c89e8af5c837a52b75cfffeea493f522a0 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+SHA-256 de la imagen | dispositivo (foto local) | 649ddff857b2746b918a25586ccfd8c89e8af5c837a52b75cfffeea493f522a0 | coincide
+                     | dispositivo (evento)     | 649ddff857b2746b918a25586ccfd8c89e8af5c837a52b75cfffeea493f522a0 |
+                     | S3 (metadatos)           | 649ddff857b2746b918a25586ccfd8c89e8af5c837a52b75cfffeea493f522a0 |
+                     | S3 (descarga)            | 649ddff857b2746b918a25586ccfd8c89e8af5c837a52b75cfffeea493f522a0 |
+                     | portal (descarga)        | 649ddff857b2746b918a25586ccfd8c89e8af5c837a52b75cfffeea493f522a0 |
+
+Detalles:
+  - dispositivo: C:\MLOps_Project_Four\evidencia_f6\events.jsonl (1 linea(s) con este ID)
+  - foto local: C:\MLOps_Project_Four\evidencia_f6\ff24163f-fc90-4279-b224-6a98b5b406ae.jpg (59661 bytes)
+  - S3 s3://dataset-quality-releases-750702272375/edge-captures/events/ff24163f-fc90-4279-b224-6a98b5b406ae.json: 1 registro(s) con este ID
+  - registro: VersionId J8ExCdGrxptolBm3l1nbDa8Sxnz4EyHj, LastModified 2026-10-12T22:16:49+00:00, received_at 2026-10-12T22:16:48.281+00:00
+  - imagen s3://dataset-quality-releases-750702272375/edge-captures/images/ff24163f-fc90-4279-b224-6a98b5b406ae.jpg: VersionId UgUgO7kMldtdqjIREpTkfQAbVu_1xgZT, 59661 bytes
+  - portal https://174-129-84-80.sslip.io/api/p4/captures/ff24163f-fc90-4279-b224-6a98b5b406ae: HTTP 200; /image: HTTP 200
+
+Resultado: TODO COINCIDE (codigo de salida 0); 8 de 8 filas comparadas entre dos o mas fuentes

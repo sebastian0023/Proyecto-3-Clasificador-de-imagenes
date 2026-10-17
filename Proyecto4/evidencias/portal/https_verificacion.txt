@@ -1,0 +1,24 @@
+=== http:// -> redireccion
+308 -> https://174-129-84-80.sslip.io/
+=== certificado
+=== https:// sin credenciales
+HTTP/1.1 401 Unauthorized
+Www-Authenticate: Basic realm="restricted"
+=== GET sin credenciales (deben ser 401)
+  GET /                                              401
+  GET /api/p4/captures                               401
+  GET /api/p4/captures/f5-prueba-20261009-0001/image 401
+  GET /api/p4/captures/export?format=csv             401
+  GET /health                                        401
+  GET /docs                                          401
+  GET mlflow.174-129-84-80.sslip.io/                 401
+=== POST /api/p4/captures sin token (Caddy deja pasar; la app responde)
+{"error":"no_autorizado","mensaje":"Falta el token del dispositivo o no es valido","detalles":[]}  HTTP 401
+=== POST con token falso
+{"error":"no_autorizado","mensaje":"Falta el token del dispositivo o no es valido","detalles":[]}  HTTP 401
+=== otros metodos/rutas sin credenciales no se saltan basic_auth
+  POST /api/p4/captures/export                       401
+  PUT /api/policy                                    401
+  GET /api/p4/captures/ (barra final)                401
+174-129-84-80.sslip.io | emisor: Let's Encrypt YE2 | SAN: ['174-129-84-80.sslip.io'] | vence: Jan  7 17:30:20 2027 GMT | TLSv1.3
+mlflow.174-129-84-80.sslip.io | emisor: Let's Encrypt YE2 | SAN: ['mlflow.174-129-84-80.sslip.io'] | vence: Jan  7 17:30:21 2027 GMT | TLSv1.3

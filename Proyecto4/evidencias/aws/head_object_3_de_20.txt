@@ -1,0 +1,33 @@
+head-object de 3 de las 20 capturas (solo lectura, perfil del equipo con lectura sobre el bucket)
+Consulta: 2026-10-15T05:16:14Z (14 oct 23:16 -06:00)
+Bucket: dataset-quality-releases-750702272375
+
+Comando por llave (PowerShell):
+  aws s3api head-object --bucket dataset-quality-releases-750702272375 --key edge-captures/events/<capture_id>.json --profile <perfil> --query "{VersionId:VersionId,LastModified:LastModified,Bytes:ContentLength,Tipo:ContentType}"
+  aws s3api head-object --bucket dataset-quality-releases-750702272375 --key edge-captures/images/<capture_id>.jpg --profile <perfil> --query "{VersionId:VersionId,LastModified:LastModified,Bytes:ContentLength,Tipo:ContentType,sha256:Metadata.sha256}"
+
+9fdca5eb-2ef9-4266-8991-f145c7c3c404 (cat, 0.9917920827865601)
+  edge-captures/events/9fdca5eb-2ef9-4266-8991-f145c7c3c404.json
+    VersionId=qbnSzkFDQ_o6kvJXpZ_fXE.rFYi3W51F  LastModified=2026-10-14T20:39:17+00:00  Bytes=753  Tipo=application/json
+  edge-captures/images/9fdca5eb-2ef9-4266-8991-f145c7c3c404.jpg
+    VersionId=OtQTtZK9nDUalBeHo8SAuyao.wP9JOQa  LastModified=2026-10-14T20:39:17+00:00  Bytes=72084  Tipo=image/jpeg
+    metadato sha256=d66a04f9166f567039901fa136e6324c9e86f8e722643469b3ea2c238bf3a367
+  capturas_20.csv: version_id_registro, version_id_imagen e image_sha256 iguales -> coincide
+
+fbf85a5e-9be6-4e8b-a716-38f4ee8873e8 (dog, 0.9948710203170776; reintentada en F9)
+  edge-captures/events/fbf85a5e-9be6-4e8b-a716-38f4ee8873e8.json
+    VersionId=a4Pw2pfZPtGzBh8ljyKWXZ1NbkidZKcz  LastModified=2026-10-14T20:44:37+00:00  Bytes=754  Tipo=application/json
+  edge-captures/images/fbf85a5e-9be6-4e8b-a716-38f4ee8873e8.jpg
+    VersionId=nrfbfSXCiEEYFHbOZN8By1eWhtfiqdId  LastModified=2026-10-14T20:44:37+00:00  Bytes=86676  Tipo=image/jpeg
+    metadato sha256=5631eccc5aca392756c66e76f3021397a4a1dc9e207c9f0ee1ba891fcf8da575
+  capturas_20.csv: version_id_registro, version_id_imagen e image_sha256 iguales -> coincide
+
+c44bd96c-20cc-41ed-bb04-1bcd22df7550 (cat, 0.993374764919281)
+  edge-captures/events/c44bd96c-20cc-41ed-bb04-1bcd22df7550.json
+    VersionId=PU7jpdlTL9tLqm_koZASQvusXF9ubYax  LastModified=2026-10-14T20:38:13+00:00  Bytes=752  Tipo=application/json
+  edge-captures/images/c44bd96c-20cc-41ed-bb04-1bcd22df7550.jpg
+    VersionId=Oc.vTCYdzxm6HOlxkoxlVl1bCuZ5XXAN  LastModified=2026-10-14T20:38:13+00:00  Bytes=72031  Tipo=image/jpeg
+    metadato sha256=453dbfede63fff09247550d083cc0db41b19b87dd7eefe59b66055672608fee0
+  capturas_20.csv: version_id_registro, version_id_imagen e image_sha256 iguales -> coincide
+
+Resultado: 3 de 3 coinciden con capturas_20.csv (VersionId del registro, VersionId de la imagen y SHA-256).

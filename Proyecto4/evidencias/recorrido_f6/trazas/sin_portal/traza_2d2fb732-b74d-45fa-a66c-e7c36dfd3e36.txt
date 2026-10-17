@@ -1,0 +1,42 @@
+Traza de la captura 2d2fb732-b74d-45fa-a66c-e7c36dfd3e36
+Generada: 2026-10-13T13:47:52+00:00
+
+campo                | fuente                   | valor                                                            | resultado
+---------------------+--------------------------+------------------------------------------------------------------+----------
+capture_id           | dispositivo              | 2d2fb732-b74d-45fa-a66c-e7c36dfd3e36                             | coincide
+                     | S3                       | 2d2fb732-b74d-45fa-a66c-e7c36dfd3e36                             |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+predicted_class      | dispositivo              | person                                                           | coincide
+                     | S3                       | person                                                           |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+confidence           | dispositivo              | 0.983082115650177                                                | coincide
+                     | S3                       | 0.983082115650177                                                |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+model_version        | dispositivo              | 1.0.0-int8.1                                                     | coincide
+                     | S3                       | 1.0.0-int8.1                                                     |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+model_sha256         | dispositivo              | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 | coincide
+                     | S3                       | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+captured_at          | dispositivo              | 2026-10-12T22:16:21.671066+00:00                                 | coincide
+                     | S3                       | 2026-10-12T22:16:21.671066+00:00                                 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+image_sha256         | dispositivo              | e40519f72ec55e3dbe4bfe3bd0e3ee60f617b6aff58582c346fa8d74a14e6f71 | coincide
+                     | S3                       | e40519f72ec55e3dbe4bfe3bd0e3ee60f617b6aff58582c346fa8d74a14e6f71 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+SHA-256 de la imagen | dispositivo (foto local) | e40519f72ec55e3dbe4bfe3bd0e3ee60f617b6aff58582c346fa8d74a14e6f71 | coincide
+                     | dispositivo (evento)     | e40519f72ec55e3dbe4bfe3bd0e3ee60f617b6aff58582c346fa8d74a14e6f71 |
+                     | S3 (metadatos)           | e40519f72ec55e3dbe4bfe3bd0e3ee60f617b6aff58582c346fa8d74a14e6f71 |
+                     | S3 (descarga)            | e40519f72ec55e3dbe4bfe3bd0e3ee60f617b6aff58582c346fa8d74a14e6f71 |
+
+Detalles:
+  - dispositivo: C:\MLOps_Project_Four\evidencia_f6\events.jsonl (1 linea(s) con este ID)
+  - foto local: C:\MLOps_Project_Four\evidencia_f6\2d2fb732-b74d-45fa-a66c-e7c36dfd3e36.jpg (59580 bytes)
+  - S3 s3://dataset-quality-releases-750702272375/edge-captures/events/2d2fb732-b74d-45fa-a66c-e7c36dfd3e36.json: 1 registro(s) con este ID
+  - registro: VersionId FK3L3HmDHmEvaOmpvFZMFjrb2yGpVTmE, LastModified 2026-10-12T22:16:55+00:00, received_at 2026-10-12T22:16:54.516+00:00
+  - imagen s3://dataset-quality-releases-750702272375/edge-captures/images/2d2fb732-b74d-45fa-a66c-e7c36dfd3e36.jpg: VersionId gG..vH33Oaq6Ah5.RkmIzgMx8Q0O8_ID, 59580 bytes
+
+Avisos:
+  - Se omite el portal: --sin-portal.
+
+Resultado: TODO COINCIDE (codigo de salida 0); 8 de 8 filas comparadas entre dos o mas fuentes

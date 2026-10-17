@@ -1,0 +1,27 @@
+Verificacion de la exportacion completa contra S3 (solo lecturas)
+
+Exportacion (la descargo Emilio con el usuario de evaluacion del portal):
+  GET https://174-129-84-80.sslip.io/api/p4/captures/export?format=csv  -> export_completa.csv
+  GET https://174-129-84-80.sslip.io/api/p4/captures/export?format=json -> export_completa.json
+  Hora de la descarga: 2026-10-15T05:22:32Z (exported_at del JSON: 2026-10-15T05:22:30+00:00)
+
+Consulta de S3: 2026-10-15T05:23:54Z, bucket dataset-quality-releases-750702272375, perfil del equipo con lectura
+  list-objects-v2 de edge-captures/events/ y edge-captures/images/, y descarga de los registros para comparar campos
+
+Conteos
+  CSV:  285 filas, 285 capture_id unicos
+  JSON: total=285, 285 items, 285 capture_id unicos
+  S3:   285 registros (events/) y 285 imagenes (images/)
+
+Comparacion
+  IDs del CSV contra registros de S3:      0 diferencias
+  IDs del JSON contra registros de S3:     0 diferencias
+  IDs de imagenes contra IDs de registros: 0 diferencias
+  Campos por registro (CSV y JSON contra el registro de S3): captured_at, predicted_class, confidence,
+  device_id, model_version, model_sha256, image_sha256, received_at, image_key -> 0 diferencias en 285 registros
+
+Reparto (JSON)
+  por clase:       person=172, dog=41, cat=72
+  por dispositivo: edge01=282, f5-prueba=2, f4-prueba=1 (eventos de prueba de F4 y F5)
+
+Resultado: la exportacion del portal coincide exactamente con lo persistido en S3 (285 de 285).

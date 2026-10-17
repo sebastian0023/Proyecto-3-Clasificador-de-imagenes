@@ -1,0 +1,7 @@
+Entradas conocidas: Raspberry Pi fisica (evidencia_f3/arm64_check_output.txt, ejecutado por Bryan)
+contra F7 (calidad/registros/pred_optimizado.csv, INT8 en aarch64 emulado). Tolerancia: 6 decimales de la salida de la Pi.
+  0.1.3:a1330 (real dog): Pi dog [0.063762, 0.930898, 0.00534] | F7 dog [0.063762, 0.930898, 0.00534] | max dif 3.04e-07 -> iguales
+  0.1.3:a1528 (real cat): Pi cat [0.999977, 1.3e-05, 1.1e-05] | F7 cat [0.999977, 1.3e-05, 1.1e-05] | max dif 4.70e-07 -> iguales
+  0.1.3:a1022 (real person): Pi person [0.002228, 0.004981, 0.992791] | F7 person [0.002228, 0.004981, 0.992791] | max dif 3.99e-07 -> iguales
+Smoke test x86 (modelo/registros/smoke_test.json, Edith): clase esperada en original, fp32 e int8: [('0.1.3:a1330', 'dog', True), ('0.1.3:a1528', 'cat', True), ('0.1.3:a1022', 'person', True)]
+RESULTADO: la Pi y F7 dan la misma clase (la correcta) y las mismas probabilidades

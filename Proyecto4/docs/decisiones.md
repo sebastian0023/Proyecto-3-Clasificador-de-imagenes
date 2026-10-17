@@ -13,7 +13,7 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 | 5 | Servicios de AWS | Emilio | 8 oct | cerrada | F4, F5 |
 | 6 | Ubicación de Capturas Edge en el portal | Emilio | 8 oct (URL y acceso: 9 oct) | cerrada | F5 |
 | 7 | Hardware y entorno del dispositivo | Bryan | | pendiente | F3, F8 |
-| 8 | Qué cabe en Git y qué se distribuye por enlace | Edith y Emilio | 8 oct (pesos) | cerrada para pesos y registros; carpeta de evidencias: pendiente de dato (Emilio, F10) | F2, F10 |
+| 8 | Qué cabe en Git y qué se distribuye por enlace | Edith y Emilio | 8 oct (pesos); 15 oct (carpeta de evidencias) | cerrada | F2, F10 |
 
 ## 1. Formato y runtime
 
@@ -89,7 +89,7 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
   - Variante y FP32 de referencia: `s3://dataset-quality-releases-750702272375/models/clasificador-edge/1.0.0-int8.1/`, versiones inmutables (`modelo/publish.py` no sobrescribe).
 - **Dónde se alojan los artefactos grandes:** en el mismo bucket S3 del P2/P3 (versionado, sin acceso público). El evaluador los descarga con su usuario de solo lectura o los recibe por un enlace temporal; nunca con llaves del equipo.
 - **Qué sí va en Git:** código de conversión y de evaluación, configuración, lockfiles y los registros pequeños que respaldan las cifras: registro de conversión, manifiesto de calibración, prueba de humo, predicciones por muestra y métricas (`modelo/registros/`, `calidad/registros/`, guardados byte por byte para que su SHA-256 no cambie).
-- **Dónde queda la carpeta de evidencias (F10):** **pendiente de dato (Emilio, F10).** Hoy la evidencia de F3 está en `Proyecto4/evidencia_f3/`, y la de F4–F6 está fuera del repo, en la laptop de Emilio, a la espera de copiarse en F10 sin secretos.
+- **Dónde queda la carpeta de evidencias (F10):** en Git, en [`Proyecto4/evidencias/`](../evidencias/), con su índice en [`evidencias/INDICE.md`](../evidencias/INDICE.md) (cerrada por Emilio el 15 oct). Contiene las 20 capturas con sus fotos, las comprobaciones, la exportación completa, consultas de AWS de solo lectura, capturas del portal y la evidencia de F4–F6 copiada sin secretos (revisada con gitleaks y búsqueda manual): unos 2.2 MB, por lo que cabe en Git sin enlaces externos. `evidencia_f3/` y `evidencia_f9/` se quedan donde están y el índice las enlaza. Las fotos de prueba descartadas y lo que no está revisado siguen fuera del repo.
 
 ## Referencia del modelo del Proyecto 3
 

@@ -3,6 +3,12 @@
   "bucket": "dataset-quality-releases-750702272375",
   "prefix": "models/clasificador-edge/1.0.0-int8.1/",
   "published_at": "2026-10-08T22:45:39+00:00",
+  "source_model": {
+    "key": "models/clasificador/1.0.0/model.pt",
+    "bytes": 44783563,
+    "sha256": "e4acca429ebf73d0e5a60fb0dda383a6a5322dccb1decf04b4e40ab9db989172",
+    "version_id": "VtRww5se97lomVTcKJUv6d9mYSL7TXOf"
+  },
   "objects": [
     {
       "key": "models/clasificador-edge/1.0.0-int8.1/model_int8.onnx",

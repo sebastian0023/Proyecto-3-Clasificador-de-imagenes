@@ -1,0 +1,48 @@
+Traza de la captura b7faabf1-343a-4fba-a34b-f01d112326c6
+Generada: 2026-10-13T13:54:06+00:00
+
+campo                | fuente                   | valor                                                            | resultado
+---------------------+--------------------------+------------------------------------------------------------------+----------
+capture_id           | dispositivo              | b7faabf1-343a-4fba-a34b-f01d112326c6                             | coincide
+                     | S3                       | b7faabf1-343a-4fba-a34b-f01d112326c6                             |
+                     | portal                   | b7faabf1-343a-4fba-a34b-f01d112326c6                             |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+predicted_class      | dispositivo              | person                                                           | coincide
+                     | S3                       | person                                                           |
+                     | portal                   | person                                                           |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+confidence           | dispositivo              | 0.9915691018104553                                               | coincide
+                     | S3                       | 0.9915691018104553                                               |
+                     | portal                   | 0.9915691018104553                                               |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+model_version        | dispositivo              | 1.0.0-int8.1                                                     | coincide
+                     | S3                       | 1.0.0-int8.1                                                     |
+                     | portal                   | 1.0.0-int8.1                                                     |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+model_sha256         | dispositivo              | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 | coincide
+                     | S3                       | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 |
+                     | portal                   | ca689c4e1478ccca7821dffaba8f07886bd9609a8aa3cec7450d9f875fbd69c0 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+captured_at          | dispositivo              | 2026-10-12T22:16:28.113487+00:00                                 | coincide
+                     | S3                       | 2026-10-12T22:16:28.113487+00:00                                 |
+                     | portal                   | 2026-10-12T22:16:28.113487+00:00                                 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+image_sha256         | dispositivo              | 2c01e028807979bb1c051fbdfa176676d65eb240f362d2dff640f4fa2deb0e02 | coincide
+                     | S3                       | 2c01e028807979bb1c051fbdfa176676d65eb240f362d2dff640f4fa2deb0e02 |
+                     | portal                   | 2c01e028807979bb1c051fbdfa176676d65eb240f362d2dff640f4fa2deb0e02 |
+---------------------+--------------------------+------------------------------------------------------------------+----------
+SHA-256 de la imagen | dispositivo (foto local) | 2c01e028807979bb1c051fbdfa176676d65eb240f362d2dff640f4fa2deb0e02 | coincide
+                     | dispositivo (evento)     | 2c01e028807979bb1c051fbdfa176676d65eb240f362d2dff640f4fa2deb0e02 |
+                     | S3 (metadatos)           | 2c01e028807979bb1c051fbdfa176676d65eb240f362d2dff640f4fa2deb0e02 |
+                     | S3 (descarga)            | 2c01e028807979bb1c051fbdfa176676d65eb240f362d2dff640f4fa2deb0e02 |
+                     | portal (descarga)        | 2c01e028807979bb1c051fbdfa176676d65eb240f362d2dff640f4fa2deb0e02 |
+
+Detalles:
+  - dispositivo: C:\MLOps_Project_Four\evidencia_f6\events.jsonl (1 linea(s) con este ID)
+  - foto local: C:\MLOps_Project_Four\evidencia_f6\b7faabf1-343a-4fba-a34b-f01d112326c6.jpg (59630 bytes)
+  - S3 s3://dataset-quality-releases-750702272375/edge-captures/events/b7faabf1-343a-4fba-a34b-f01d112326c6.json: 1 registro(s) con este ID
+  - registro: VersionId QL4SMBfWVkU0U.Q5uOb7oQBy1t5NBJpO, LastModified 2026-10-12T22:16:57+00:00, received_at 2026-10-12T22:16:56.244+00:00
+  - imagen s3://dataset-quality-releases-750702272375/edge-captures/images/b7faabf1-343a-4fba-a34b-f01d112326c6.jpg: VersionId ArNM1UH1vjwv.SAGsEkXef0TmkG17Mqm, 59630 bytes
+  - portal https://174-129-84-80.sslip.io/api/p4/captures/b7faabf1-343a-4fba-a34b-f01d112326c6: HTTP 200; /image: HTTP 200
+
+Resultado: TODO COINCIDE (codigo de salida 0); 8 de 8 filas comparadas entre dos o mas fuentes

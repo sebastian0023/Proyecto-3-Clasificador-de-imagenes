@@ -7,6 +7,7 @@ Clasificador multiclase de un objeto por imagen, entrenado con recortes de las c
 | `Proyecto1/` | Portal de anotación (imágenes, categorías y cajas COCO). |
 | `Proyecto2/` | Portal de calidad y versionado del dataset (compuerta, releases con DVC). Es la base del stack de P3. |
 | `Proyecto3/` | Worker de entrenamiento, modelo e inferencia (`src/p3/`), pruebas y documentación (`docs/`). |
+| `Proyecto4/` | Modelo en edge: variante INT8 del clasificador en una Raspberry Pi con cámara, envío a AWS y sección Capturas Edge del portal. Ver [`Proyecto4/README.md`](Proyecto4/README.md). |
 
 ## Requisitos
 
