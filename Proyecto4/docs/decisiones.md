@@ -9,10 +9,10 @@ Estado: **cerrada** / **pendiente de dato**. Mientras una decisión esté pendie
 | 1 | Formato y runtime del modelo en el dispositivo | Edith y Bryan | 8 oct | cerrada | F2, F3 |
 | 2 | Técnica y objetivo de optimización | Edith | 8 oct | cerrada | F2, F7, F8 |
 | 3 | Datos de comparación de calidad | Edith | 13 oct | cerrada | F7 |
-| 4 | Modo de captura | Bryan | | pendiente | F3, F9 |
+| 4 | Modo de captura | Bryan | 13 oct | cerrada | F3, F9 |
 | 5 | Servicios de AWS | Emilio | 8 oct | cerrada | F4, F5 |
 | 6 | Ubicación de Capturas Edge en el portal | Emilio | 8 oct (URL y acceso: 9 oct) | cerrada | F5 |
-| 7 | Hardware y entorno del dispositivo | Bryan | | pendiente | F3, F8 |
+| 7 | Hardware y entorno del dispositivo | Bryan | 14 oct | cerrada | F3, F8 |
 | 8 | Qué cabe en Git y qué se distribuye por enlace | Edith y Emilio | 8 oct (pesos); 15 oct (carpeta de evidencias) | cerrada | F2, F10 |
 
 ## 1. Formato y runtime

@@ -42,14 +42,15 @@ Narración o diapositivas sin ejecución valen 0. Duración orientativa de 3 a 5
 
 ## Cómo se cierra
 
-- [ ] Simulacro completo sin intervención sobre el código
-- [ ] M1, M2 y M3 confirmados con evidencia observada (Sebastián)
-- [ ] Video accesible desde un enlace, mostrando V1, V2 y V3 (Edith)
-- [ ] Pendientes del simulacro cerrados el jueves 15
-- [ ] Entrega enviada el viernes 16 (Sebastián)
-- [ ] Estado de la tarjeta en **Hecho** (Sebastián)
+- [x] Simulacro completo sin intervención sobre el código
+- [x] M1, M2 y M3 confirmados con evidencia observada (Sebastián)
+- [x] Video accesible desde un enlace, mostrando V1, V2 y V3 (Edith)
+- [x] Pendientes del simulacro cerrados el jueves 15
+- [x] Entrega enviada el viernes 16 (Sebastián)
+- [x] Estado de la tarjeta en **Hecho** (Sebastián)
 
 ## Registro de avance
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 2026-10-16 | Todos | Ensayo | Video demostrativo |

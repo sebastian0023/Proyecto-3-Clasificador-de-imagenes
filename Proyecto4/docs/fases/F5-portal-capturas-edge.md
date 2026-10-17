@@ -34,8 +34,8 @@
 - [x] La sección abre desde la navegación del portal desplegado (`https://174-129-84-80.sslip.io/#/edge-captures` con `basic_auth`; `navegador_prueba.jpeg`)
 - [x] Muestra los registros reales de F4, no datos fijos (`f4-prueba-20261008-0001` de F4 y las capturas nuevas leídas de S3 por `/api/p4/captures`; la página no tiene datos fijos)
 - [x] Los metadatos coinciden con los de AWS en una captura de prueba (`f5-https-20261009-0001`, enviada por HTTPS al portal desplegado: los 11 campos del registro en S3 iguales al evento enviado, imagen con el mismo SHA-256; el portal la muestra arriba con person 99.94 % al pulsar Actualizar; `head_object_f5_https.txt`, `navegador_https.jpeg`)
-- [ ] PR fusionado con review de Edith
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] PR fusionado con review de Edith
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 

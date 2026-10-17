@@ -34,12 +34,12 @@
 
 ## Cómo se cierra
 
-- [ ] Modelo original inferible, con versión, run ID y hash anotados (Edith)
-- [ ] Cámara capturando en el dispositivo (Bryan)
-- [ ] AWS responde con las credenciales del equipo actual (Emilio)
-- [ ] Contrato del evento acordado por Bryan y Emilio
-- [ ] Tarjetas F2–F11 con responsable y fecha confirmados (Sebastián)
-- [ ] Estado de la tarjeta de F1 en **Hecho** (Sebastián)
+- [x] Modelo original inferible, con versión, run ID y hash anotados (Edith)
+- [x] Cámara capturando en el dispositivo (Bryan)
+- [x] AWS responde con las credenciales del equipo actual (Emilio)
+- [x] Contrato del evento acordado por Bryan y Emilio
+- [x] Tarjetas F2–F11 con responsable y fecha confirmados (Sebastián)
+- [x] Estado de la tarjeta de F1 en **Hecho** (Sebastián)
 
 ## Registro de avance
 

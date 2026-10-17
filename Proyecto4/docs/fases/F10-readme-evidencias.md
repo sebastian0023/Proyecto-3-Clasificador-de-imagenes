@@ -63,8 +63,8 @@
 - [x] Lista de comprobaciones ejecutada con resultados registrados → [`docs/comprobaciones.md`](../comprobaciones.md) (todas las filas con resultado, incluida la 3.2 con el portal: 8 de 8)
 - [x] Carpeta de evidencias completa, con todos los enlaces abriendo → [`evidencias/INDICE.md`](../../evidencias/INDICE.md) cubre la tabla de la rúbrica, con las **20 de 20** capturas (7 cat, 7 dog, 6 person) en [`capturas_20/`](../../evidencias/capturas_20/) y sus fotos verificadas contra S3. Los enlaces relativos del INDICE, el README de `Proyecto4/`, la ficha, las comprobaciones y el README raíz abren, con sus anclas, y sus destinos están en Git. El video lo agrega F11 (opcional)
 - [x] Sin credenciales reales en el repositorio ni en el paquete → gitleaks v8.30.1 con `.gitleaks.toml` sobre `Proyecto4/` (156 archivos versionados o nuevos) y `origin/main..HEAD`: sin hallazgos; búsqueda manual (`AKIA`, `Bearer` con valor, `$2a$`, `C:\Users`, `P4_DEVICE_TOKEN=` con valor, llaves privadas) sin valores reales
-- [ ] PR fusionado con review de Edith
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] PR fusionado con review de Edith
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 

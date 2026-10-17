@@ -48,8 +48,8 @@ El script exige el SHA-256 `ca689c4e…69c0` del modelo y usa `modelo/preprocess
 - [x] El mismo ID enviado dos veces aparece una sola vez (reenvío → `200 duplicate`; `s3 ls` muestra un registro y una imagen; `VersionId` del registro sin cambio)
 - [x] Consulta de lectura documentada y probada ([`docs/consulta-aws.md`](../consulta-aws.md), resultado del 9 oct con `p4-emilio`)
 - [x] Configuración sin credenciales reales en Git (gitleaks v8.30.1 con `.gitleaks.toml` el 9 oct: `main..HEAD` con los 4 commits de F4 y los cambios en staging sin hallazgos; `Proyecto2/.env` ignorado por `Proyecto2/.gitignore:4`; `.env.example` con `P4_DEVICE_TOKEN` y `P4_AWS_PROFILE` vacíos)
-- [ ] PR fusionado con review de Edith
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] PR fusionado con review de Edith
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 
