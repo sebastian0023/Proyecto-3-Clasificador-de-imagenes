@@ -163,10 +163,10 @@ La exportación incluye **32 capturas de `edge01` con `image_ref` `edge01-*.jpg`
 | Clasificación sin red en la Pi y reenvío al volver la red | 2.3, 4.3 | [`evidencia_f3/ejecucion_offline.txt`](../evidencia_f3/ejecucion_offline.txt), [`evidencia_f3/ping_offline.txt`](../evidencia_f3/ping_offline.txt) |
 | Consulta de AWS de solo lectura durante la demo | 4.2 | [`docs/consulta-aws.md`](../docs/consulta-aws.md) |
 
-## 11. Video (pendiente, lo agrega F11)
+## 11. Video
 
-El video opcional (V1–V3) se graba en F11. Cuando exista, aquí va su enlace.
+[Video de la demostración V1–V3 (16 oct de 2026)](https://iteso01-my.sharepoint.com/:v:/g/personal/edith_perez_iteso_mx/IQDenRwiFy1qQZ4MYBzjhwPVAa7KIOlz2fmEmwlBtJ8NWWM)
 
 ## Pendientes de este paquete
 
-- Video (F11).
+- Ninguno: el video ya está en la sección 11.

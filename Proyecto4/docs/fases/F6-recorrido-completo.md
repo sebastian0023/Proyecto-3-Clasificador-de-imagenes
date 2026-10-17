@@ -32,8 +32,8 @@
 - [x] Una fotografía nueva de la cámara visible en Capturas Edge (`bf2e1822-61a7-4439-a1ba-5ee395e3c026` en la galería del portal desplegado: foto de la Pi, person 98.74 %, `edge01`, `1.0.0-int8.1`, fechas iguales a S3; `portal_bf2e1822.jpg`; el portal sirve registro e imagen de los 7 IDs, `GET` `200`/`200` en las trazas)
 - [x] Imagen, ID, clase y versión coinciden en dispositivo, AWS y portal (7 trazas: 8 de 8 filas iguales, imagen con el mismo SHA-256 en la foto de la Pi, el evento, S3 y el portal; `trazas/traza_<id>.txt`)
 - [x] Un envío fallido y reintentado deja un solo registro (los 7 IDs del ensayo: fallos de conexión y un solo `201` en `ejecucion_offline.txt`; 1 registro por ID en `edge-captures/events/` según las trazas. Evidencia adicional: 5 envíos con fallo **real** de red el 13 oct, DNS y `Connection reset`, reintentados con el mismo ID y con 1 registro cada uno; `reenvio_68_verificacion.txt`)
-- [ ] PR fusionado con review de Edith
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] PR fusionado con review de Edith
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 

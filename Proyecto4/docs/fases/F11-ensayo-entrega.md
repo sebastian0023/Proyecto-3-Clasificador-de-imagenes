@@ -4,14 +4,14 @@
 |---|---|
 | Responsable | Sebastián (PM, coordina) |
 | Revisor de PRs | — (la fase no abre PR) |
-| Fechas | 14 oct de 2026; colchón el 15; entrega el 16 |
+| Fechas | 14 oct → 16 oct de 2026 |
 | Rama | — |
 | Puntos de rúbrica | 15 extra (video V1, V2 y V3); simulacro de M1, M2 y M3 |
 | Depende de | F1–F10 |
 | Bloquea a | — |
 | Control | Control 3 |
 
-**Nota de calendario:** todo ocurre el miércoles 14, con el código congelado desde el martes 13 por la noche; coordina Sebastián y participan los cuatro. El jueves 15 queda como colchón para corregir lo que salga del simulacro y la entrega es el viernes 16.
+**Nota de calendario:** el simulacro previsto para el 14 oct se corrió el viernes 16 por la noche, junto con el ensayo y la grabación del video; los pendientes de los PR #49 y #51 se resolvieron ese mismo día. La entrega se envía el viernes 16.
 
 > Fase de coordinación. Sebastián dirige el simulacro, repasa las evidencias y envía la entrega; no ejecuta trabajo técnico ni toca el código. La demostración y el video los opera el equipo.
 
@@ -30,7 +30,7 @@ Narración o diapositivas sin ejecución valen 0. Duración orientativa de 3 a 5
 - **Simulacro de evaluación:** hacer de evaluador siguiendo `docs/rubrica.md` (demostración guiada de unos 10 a 15 minutos). Elegir los objetos y su orden, cinco eventos para contrastar entre exportación local, AWS y portal, y una muestra de la comparación de calidad o del benchmark para reproducir. Las 20 capturas y las mediciones pueden existir de antemano; durante la demo basta una captura nueva dirigida.
 - **Requisitos mínimos:** confirmar M1, M2 y M3 con evidencia observada, no con afirmaciones.
 - **Inventario de evidencias:** recorrer la carpeta de F10 contra la lista de entrega del prompt y abrir cada enlace con el acceso del evaluador.
-- **Pendientes:** anotar cada falla con dueño y cerrarla el jueves 15.
+- **Pendientes:** anotar cada falla con dueño y cerrarla el viernes 16.
 - **Entrega:** enviar el viernes 16 el paquete de evidencias, la URL del portal y el video.
 
 ## Bloques de trabajo
@@ -42,10 +42,10 @@ Narración o diapositivas sin ejecución valen 0. Duración orientativa de 3 a 5
 
 ## Cómo se cierra
 
-- [ ] Simulacro completo sin intervención sobre el código
+- [ ] Simulacro completo sin intervención sobre el código (lo marca Sebastián)
 - [ ] M1, M2 y M3 confirmados con evidencia observada (Sebastián)
-- [ ] Video accesible desde un enlace, mostrando V1, V2 y V3 (Edith)
-- [ ] Pendientes del simulacro cerrados el jueves 15
+- [x] Video accesible desde un enlace en `evidencias/INDICE.md §11`, mostrando V1, V2 y V3 (Edith/Bryan)
+- [ ] Pendientes del simulacro cerrados el viernes 16 (lo marca Sebastián)
 - [ ] Entrega enviada el viernes 16 (Sebastián)
 - [ ] Estado de la tarjeta en **Hecho** (Sebastián)
 
@@ -53,3 +53,4 @@ Narración o diapositivas sin ejecución valen 0. Duración orientativa de 3 a 5
 
 | Fecha | Quién | Bloque | Qué se hizo / PR | Pendiente |
 |---|---|---|---|---|
+| 2026-10-16 | Todos | Ensayo y video | Ensayo con Sebastián como evaluador y grabación del video de la demostración (V1, V2 y V3: captura y clasificación en la Pi, corte y regreso de la red con reintento, captura nueva en AWS y en Capturas Edge, misma captura en la Pi, S3 y el portal). Enlace en [`evidencias/INDICE.md`](../../evidencias/INDICE.md#11-video). | Confirmar M1–M3 y enviar la entrega (Sebastián). |

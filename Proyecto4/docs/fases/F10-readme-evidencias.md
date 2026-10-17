@@ -4,7 +4,7 @@
 |---|---|
 | Responsable | Emilio (Líder de AWS · portal · integración) |
 | Revisor de PRs | Edith |
-| Fechas | 13 oct → 14 oct de 2026 |
+| Fechas | 13 oct → 16 oct de 2026 |
 | Rama | `feat/p4-fase-10-readme-evidencias` |
 | Puntos de rúbrica | 10 (6.1, 6.2 y 6.3) |
 | Depende de | F7, F8 |
@@ -63,8 +63,8 @@
 - [x] Lista de comprobaciones ejecutada con resultados registrados → [`docs/comprobaciones.md`](../comprobaciones.md) (todas las filas con resultado, incluida la 3.2 con el portal: 8 de 8)
 - [x] Carpeta de evidencias completa, con todos los enlaces abriendo → [`evidencias/INDICE.md`](../../evidencias/INDICE.md) cubre la tabla de la rúbrica, con las **20 de 20** capturas (7 cat, 7 dog, 6 person) en [`capturas_20/`](../../evidencias/capturas_20/) y sus fotos verificadas contra S3. Los enlaces relativos del INDICE, el README de `Proyecto4/`, la ficha, las comprobaciones y el README raíz abren, con sus anclas, y sus destinos están en Git. El video lo agrega F11 (opcional)
 - [x] Sin credenciales reales en el repositorio ni en el paquete → gitleaks v8.30.1 con `.gitleaks.toml` sobre `Proyecto4/` (156 archivos versionados o nuevos) y `origin/main..HEAD`: sin hallazgos; búsqueda manual (`AKIA`, `Bearer` con valor, `$2a$`, `C:\Users`, `P4_DEVICE_TOKEN=` con valor, llaves privadas) sin valores reales
-- [ ] PR fusionado con review de Edith
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] PR (#49) fusionado por Sebastián, sin review registrada
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 
@@ -76,3 +76,4 @@
 | 2026-10-15 | Emilio | Las 20 capturas | 6 `person` de la sesión de Bryan del 15 oct, sin cara y revisadas a la vista; en cada una coinciden el SHA-256 de la foto de S3, el `image_sha256`, el metadato de S3 y la foto de Bryan; `capturas_20.csv/json` con las 20 (7/7/6). Hallazgo nuevo en el [INDICE](../../evidencias/INDICE.md#hallazgos-del-modelo-en-las-capturas-recientes): 12 fotos de la pared de ladrillo sin nadie dieron `person` (0.9467–0.9697); recomendación de evitar ese fondo en la demo. Casilla de carpeta completa marcada. | `device_id` configurable (PR de Bryan); seguimiento del README por Edith o Bryan; video (F11). |
 | 2026-10-15 | Emilio | Configuración y cámara | Con el PR #50 de Bryan ya en la rama: tabla de configuración del README (`P4_DEVICE_ID`/`--device-id`, validación), ficha (cámara `32e6:9221` y `device_id`) e INDICE (captura `2fc25b54…` con `edge01-demo`, comprobada en S3, como evidencia de 6.3; log de la Pi como fuente del lado del dispositivo de las 6 `person`, con clase y confianza iguales a S3). | Seguimiento del README por Edith o Bryan; video (F11). |
 | 2026-10-16 | Emilio | Seguimiento del README | Edith siguió el README en un clon limpio de `49e318f` (texto en la casilla). Correcciones aplicadas en el README: volver a correr `up.py` después de editar `.env` (sección 4); credenciales del evaluador sin llaves de AWS, por decisión del equipo del 16 oct: enlace temporal de `model_int8.onnx` con verificación de SHA-256 (paso 2) y comprobación por el portal con el usuario `evaluador` (`GET /api/p4/captures/{id}`, `/image` y `/export`, rutas confirmadas en `src/p4/captures/api.py`), con la traza de S3 a cargo del equipo (paso 5). Casilla marcada. | Video (F11). |
+| 2026-10-16 | Sebastián | Fusión | PR #49 fusionado por Sebastián, sin review registrada en GitHub. | Ninguno |

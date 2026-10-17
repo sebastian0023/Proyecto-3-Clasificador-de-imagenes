@@ -39,8 +39,8 @@
 - [x] Reporte antes y después con métricas por clase y errores explicados: [`docs/calidad.md`](../calidad.md) y [`metricas.json`](../../calidad/registros/metricas.json). Solo `0.1.3:a554` cambia (dog → person; el original ya dudaba, con 0.55)
 - [x] Caída de accuracy de hasta 2 puntos porcentuales: 0.9965753424657534 → 0.9931506849315068, **0.3424657534246589 pp**, con el INT8 evaluado en aarch64 (entorno de la Pi)
 - [x] Procedencia de calibración y exclusión del test anotadas: [`calidad.md` § Separación de datos](../calidad.md#separación-de-datos) y decisión 3 en [`decisiones.md`](../decisiones.md)
-- [ ] PR fusionado con review de Bryan
-- [ ] Estado de la tarjeta en **Hecho**
+- [x] PR fusionado con review de Bryan
+- [x] Estado de la tarjeta en **Hecho**
 
 ## Registro de avance
 
